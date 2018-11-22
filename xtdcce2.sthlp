@@ -15,12 +15,12 @@ with a large number of observations over groups and time periods.{p_end}
 {cmdab:p:ooled}({varlist})
 {cmd:cr_lags}({it:string})
 {cmdab:nocross:sectional}
-{cmdab:ivreg2:options}({it:string}) 
+{cmdab:ivreg2:options}({it:string})
 {cmd:e_ivreg2}
 {cmd:ivslow}
 {cmdab:noi:sily}
 {cmd:lr}({varlist})
-{cmd:lr_options}({it:string}) 
+{cmd:lr_options}({it:string})
 {cmdab:pooledc:onstant}
 {cmdab:reportc:onstant}
 {cmdab:noconst:ant}
@@ -60,7 +60,7 @@ A panel is large if the number of cross-sectional units (or groups) and the numb
 It fits the following estimation methods:{p_end}
 {p 8 8}
 i) The Mean Group Estimator (MG, Pesaran and Smith 1995).{break}
-ii) The Common Correlated Effects Estimator (CCE, Pesaran 2006),{break} 
+ii) The Common Correlated Effects Estimator (CCE, Pesaran 2006),{break}
 iii) The Dynamic Common Correlated Effects Estimator (DCCE, Chudik and Pesaran 2015), and{p_end}
 {p 4 4}For a dynamic model, several methods to estimate long run effects are possible:{p_end}
 {p 8 8} a) The Pooled Mean Group Estimator (PMG, Shin et. al 1999) based on an Error Correction Model, {break}
@@ -73,19 +73,19 @@ Additionally {cmd:xtdcce2} tests for cross sectional dependence (see {help xtcd2
 
 {marker options}{title:Options}
 
-{p 4 8}{cmdab:cr:osssectional}({varlist}) defines the variables which are added as cross sectional averages to the equation. 
-Variables in {cmd:crosssectional()} may be included in {cmd:pooled()}, {cmd:exogenous_vars()}, {cmd:endogenous_vars()} and {cmd:lr()}. 
+{p 4 8}{cmdab:cr:osssectional}({varlist}) defines the variables which are added as cross sectional averages to the equation.
+Variables in {cmd:crosssectional()} may be included in {cmd:pooled()}, {cmd:exogenous_vars()}, {cmd:endogenous_vars()} and {cmd:lr()}.
 Variables in {cmd: crosssectional()} are partialled out, the coefficients not estimated and reported.{p_end}
-{p 8 8}{cmd:crosssectional}(_all) adds all variables as cross sectional averages. 
+{p 8 8}{cmd:crosssectional}(_all) adds all variables as cross sectional averages.
 No cross sectional averages are added if {cmd:crosssectional}(_none) is used, which is equivalent to {cmd:nocrosssectional}.
 {cmd:crosssectional}() is a required option but can be substituted by {cmd:nocrosssectional}.{p_end}
 
 {p 4 8}{cmdab:p:ooled}({varlist}) specifies variables which estimated coefficients are constrained to be equal across all cross sectional units.
-Variables may occur in {indepvars}. 
+Variables may occur in {indepvars}.
 Variables in {cmd:exogenous_vars()}, {cmd:endogenous_vars()} and {cmd:lr()} may be pooled as well.{p_end}
 
-{p 4 8 12}{cmd:cr_lags}({it:integers}) sets the number of lags of the cross sectional averages. 
-If not defined but {cmd:crosssectional()} contains a varlist, then only contemporaneous cross sectional averages are added but no lags. 
+{p 4 8 12}{cmd:cr_lags}({it:integers}) sets the number of lags of the cross sectional averages.
+If not defined but {cmd:crosssectional()} contains a varlist, then only contemporaneous cross sectional averages are added but no lags.
 {cmd:cr_lags(0)} is the equivalent.
 The number of lags can be different for different variables, where the order is the same as defined in {cmd:cr()}.
 For example if {cmd:cr(y x)} and only contemporaneous cross-sectional averages of y but 2 lags of x are added,
@@ -100,26 +100,26 @@ Results will be equivalent to the Mean Group estimator.{p_end}
 
 {p 4 8 12}{cmdab:noconst:ant} suppresses the constant term.{p_end}
 
-{p 4 8}{cmd:xtdcce2} supports IV regressions using {help ivreg2}. 
+{p 4 8}{cmd:xtdcce2} supports IV regressions using {help ivreg2}.
 The IV specific options are:{break}
 	{cmdab:ivreg2:options}({it:string}) passes further options to {cmd:ivreg2}, see {help ivreg2##s_options:ivreg2, options}.{break}
 	{cmd:e_ivreg2} posts all available results from {cmd:ivreg2} in {cmd: e()} with prefix {it:ivreg2_}, see {help ivreg2##s_macros: ivreg2, macros}.{break}
 	{cmdab:noi:sily} displays output of {cmd:ivreg2}.{break}
 	{cmd:ivslow}: For the calculation of standard errors for pooled coefficients an auxiliary regressions is performed.
-	In case of an IV regression, xtdcce2 runs a simple IV regression for the auxiliary regressions. 
+	In case of an IV regression, xtdcce2 runs a simple IV regression for the auxiliary regressions.
 	this is faster.
-	If option is used {cmd:ivslow}, then xtdcce2 calls ivreg2 for the auxiliary regression. 
+	If option is used {cmd:ivslow}, then xtdcce2 calls ivreg2 for the auxiliary regression.
 	This is advisable as soon as ivreg2 specific options are used.{p_end}
 
-{p 4 8}{cmd:xtdcce2} is able to estimate long run coefficients. 
+{p 4 8}{cmd:xtdcce2} is able to estimate long run coefficients.
 Three models are supported:
-The pooled mean group models (Shin et. al 1999), similar to {help xtpmg}, the CS-DL (see {help xtdcce2##csdl: xtdcce2, csdl}) 
-and CS-ARDL method (see {help xtdcce2##ardl: xtdcce2, ardl}) as developed in Chudik et. al 2016. 
+The pooled mean group models (Shin et. al 1999), similar to {help xtpmg}, the CS-DL (see {help xtdcce2##csdl: xtdcce2, csdl})
+and CS-ARDL method (see {help xtdcce2##ardl: xtdcce2, ardl}) as developed in Chudik et. al 2016.
 No options for the CS-DL model are necessary.{p_end}
 
-{p 8 8}{cmd:lr}({varlist}) specifies the variables to be included in the long-run cointegration vector. 
+{p 8 8}{cmd:lr}({varlist}) specifies the variables to be included in the long-run cointegration vector.
 	The first variable(s) is/are the error-correction speed of adjustment term.
-	The default is to use the pmg model. 
+	The default is to use the pmg model.
 	In this case each estimated coefficient is divided by the negative of the long-run cointegration vector (the first variable).
 	If the option {cmd:ardl} is used, then the long run coefficients are estimated as the sum over the coefficients relating to a variable,
 	divided by the sum of the coefficients of the dependent variable.{break}
@@ -140,7 +140,7 @@ No options for the CS-DL model are necessary.{p_end}
 
 {p 4 8 12}{cmdab:showi:ndividual} reports unit individual estimates in output.{p_end}
 
-{p 4 8 12}{cmd:fullsample} uses entire sample available for calculation of cross sectional averages. 
+{p 4 8 12}{cmd:fullsample} uses entire sample available for calculation of cross sectional averages.
 Any observations which are lost due to lags will be included calculating the cross sectional averages (but are not included in the estimation itself).{p_end}
 
 {p 4 8 12}{cmd:fast} omit calculation of unit specific standard errors.{p_end}
@@ -156,22 +156,22 @@ Any observations which are lost due to lags will be included calculating the cro
 {col 10} (1) {col 20} y(i,t) = b0(i) + b1(i)*y(i,t-1) + x(i,t)*b2(i) + x(i,t-1)*b3(i) + u(i,t)
 {col 20} u(i,t) = g(i)*f(t) + e(i,t)
 
-{p 4 4} where f(t) is an unobserved common factor loading, g(i) a heterogeneous factor loading, x(i,t) is a (1 x K) vector 
+{p 4 4} where f(t) is an unobserved common factor loading, g(i) a heterogeneous factor loading, x(i,t) is a (1 x K) vector
 and b2(i) and b3(i) the coefficient vectors.
-The error e(i,t) is iid and the heterogeneous coefficients b1(i), b2(i) and b3(i) are randomly distributed around a common mean. 
+The error e(i,t) is iid and the heterogeneous coefficients b1(i), b2(i) and b3(i) are randomly distributed around a common mean.
 It is assumed that x(i,t) is strictly exogenous.
-In the case of a static panel model (b1(i) = 0) Pesaran (2006) shows that mean of the coefficients 0, b2 and b3 
-(for example for b2(mg) = 1/N sum(b2(i))) 
+In the case of a static panel model (b1(i) = 0) Pesaran (2006) shows that mean of the coefficients 0, b2 and b3
+(for example for b2(mg) = 1/N sum(b2(i)))
 can be consistently estimated by adding cross sectional means of the dependent and all independent variables.
-The cross sectional means approximate the unobserved factors. 
+The cross sectional means approximate the unobserved factors.
 In a dynamic panel data model (b1(i) <> 0) pT lags of the cross sectional means are added to achieve consistency (Chudik and Pesaran 2015).
-The mean group estimates for b1, b2 and b3 are consistently estimated as long as N,T and pT go to infinity. 
-This implies that the number of cross sectional units and time periods is assumed to grow with the same rate. 
-In an empirical setting this can be interpreted as N/T being constant. 
-A dataset with one dimension being large in comparison to the other would lead to inconsistent estimates, even if both dimension are large in numbers. 
-For example a financial dataset on stock markets returns on a monthly basis over 30 years (T=360) of 10,000 firms would not be sufficient. 
-While individually both dimension can be interpreted as large, they do not grow with the same rate and the ratio would not be constant. 
-Therefore an estimator relying on fixed T asymptotics and large N would be appropriate. 
+The mean group estimates for b1, b2 and b3 are consistently estimated as long as N,T and pT go to infinity.
+This implies that the number of cross sectional units and time periods is assumed to grow with the same rate.
+In an empirical setting this can be interpreted as N/T being constant.
+A dataset with one dimension being large in comparison to the other would lead to inconsistent estimates, even if both dimension are large in numbers.
+For example a financial dataset on stock markets returns on a monthly basis over 30 years (T=360) of 10,000 firms would not be sufficient.
+While individually both dimension can be interpreted as large, they do not grow with the same rate and the ratio would not be constant.
+Therefore an estimator relying on fixed T asymptotics and large N would be appropriate.
 On the other hand a dataset with lets say N = 30 and T = 34 would qualify as appropriate, if N and T grow with the same rate.{p_end}
 
 {p 4 4}The variance of the mean group coefficient b1(mg) is estimated as:{p_end}
@@ -191,10 +191,10 @@ On the other hand a dataset with lets say N = 30 and T = 34 would qualify as app
 {p 4 4} where z(i,s) is a (1 x K+1) vector including the cross sectional means at time s and the sum is over s=t...t-pT.
 {cmd:xtdcce2} supports several different specifications of equation (2).{p_end}
 
-{p 4 4} {cmd:xtdcce2} partials out the cross sectional means internally. 
+{p 4 4} {cmd:xtdcce2} partials out the cross sectional means internally.
 For consistency of the cross sectional specific estimates, the matrix z = (z(1,1),...,z(N,T)) has to be of full column rank.
-This condition is checked for each cross section. 
-{cmd:xtdcce2} will return a warning if z is not full column rank. 
+This condition is checked for each cross section.
+{cmd:xtdcce2} will return a warning if z is not full column rank.
 It will, however, continue estimating the cross sectional sepecific coefficients and then calculate the mean group estimates.
 The mean group estimates will be consistent.
 For further reading see, Chudik, Pesaran (2015, Journal of Econometrics), Assumption 6 and page 398.{p_end}
@@ -212,7 +212,7 @@ The estimated equation is:
 {p 2}{ul: ii) Common Correlated Effects}{p_end}
 
 {p 4 4} The model in equation (3) does not account for unobserved common factors between units.
-To do so, cross sectional averages are added in the fashion of Pesaran (2006):{p_end} 
+To do so, cross sectional averages are added in the fashion of Pesaran (2006):{p_end}
 
 {col 10}(4){col 20} y(i,t) = b0(i) + x(i,t)*b2(i) + d(i)*z(i,t) + e(i,t).
 
@@ -232,7 +232,7 @@ Chudik and Pesaran (2015) show that consistency is gained if pT lags of the cros
 {p 4 4} where s = t,...,t-pT. Equation (5) is estimated if the option {cmd:cr_lags()} contains a positive number.{p_end}
 {p 4}{help xtdcce2##example_dcce:See example}{p_end}
 
-{p 2}{ul: iv) Pooled Estimators}{p_end} 
+{p 2}{ul: iv) Pooled Estimators}{p_end}
 
 {p 4 4} Equations (3) - (5) can be constrained that the parameters are the same across units. Hence the equations become:{p_end}
 
@@ -240,15 +240,15 @@ Chudik and Pesaran (2015) show that consistency is gained if pT lags of the cros
 {col 10}(4-p){col 20} y(i,t) = b0 + x(i,t)*b2 + d(i)*z(i,t) + e(i,t),
 {col 10}(5-p){col 20} y(i,t) = b0 + b1*y(i,t-1) + x(i,t)*b2 + sum [d(i)*z(i,s)] + e(i,t).
 
-{p 4 4}Variables with pooled (homogenous) coefficients are specified using the {cmd:pooled({varlist})} option. 
-The constant is pooled by using the option {cmd:pooledconstant}. 
-In case of a pooled estimation, the standard errors are obtained from a mean group regression. 
+{p 4 4}Variables with pooled (homogenous) coefficients are specified using the {cmd:pooled({varlist})} option.
+The constant is pooled by using the option {cmd:pooledconstant}.
+In case of a pooled estimation, the standard errors are obtained from a mean group regression.
 This regression is performed in the background. See Pesaran (2006).{p_end}
 {p 4}{help xtdcce2##example_pooled:See example}{p_end}
 
 {p 2}{ul: v) Instrumental Variables}{p_end}
 
-{p 4 4}{cmd:xtdcce2} supports estimations of instrumental variables by using the {help ivreg2} package. 
+{p 4 4}{cmd:xtdcce2} supports estimations of instrumental variables by using the {help ivreg2} package.
 Endogenous variables (to be instrumented) are defined in {varlist}2 and their instruments are defined in {varlist}_iv.{p_end}
 {p 4}{help xtdcce2##example_iv:See example}{p_end}
 
@@ -266,9 +266,9 @@ Shin et. al estimate the long run coefficients by ML and the short run coefficie
 
 {col 10}(7){col 20}y(i,t) = o0(i) + phi(i)*y(i,t-1) + x(i,t)*o2(i) + g1(i)*[y(i,t)-y(i,t-1)] + [x(i,t) - x(i,t-1)] * g2(i) + e(i,t),
 
-{p 4 4}where w2(i) = - o2(i) / phi(i) and w0(i) = - o0(i)/phi(i). 
-Equation (7) is estimated by including the levels of y and x as long run variables 
-using the {cmd:lr({varlist})} and {cmd:pooled({varlist})} options and 
+{p 4 4}where w2(i) = - o2(i) / phi(i) and w0(i) = - o0(i)/phi(i).
+Equation (7) is estimated by including the levels of y and x as long run variables
+using the {cmd:lr({varlist})} and {cmd:pooled({varlist})} options and
 adding the first differences as independent variables.
 {cmd:xtdcce2} estimates equation (7) but automatically calculates estimates for w(i) = (w0(i),...,wk(i)).
 The advantage estimating equation (7) by OLS is that it is possible to use IV regressions and add cross sectional averages to account for dependencies between units.
@@ -283,9 +283,9 @@ Therefore they fit the following model, based on equation (1):{p_end}
 
 {col 10}(8){col 20}y(i,t) = w0(i) + x(i,t) * w2(i)  + delta(i) * (x(i,t) - x(i,t-1)) + sum [d(i)*z(i,s)] + e(i,t)
 
-{p 4 4}where w2(i) is the long effect and sum [d(i)*z(i,s)] the cross-sectional averages with 
+{p 4 4}where w2(i) is the long effect and sum [d(i)*z(i,s)] the cross-sectional averages with
 an appropriate number of lags.
-To account for the lags of the dependent variable, the corresponding number of first differences are added. 
+To account for the lags of the dependent variable, the corresponding number of first differences are added.
 If the model is an ARDL(1,1), then only the first difference of the explanatory variable is added.
 In the case of an ARDL(1,2) model, the first and the second difference are added.
 The advantage of the CS-DL approach is, that no short run coefficients need to be estimated.  {break}
@@ -293,12 +293,12 @@ A general ARDL(py,px) model is estimated by:{p_end}
 
 {col 10}(8){col 20}y(i,t) = w0(i) + x(i,t) * w2(i)  + sum(l=1,px) delta(i,l) * (x(i,t-l) - x(i,t-l-1))  + sum [d(i)*z(i,s)] + e(i,t)
 
-{p 4 4}The mean group coefficients are calculated as the unweighted averages of all cross-sectional specific coefficient estimates. 
+{p 4 4}The mean group coefficients are calculated as the unweighted averages of all cross-sectional specific coefficient estimates.
 The variance/covariance matrix is estimated as in the case of a Mean Group Estimation.{p_end}
 {p 4}{help xtdcce2##example_csdl:See example}{p_end}
 
 {marker ardl}{p 2}{ul: viii) Cross-Section Augmented ARDL (CS-ARDL)}{p_end}
-{p 4 4}As an alternative approach the long run coefficients can be estimated by first estimating the short run coefficients and then the long run coefficients. 
+{p 4 4}As an alternative approach the long run coefficients can be estimated by first estimating the short run coefficients and then the long run coefficients.
 For a general ARDL(py,px) model including cross-sectional averages such as:{p_end}
 
 {col 10}(9){col 20}y(i,t) = b0(i) + sum(l=1,py) b1(i,l) y(i,t-l) + sum(l=0,px) b2(i,l) x(i,t-l) +  sum [d(i)*z(i,s)] + e(i,t),
@@ -311,7 +311,7 @@ For a general ARDL(py,px) model including cross-sectional averages such as:{p_en
 
 {col 10}(11){col 20}w1(i) = 1 - sum(l=1,py) b1(i,l).
 
-{p 4 4}This is the CS-ARDL estimator in Chudik et. al (2016). 
+{p 4 4}This is the CS-ARDL estimator in Chudik et. al (2016).
 The variables belonging to w(1,i) need to be enclosed in parenthesis, or {help tsvarlist} need to be used.
 For example coding {cmd:lr(y x L.x)} is equivalent to {cmd:lr(y (x lx))}, where
 lx is a variable containing the first lag of x (lx = L.x).{break}
@@ -361,8 +361,8 @@ The variance/covariance matrix is calculated using the delta method, see Ditzen 
 {col 8}{cmd: e(version)}{col 27} xtdcce2 version, if {stata xtdcce2, version} used.
 
 {col 4} Matrices
-{col 8}{cmd: e(b)}{col 27} coefficient vector 
-{col 8}{cmd: e(V)}{col 27} variance-covariance matrix 
+{col 8}{cmd: e(b)}{col 27} coefficient vector
+{col 8}{cmd: e(V)}{col 27} variance-covariance matrix
 {col 8}{cmd: e(bi)}{col 27} coefficient vector of individual and pooled coefficients
 {col 8}{cmd: e(Vi)}{col 27} variance-covariance matrix of individual and pooled coefficients
 
@@ -373,7 +373,7 @@ The variance/covariance matrix is calculated using the delta method, see Ditzen 
 
 {marker postestimation}{title:Postestimation Commands}
 
-{p 4 4}{cmd: predict} and {cmd: estat} can be used after {cmd: xtdcce2}. 
+{p 4 4}{cmd: predict} and {cmd: estat} can be used after {cmd: xtdcce2}.
 
 {p 2}{ul: predict}{p_end}
 {p 4 4}The syntax for {cmd:predict} is:{p_end}
@@ -392,11 +392,11 @@ The variance/covariance matrix is calculated using the delta method, see Ditzen 
 {col 8}{cmd:replace}{col 27} replace the variable if existing.
 {hline}
 
-{p 8 8}{cmd:xtdcce2} is able to calculte both residuals from equation (1). 
+{p 8 8}{cmd:xtdcce2} is able to calculte both residuals from equation (1).
 {cmd:predict} {newvar} , {cmdab:r:esiduals} calculates e(i,t).
 That is, the residuals of the regression with the cross sectional averages partialled out.
-{cmd:predict} {newvar} , {cmdab:r:esiduals} calculates u(i,t) = g(i)*f(g) + e(i,t). 
-That is, the residuals including the common factors, approximated by the cross sectional averages. 
+{cmd:predict} {newvar} , {cmdab:r:esiduals} calculates u(i,t) = g(i)*f(g) + e(i,t).
+That is, the residuals including the common factors, approximated by the cross sectional averages.
 Internally, the fitted values are calculated and then subtracted from the dependent variable.
 Therefore it is important to note, that if a constant is used, the constant needs to be reported using the {cmd:xtdcce2} option {cmd:reportconstant}.
 Otherwise the u(i,t) includes the constant as well (u(i,t) = b0(i) + g(i)*f(g) + e(i,t)).{p_end}
@@ -442,7 +442,7 @@ In order to obtain estimates for the constant, the option {cmd:reportconstant} i
 
 {p 4 4}Omitting {cmd:reportconstant} leads to the same result, however the constant is partialled out:{p_end}
 
-{p 8}{stata xtdcce2 d.log_rgdpo L.log_rgdpo log_hc log_ck log_ngd , nocross}.{p_end}	
+{p 8}{stata xtdcce2 d.log_rgdpo L.log_rgdpo log_hc log_ck log_ngd , nocross}.{p_end}
 
 
 {marker example_cce}{p 4}{ul: Common Correlated Effect}{p_end}
@@ -479,14 +479,14 @@ To predict the residuals, options {cmd:residuals} is used:{p_end}
 
 {p 8}{stata predict residuas, residuals}{p_end}
 
-{p 4 4}The residuals do not contain the partialled out factors, that is they are e(i,t) in equation (1) and (2). 
+{p 4 4}The residuals do not contain the partialled out factors, that is they are e(i,t) in equation (1) and (2).
 To estimate u(i,t), the error term containing the common factors, option {cmd:cfresiduals} is used:{p_end}
 
 {p 8}{stata predict uit, cfresiduals}{p_end}
 
 {p 4 4}In a similar fashion, the linear prediction (option {cmd:xb}, the default) and the standard error of the prediction can be obtained.
-The unit specific estimates for each variable and the standard error can be 
-obtained using options {cmdab:coeff:icients} and {cmd:se}. 
+The unit specific estimates for each variable and the standard error can be
+obtained using options {cmdab:coeff:icients} and {cmd:se}.
 For example, obtain the coefficients for log_hc from the regression above and calculate the mean, which should be the same as the
 mean group estimate:{p_end}
 
@@ -524,7 +524,7 @@ Using the lagged level of physical capital as an instrument for the contemporane
 
 {p 4 4}Variables of the long run cointegration vector are defined in {cmd:lr({varlist})}, where the first variable is the error correction speed of adjustment term.
 To ensure homogeneity of the long run effects, the corresponding variables have to be included in the {cmd:pooled({varlist})} option.
-Following the example from Blackburne and Frank (2007) with the {it:jasa2} dataset 
+Following the example from Blackburne and Frank (2007) with the {it:jasa2} dataset
 (the dataset is available at {browse www.econ.cam.ac.uk/people-files/emeritus/mhp1/jasa.exe:here} from {browse www.econ.cam.ac.uk/people/emeritus/mhp1/published-articles#1999:Pesaran's webpage}).{p_end}
 
 {p 8}{stata xtdcce2 d.c d.pi d.y if year >= 1962 , lr(L.c pi y) p(L.c pi y) cr(_all) cr_lags(2)}{p_end}
@@ -540,14 +540,14 @@ A second option is {cmd:xtpmgnames} in order to match the naming convention from
 
 {marker example_csdl}{p 4}{ul: Cross-Section Augmented Distributed Lag (CS-DL)}{p_end}
 
-{p 4 4}Chudik et. al (2013) estimate the long run effects of public debt on output growth 
-(the data is available {browse www.econ.cam.ac.uk/people-files/faculty/km418/CMPR_Data.zip:here} 
+{p 4 4}Chudik et. al (2013) estimate the long run effects of public debt on output growth
+(the data is available {browse www.econ.cam.ac.uk/people-files/faculty/km418/CMPR_Data.zip:here}
 on {browse www.econ.cam.ac.uk/people-files/faculty/km418/research.html:Kamiar Mohaddes' personal webpage}).
-In the dataset, the dependent variable is {it:d.y} and the independent variables are the inflation rate (dp) and debt to GDP ratio (d.gd). 
-For an ARDL(1,1,1) only the first difference of dp and d.gd are added as further covariates. 
-Only a contemporaneous lag of the cross-sectional averages (i.e. cr_lags(0)) of the dependent variable and 
-3 lags of the independent variables are added. 
-The lag structure is implemented by defining a {it:numlist} rather than a number in {cmd:cr_lags()}. 
+In the dataset, the dependent variable is {it:d.y} and the independent variables are the inflation rate (dp) and debt to GDP ratio (d.gd).
+For an ARDL(1,1,1) only the first difference of dp and d.gd are added as further covariates.
+Only a contemporaneous lag of the cross-sectional averages (i.e. cr_lags(0)) of the dependent variable and
+3 lags of the independent variables are added.
+The lag structure is implemented by defining a {it:numlist} rather than a number in {cmd:cr_lags()}.
 For the example here {cmd:cr_lags(0 3 3)} is used, where the first
 number refers to the first variable defined in {cmd:cr()}, the second to the second etc.{p_end}
 
@@ -559,17 +559,17 @@ number refers to the first variable defined in {cmd:cr()}, the second to the sec
 
 {p 8}{stata xtdcce2 d.y dp d.gd L(0/2).d.(dp d.gd), cr(d.y dp d.gd) cr_lags(0 3 3) fullsample}{p_end}
 
-{p 4 4}Note, the {cmd:fullsample} option is used to reproduce the results in Chudik et. al (2013).{p_end} 
+{p 4 4}Note, the {cmd:fullsample} option is used to reproduce the results in Chudik et. al (2013).{p_end}
 
 
 {marker example_ardl}{p 4}{ul: Cross-Section Augmented ARDL (CS-ARDL)}{p_end}
 
-{p 4 4}Chudik et. al (2013) estimate besides the CS-DL model a CS-ARDL model. 
+{p 4 4}Chudik et. al (2013) estimate besides the CS-DL model a CS-ARDL model.
 To estimate this model all variables are treated as long run coefficients and thus added to {varlist} in {cmd:lr({varlist})}.
-{cmd:xtdcce2} first estimates the short run coefficients and the calculates then long run coefficients, 
+{cmd:xtdcce2} first estimates the short run coefficients and the calculates then long run coefficients,
 following {help xtdcce2##eq_10:Equation 10}.
 The option {cmd:lr_options(ardl)} is used to invoke the estimation of the long run coefficients.
-Variables with the same base (i.e. forming the same long run coefficient) need to be either 
+Variables with the same base (i.e. forming the same long run coefficient) need to be either
 enclosed in parenthesis or {help tsvarlist} operators need to be used.
 In Table 17 an ARDL(1,1,1) model is estimated with three lags of the cross-sectional averages:{p_end}
 
@@ -597,7 +597,7 @@ Stata Journal 7(4): 465-506{p_end}
 
 {p 4 8}Chudik, A., K. Mohaddes, M. H. Pesaran, and M. Raissi. 2013.
 Debt, Inflation and Growth: Robust Estimation of Long-Run Effects in Dynamic Panel Data Model.{p_end}
-  
+
 {p 4 8}Chudik, A., and M. H. Pesaran. 2015.
 Common correlated effects estimation of heterogeneous dynamic panel data models with weakly exogenous regressors.
 Journal of Econometrics 188(2): 393-420.{p_end}
@@ -621,8 +621,8 @@ Stata Journal 12(1): 61-71.{p_end}
 {p 4 8}Feenstra, R. C., R. Inklaar, and M. Timmer. 2015.
 The Next Generation of the Penn World Table. American Economic Review. www.ggdc.net/pwt{p_end}
 
-{p 4 8} Jann, B. 2005. 
-moremata: Stata module (Mata) to provide various functions. 
+{p 4 8} Jann, B. 2005.
+moremata: Stata module (Mata) to provide various functions.
 Available from http://ideas.repec.org/c/boc/bocode/s455001.html.
 
 {p 4 8}Pesaran, M. 2006.
@@ -679,4 +679,4 @@ Ditzen, J. 2018. xtdcce2: Estimating dynamic common correlated effects in Stata.
 {p 8 10} - legacy control for endogenous_var(), exogenous_var() and residuals().{p_end}
 
 {title:Also see}
-{p 4 4}See also: {help xtcd2}, {help ivreg2}, {help xtmg}, {help xtpmg}, {help moremata}{p_end} 
+{p 4 4}See also: {help xtcd2}, {help ivreg2}, {help xtmg}, {help xtpmg}, {help moremata}{p_end}

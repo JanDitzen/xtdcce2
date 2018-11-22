@@ -15,7 +15,7 @@ xtdcce2 d.log_rgdpo L.log_rgdpo log_hc log_ck log_ngd , reportc cr(d.log_rgdpo L
 xtdcce2 d.log_rgdpo d.L.log_rgdpo d.log_hc d.log_ck d.log_ngd , cr(_all) reportc lr(L.log_rgdpo log_hc log_ck log_ngd) p(L.log_rgdpo log_hc log_ck log_ngd)
 xtdcce2 d.log_rgdpo d.L.log_rgdpo d.log_hc d.log_ck d.log_ngd , cr(_all) reportc lr(L.log_rgdpo log_hc log_ck log_ngd) p(L.log_rgdpo log_hc log_ck log_ngd) lr_options(nodivide)
 xtdcce2 d.log_rgdpo d.L.log_rgdpo d.log_hc d.log_ck d.log_ngd , cr(_all) reportc lr(L.log_rgdpo log_hc log_ck log_ngd) p(L.log_rgdpo log_hc log_ck log_ngd) lr_options(xtpmgnames)
-xtdcce2 d.log_rgdpo d.L.log_rgdpo d.log_hc d.log_ngd (d.log_ck = L.log_ck), cr(_all) reportc 
+xtdcce2 d.log_rgdpo d.L.log_rgdpo d.log_hc d.log_ngd (d.log_ck = L.log_ck), cr(_all) reportc
 predict res, res
 predict coeff, coeff
 *xtcd2

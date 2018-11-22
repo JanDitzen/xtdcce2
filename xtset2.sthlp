@@ -28,7 +28,7 @@
 
 
 {marker description}{title:Description}
-{p 4 4} {cmd:xtset2} extends {help xtset} and help {tsset}. 
+{p 4 4} {cmd:xtset2} extends {help xtset} and help {tsset}.
 It is possible to define a balanced panel with respect to variables, similar to the {it:touse} option of {cmd:_xt}.
 {p_end}
 
