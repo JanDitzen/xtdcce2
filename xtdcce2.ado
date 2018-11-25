@@ -2,7 +2,7 @@
 *! author Jan Ditzen
 *! www.jan.ditzen.net - j.ditzen@hw.ac.uk
 *! see viewsource xtdcce2.ado for more info.
-*! github versions
+*! github version
 /*
 This program estimates a dynamic common correlated effects model with or without pooled coefficients. The equation is (Eq. 48, Chudik, Pesaran 2015):
 
