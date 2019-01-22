@@ -1,0 +1,12 @@
+v 3
+d xtdcce2 estimating heterogeneous coefficient models using common correlated effects in a dynamic panel. Version 1.35
+d Jan Ditzen, Heriot-Watt University
+d Distribution-Date:  20190122
+f xtdcce2135/xtdcce2135.ado
+f xtdcce2135/xtdcce2_estat.ado
+f xtdcce2135/xtdcce2_p.ado
+f xtdcce2135/xtdcce2.sthlp
+f xtdcce2135/xtset2.ado
+f xtdcce2135/xtset2.sthlp
+f xtdcce2135/xtcd2.ado
+f xtdcce2135/xtcd2.sthlp
