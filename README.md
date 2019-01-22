@@ -7,8 +7,8 @@ ssc install xtdcce2
 
 Alternative version can be found on github or can be installed from within Stata:
 
-net install xtdcce2 , from(http://www.ditzen.net/Stata/) 
+net install, from(https://janditzen.github.io/xtdcce2/)
 
 and beta versions:
 
-net from http://www.ditzen.net/Stata/xtdcce2_beta
+net from https://janditzen.github.io/xtdcce2/
