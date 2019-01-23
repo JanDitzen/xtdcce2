@@ -661,7 +661,7 @@ xtdcce2 from {stata "net from http://www.ditzen.net/Stata/xtdcce2_beta"}.{p_end}
 {marker ChangLog}{title:Changelog}
 {p 4 8}This version: 1.34 - 22. January 2019{p_end}
 {p 4 8}Version 1.33 to Version 1.34{p_end}
-{p 8 10} - small bug fixes in code and help file.
+{p 8 10} - small bug fixes in code and help file.{p_end}
 {p 4 8}Version 1.32 to Version 1.33{p_end}
 {p 8 10} - bug in if statements fixed.{p_end}
 {p 8 10} - noomitted added, bug in cr(_all) fixed.{p_end}
