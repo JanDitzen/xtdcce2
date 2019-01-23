@@ -1,6 +1,7 @@
 {smcl}
 {hline}
-{hi:help xtdcce2}{right: v. 134 - 22. January 2019}
+{hi:help xtdcce2}{right: v. 135 - 22. January 2019}
+{right:SJ18-3: st0536}
 {hline}
 {title:Title}
 
@@ -32,6 +33,7 @@ with a large number of observations over groups and time periods.{p_end}
 {cmdab:showi:ndividual}
 {cmd:fullsample}
 {cmd:fast}
+{cmdab:nodim:check}
 {cmdab:NOOMIT:ted}]{p_end}
 
 
@@ -144,6 +146,12 @@ No options for the CS-DL model are necessary.{p_end}
 Any observations which are lost due to lags will be included calculating the cross sectional averages (but are not included in the estimation itself).{p_end}
 
 {p 4 8 12}{cmd:fast} omit calculation of unit specific standard errors.{p_end}
+
+{p 4 8 12}{cmdunab:nodim:check} Does not check for dimension. 
+Before estimating a model, {cmd:xtdcce2} automatically checks if the 
+time dimension within each panel is long enough to run a mean group regression.
+Panel units with an insufficient number are automatically dropped.
+{p_end}
 
 {p 4 8 12}{cmdab:noomit:ted} no omitted variable checks.{p_end}
 
@@ -659,7 +667,8 @@ and beta versions including a full history of
 xtdcce2 from {stata "net from http://www.ditzen.net/Stata/xtdcce2_beta"}.{p_end}
 
 {marker ChangLog}{title:Changelog}
-{p 4 8}This version: 1.34 - 22. January 2019{p_end}
+{p 4 8}This version: 1.35 - 23. January 2019{p_end}
+{p 4 10}  - Bug fix in calculation of minimal T dimension, added option nodimcheck.{p_end}
 {p 4 8}Version 1.33 to Version 1.34{p_end}
 {p 8 10} - small bug fixes in code and help file.{p_end}
 {p 4 8}Version 1.32 to Version 1.33{p_end}

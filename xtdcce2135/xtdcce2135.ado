@@ -217,6 +217,7 @@ Jan - February
 		   - renamed p and estat to xtdcce2_p and xtdcce2_estat rather than including the version.
 		   - removed capture program drop for program definitions
 ----------------------------------------xtdcce2135
+23.01.2019 - added option "nodimcheck" to bypass dimension checks. 
 */
 *capture program drop xtdcce2134
 program define xtdcce2135 , eclass sortpreserve
@@ -260,6 +261,7 @@ program define xtdcce2135 , eclass sortpreserve
 			*/ JACKknife RECursive fullsample /*
 			*/ ivslow  /*
 			*/ fast /*
+			*/ NODIMcheck /* time dimension check
 			*/ NOOMITted omittest  /* option included again for omitting omitted variable tests.
 			For Legacy:
 			*/ EXOgenous_vars(varlist ts fv) ENDOgenous_vars(varlist ts fv) RESiduals(string) /*
@@ -726,55 +728,65 @@ program define xtdcce2135 , eclass sortpreserve
 				local num_partialled_out = `num_crosssectional' + `N_g' * (`=`constant_type'==1')
 				local K_total = `num_K' + `num_partialled_out'
 
+				***Check if enough observations per cross sectional unit. If not, then remove unit and display message.	
+				if "`nodimcheck'" == "" {
+
+					`noi' xtset2 if `touse' , matrix					
+					tempname PanelMatrix					
+					mata `PanelMatrix' = (st_matrix("r(PanelMatrix)"))[.,(1,2)]
+					mata `PanelMatrix'[.,2] = (`PanelMatrix'[.,2] :+ (-`num_pooled' - `num_mg_regression' / `N_g' - `num_partialled_out' / `N_g'))
+					mata `PanelMatrix' = `PanelMatrix'[xtdcce_m_selectindex(`PanelMatrix'[.,2]:<1),.]
+					mata strofreal(rows(`PanelMatrix'))
+					mata st_local("NUnitsToRemove",strofreal(rows(`PanelMatrix'))) 
+					
+					if `NUnitsToRemove' > 0 {
+						forvalues i = 1(1)`NUnitsToRemove' {
+							mata st_local("iUnitToRemove",strofreal(`PanelMatrix'[`i',1]))
+							replace `touse' = 0 if (`idvar' == `iUnitToRemove')
+							sum `d_idvar' if `idvar' == `iUnitToRemove'
+							local SummaryToRemove "`SummaryToRemove' `r(mean)'"
+							*local N_g = `N_g' - 1
+						}
+						noi disp "Units (`d_idvar') to be removed due to insufficient numbers of observations: `SummaryToRemove'"
+						
+						*** check if touse has non zero
+						sum `touse' , meanonly
+						if r(mean) == 0 {
+							restore
+							xtdcce_err 2001 `d_idvar' `d_tvar' , msg("No observations left.")
+						}
+						
+						**refresh stats
+						drop `idvar'
+						egen `idvar' = group(`d_idvar') if `touse'
+						noi sum `idvar' `d_idvar' `touse'
+						xtset2 `idvar' `tvar' if `touse'
+						local N_g = `r(N_g)'
+						local N = `r(N)'
+						local d_balanced  `r(balanced)'
+						
+						mata `mata_varlist'2 = strtoreal(`mata_varlist'[.,(3..cols(`mata_varlist'))])
+						mata st_local("num_rhs",strofreal(`N_g'*sum(((`mata_varlist'2[.,3]:==0):*`mata_varlist'2[.,2]))))
+						mata st_local("num_pooled",strofreal(sum(`mata_varlist'2[.,3])))
+						mata st_local("num_lr_np",strofreal(`N_g'*sum(((`mata_varlist'2[.,3]:==0):*(`mata_varlist'2[.,7]+`mata_varlist'2[.,8])))))
+						mata st_local("num_exo_np",strofreal(`N_g'*sum(((`mata_varlist'2[.,3]:==0):*`mata_varlist'2[.,5]))))
+						mata st_local("num_endo_np",strofreal(`N_g'*sum(((`mata_varlist'2[.,3]:==0):*`mata_varlist'2[.,6]))))
+						mata st_local("num_crosssectional",strofreal(`N_g'*sum((`mata_varlist'2[.,4]:*(`mata_varlist'2[.,9]:+1)))))
+						mata mata drop `mata_varlist'2
+						
+						local num_mg_regression =  `num_rhs'  + `num_lr_np' + `num_exo_np' + `num_endo_np'
+						local num_K = `num_mg_regression' + `num_pooled' 				
+					
+						local num_partialled_out = `num_crosssectional' + `N_g' * (`=`constant_type'==1')
+						local K_total = `num_K' + `num_partialled_out'
+						noi disp "New dimension are: N_g=`N_g', T=``N'/`N_g'' with `K_total' number of regressors."
+					}
+					mata mata drop `PanelMatrix'
+				}
 				if `N' < `K_total' {
 					restore
 					xtdcce_err 2001 `d_idvar' `d_tvar' , msg("More variables (`K_total') than observations (`N').")
 				}
-				***Check if enough observations per cross sectional unit. If not, then remove unit and display message.
-				`noi' xtset2 if `touse' , matrix
-				tempname PanelMatrix
-				mata `PanelMatrix' = (st_matrix("r(PanelMatrix)"))[.,(1,2)]
-
-				mata `PanelMatrix'[.,2] = (`PanelMatrix'[.,2] :+ (-`num_pooled' - `num_mg_regression' / `N_g' - `num_partialled_out' / `N_g'))
-				mata `PanelMatrix' = `PanelMatrix'[xtdcce_m_selectindex(`PanelMatrix'[.,2]:<1),.]
-				mata strofreal(rows(`PanelMatrix'))
-				mata st_local("NUnitsToRemove",strofreal(rows(`PanelMatrix'))) 
-			
-				if `NUnitsToRemove' > 0 {
-					forvalues i = 1(1)`NUnitsToRemove' {
-						mata st_local("iUnitToRemove",strofreal(`PanelMatrix'[`i',1]))
-						replace `touse' = 0 if (`idvar' == `iUnitToRemove')
-						sum `d_idvar' if `idvar' == `iUnitToRemove'
-						local SummaryToRemove "`SummaryToRemove' `r(mean)'"
-						*local N_g = `N_g' - 1
-					}
-					noi disp "Units (`d_idvar') to be removed due to insufficient numbers of observations: `SummaryToRemove'"
-					
-					**refresh stats
-					drop `idvar'
-					egen `idvar' = group(`d_idvar') if `touse'
-					xtset2 `idvar' `tvar' if `touse'
-					local N_g = `r(N_g)'
-					local N = `r(N)'
-					local d_balanced  `r(balanced)'
-					
-					mata `mata_varlist'2 = strtoreal(`mata_varlist'[.,(3..cols(`mata_varlist'))])
-					mata st_local("num_rhs",strofreal(`N_g'*sum(((`mata_varlist'2[.,3]:==0):*`mata_varlist'2[.,2]))))
-					mata st_local("num_pooled",strofreal(sum(`mata_varlist'2[.,3])))
-					mata st_local("num_lr_np",strofreal(`N_g'*sum(((`mata_varlist'2[.,3]:==0):*(`mata_varlist'2[.,7]+`mata_varlist'2[.,8])))))
-					mata st_local("num_exo_np",strofreal(`N_g'*sum(((`mata_varlist'2[.,3]:==0):*`mata_varlist'2[.,5]))))
-					mata st_local("num_endo_np",strofreal(`N_g'*sum(((`mata_varlist'2[.,3]:==0):*`mata_varlist'2[.,6]))))
-					mata st_local("num_crosssectional",strofreal(`N_g'*sum((`mata_varlist'2[.,4]:*(`mata_varlist'2[.,9]:+1)))))
-					mata mata drop `mata_varlist'2
-					
-					local num_mg_regression =  `num_rhs'  + `num_lr_np' + `num_exo_np' + `num_endo_np'
-					local num_K = `num_mg_regression' + `num_pooled' 				
-				
-					local num_partialled_out = `num_crosssectional' + `N_g' * (`=`constant_type'==1')
-					local K_total = `num_K' + `num_partialled_out'
-				}
-				mata mata drop `PanelMatrix'
-			
 				**Only working, for old results (<version 1.1)
 				if "`xtdcceold'" == "xtdcceold" {
 					if "`cr_lags'" > "0" {
