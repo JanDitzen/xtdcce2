@@ -1,6 +1,6 @@
 {smcl}
 {hline}
-{hi:help xtdcce2}{right: v. 135 - 22. January 2019}
+{hi:help xtdcce2}{right: v. 135 - 31. January 2019}
 {right:SJ18-3: st0536}
 {hline}
 {title:Title}
@@ -33,6 +33,7 @@ with a large number of observations over groups and time periods.{p_end}
 {cmdab:showi:ndividual}
 {cmd:fullsample}
 {cmd:fast}
+{cmdab:blockdiag:use}
 {cmdab:nodim:check}
 {cmdab:NOOMIT:ted}]{p_end}
 
@@ -147,7 +148,11 @@ Any observations which are lost due to lags will be included calculating the cro
 
 {p 4 8 12}{cmd:fast} omit calculation of unit specific standard errors.{p_end}
 
-{p 4 8 12}{cmdunab:nodim:check} Does not check for dimension. 
+{p 4 8 12}{cmdab:blockdiag:use} uses {help mata blockdiag} 
+rather than an alternative algorithm. 
+{cmd: mata blockdiag} is slower, but might produce more stable results.{p_end}
+
+{p 4 8 12}{cmdab:nodim:check} Does not check for dimension. 
 Before estimating a model, {cmd:xtdcce2} automatically checks if the 
 time dimension within each panel is long enough to run a mean group regression.
 Panel units with an insufficient number are automatically dropped.
@@ -390,7 +395,8 @@ The variance/covariance matrix is calculated using the delta method, see Ditzen 
 
 {col 6}Options {col 25} Description
 {hline}
-{col 8}{cmd:xb}{col 27} calculate linear prediction
+{col 8}{cmd:xb}{col 27} calculate linear prediction on partialled out variables
+{col 8}{cmd:xb2}{col 27} calculate linear prediction on non partialled out variables
 {col 8}{cmd:stdp}{col 27} calculate standard error of the prediction
 {col 8}{cmdab:r:esiduals}{col 27} calculate residuals (e(i,t))
 {col 8}{cmdab:cfr:esiduals}{col 27} calculate residuals including the common factors (u(i,t))
@@ -400,11 +406,21 @@ The variance/covariance matrix is calculated using the delta method, see Ditzen 
 {col 8}{cmd:replace}{col 27} replace the variable if existing.
 {hline}
 
+{p 8 8}Option {cmd:xb2} is equivalent to calculate the coefficients and then multiply
+the explanatory variables with it, while {cmd:xb} first partialles out
+the cross sectional averages and then multiplies the coefficients.{break}
+The following Table summarizes the differences with the command line {cmd:xtdcce2 y x , nocross}:{p_end}
+
+{col 10}{cmd:xb} {col 43}{cmd:xb2}
+{col 10}1. {stata predict coeff, coeff} {col 43}1. {stata predict coeff, coeff}		
+{col 10}2. {stata predict partial, partial} {col 43}2. {stata gen xb2 = coeff_x * x}
+{col 10}3. {stata gen xb = coeff_x * partial_x} {col 43}
+
 {p 8 8}{cmd:xtdcce2} is able to calculte both residuals from equation (1). 
 {cmd:predict} {newvar} , {cmdab:r:esiduals} calculates e(i,t).
 That is, the residuals of the regression with the cross sectional averages partialled out.
 {cmd:predict} {newvar} , {cmdab:cfr:esiduals} calculates u(i,t) = g(i)*f(g) + e(i,t). 
-That is, the 	by the cross sectional averages. 
+That is, the error including the cross-sectional averages. 
 Internally, the fitted values are calculated and then subtracted from the dependent variable.
 Therefore it is important to note, that if a constant is used, the constant needs to be reported using the {cmd:xtdcce2} option {cmd:reportconstant}.
 Otherwise the u(i,t) includes the constant as well (u(i,t) = b0(i) + g(i)*f(g) + e(i,t)).{p_end}
@@ -667,8 +683,10 @@ and beta versions including a full history of
 xtdcce2 from {stata "net from http://www.ditzen.net/Stata/xtdcce2_beta"}.{p_end}
 
 {marker ChangLog}{title:Changelog}
-{p 4 8}This version: 1.35 - 23. January 2019{p_end}
+{p 4 8}This version: 1.35 - 31. January 2019{p_end}
 {p 4 10}  - Bug fix in calculation of minimal T dimension, added option nodimcheck.{p_end}
+{p 4 10}  - Speed improvements (thanks to Achim Ahrens for the suggestions).{p_end}
+{p 4 10}  - Bug fix when if statements used and jackknife (thanks to Collin Rabe for the pointer).{p_end}
 {p 4 8}Version 1.33 to Version 1.34{p_end}
 {p 8 10} - small bug fixes in code and help file.{p_end}
 {p 4 8}Version 1.32 to Version 1.33{p_end}
