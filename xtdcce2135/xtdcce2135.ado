@@ -1168,7 +1168,7 @@ program define xtdcce2135 , eclass sortpreserve
 					}
 				}
 			}
-
+		
 			******************************Regression End************************************
 			***CD Test			
 			if "`cd'" == "" & "`fast'" == "0" {	
@@ -1184,8 +1184,8 @@ program define xtdcce2135 , eclass sortpreserve
 				}
 			} 
 			*noi mata `mata_varlist'
-			tempname lr_pooled lr_bases lr_select lr1_check	
 			if `ardl_indic' == 1 {
+				tempname lr_pooled lr_bases lr_select lr1_check	
 				**if lr1 pooled, then check, otherwise all mg
 				mata `lr1_check' = (`mata_varlist'[.,9]:!="0"):*(`mata_varlist'[.,5]:!="0")
 				mata st_local("num_lr1_pooled",strofreal(colsum(`lr1_check'):==sum(`mata_varlist'[.,9]:!="0")))
@@ -1203,8 +1203,8 @@ program define xtdcce2135 , eclass sortpreserve
 					mata `lr_select' = xtdcce_m_selectindex(("lr_":+`lr_bases'):!="`lr_vars_pooled'")
 					mata `lr_bases' =  `lr_bases'[`lr_select']
 					mata `lr_pooled' = `lr_pooled'[`lr_select']
-
-					mata st_local("num_lr_vars_pooled",strofreal(sum(`lr_pooled':==1)))
+					
+					mata st_local("num_lr_vars_pooled",strofreal(sum(`lr_pooledm':==1)))
 					if `num_lr_vars_pooled' > 0 {
 						mata st_local("lr_vars_pooled1",invtokens("lr_":+`lr_bases'[xtdcce_m_selectindex(`lr_pooled':==1)]'))
 					}
@@ -1225,6 +1225,7 @@ program define xtdcce2135 , eclass sortpreserve
 				
 				capture mata mata drop `lr_pooled' `lr_bases' `lr_select' `lr1_check'	
 			}
+			
 			***MG program
 			tempname b_mg cov sd t
 			mata xtdcce_m_meangroup("`eb_asisi'","`eb_mgi'","`eb_pi'","`rhs' `endogenous_vars'  `lr_vars_mg'","`pooled' `endo_pooled' `lr_vars_pooled'","","`idvar'","`touse'","`b_mg'","`cov'","`sd'","`t'","`lr_vars_pooled'",`mata_varlist')
@@ -1736,7 +1737,7 @@ program define xtdcce2135 , eclass sortpreserve
 	}	
 	
 	di as text "{hline `col_i'}{c BT}{hline `=`maxline'-`col_i''}"
-	if strtrim("`pooled'") != "" | strtrim("`lr_pooled'") != "" {
+	if wordcount("`pooled'") > 0 | wordcount("`lr_pooled'") > 0 {
 		di as text  "Pooled Variables: `endo_pooled' `pooled'"
 	}
 	if strtrim("`rhs'") != "" | strtrim("`lr_rest'") != "" {
@@ -3061,4 +3062,3 @@ mata:
 		}	
 	}
 end
-
