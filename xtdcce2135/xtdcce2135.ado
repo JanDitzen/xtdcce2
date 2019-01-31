@@ -1692,7 +1692,7 @@ program define xtdcce2135 , eclass sortpreserve
 			}
 		}
 	}	
-	if stritrim("`lr'") != "" {
+	if strtrim("`lr'") != "" {
 		if `ardl_indic' == 0 {
 			local lr_pooled : list lr & pooled
 			local lr_rest : list lr - lr_pooled
@@ -1714,7 +1714,7 @@ program define xtdcce2135 , eclass sortpreserve
 				xtdcce_output_table `var' `col_i' `b_mg' `sd' `t' cv `var'
 			}
 		}
-		if stritrim("`lr_rest'") != ""   {
+		if strtrim("`lr_rest'") != ""   {
 			di as text _col(2) "`sr_text'Mean Group:" _col(`col_i') " {c |}" 
 			local lrcount = wordcount("`lr_rest'")
 			foreach var in `lr_rest' {
@@ -1736,13 +1736,13 @@ program define xtdcce2135 , eclass sortpreserve
 	}	
 	
 	di as text "{hline `col_i'}{c BT}{hline `=`maxline'-`col_i''}"
-	if stritrim("`pooled'") != "" | stritrim("`lr_pooled'") != "" {
+	if strtrim("`pooled'") != "" | strtrim("`lr_pooled'") != "" {
 		di as text  "Pooled Variables: `endo_pooled' `pooled'"
 	}
-	if stritrim("`rhs'") != "" | stritrim("`lr_rest'") != "" {
+	if strtrim("`rhs'") != "" | strtrim("`lr_rest'") != "" {
 		di as text  "Mean Group Variables: `rhs'"
 	}
-	if stritrim("`crosssectional'") != "" {
+	if strtrim("`crosssectional'") != "" {
 		if wordcount("`cr_lags'") > 1 {
 			tempname mata_cr_output
 			mata `mata_cr_output' = `mata_varlist'[xtdcce_m_selectindex((`mata_varlist'[.,6]:=="1")),(1,11)]			
@@ -1764,7 +1764,7 @@ program define xtdcce2135 , eclass sortpreserve
 		}
 		ereturn hidden local cr_options "`crosssectional_output'" 
 	}
-	if stritrim("`lr'") != "" { 
+	if strtrim("`lr'") != "" { 
 		display  as text "Long Run Variables: `lr_pooled' `lr_rest'"
 		if `ardl_indic' == 0 {
 			display  as text "Cointegration variable(s): `lr_1'"
@@ -1779,7 +1779,7 @@ program define xtdcce2135 , eclass sortpreserve
 		display  as text "Exogenous Variables: `exo_pooled' `exogenous_vars'"
 	}
 	
-	if stritrim("`omitted_var'") != "" {
+	if strtrim("`omitted_var'") != "" {
 		display  as text "Omitted Variables:"
 		display  as text _col(2) "`omitted_var'"
 	}
@@ -3061,3 +3061,4 @@ mata:
 		}	
 	}
 end
+
