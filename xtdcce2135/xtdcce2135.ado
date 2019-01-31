@@ -218,6 +218,9 @@ Jan - February
 		   - removed capture program drop for program definitions
 ----------------------------------------xtdcce2135
 23.01.2019 - added option "nodimcheck" to bypass dimension checks. 
+25.01.2019 - added program xtdcce_m_touseupdate for a more efficient and quicker way to update touse after restore and preserve
+		   - blockdiaguse option for use of block diagonal matrix in m_reg program (thanks to Achim Ahrens!)
+		   - fixed bug in jackknife in combination with if (thanks to Collin Rabe). Changed calculation of jackknife split time point.
 */
 *capture program drop xtdcce2134
 program define xtdcce2135 , eclass sortpreserve
@@ -261,11 +264,12 @@ program define xtdcce2135 , eclass sortpreserve
 			*/ JACKknife RECursive fullsample /*
 			*/ ivslow  /*
 			*/ fast /*
+			*/ BLOCKDIAGuse /* Use block diagonal rather than own routine. Much slower!
 			*/ NODIMcheck /* time dimension check
 			*/ NOOMITted omittest  /* option included again for omitting omitted variable tests.
 			For Legacy:
 			*/ EXOgenous_vars(varlist ts fv) ENDOgenous_vars(varlist ts fv) RESiduals(string) /*
-			Working options: */ demean demeant demeanid  Weight(string)  xtdcceold ]
+			Working options: */ oldrestore demean demeant demeanid  Weight(string)  xtdcceold ]
 		
 		tempvar  esmpl Y_tilde 
 		
@@ -301,6 +305,16 @@ program define xtdcce2135 , eclass sortpreserve
 		* fast option
 		if "`fast'" == "fast" {
 			local fast = 1
+		}
+		else {
+			local fast = 0
+		}
+		*blockdiag option
+		if "`blockdiaguse'" == "" {
+			local blockdiaguse = 0
+		}
+		else {
+			local blockdiaguse = 1
 		}
 		*change noomitted NOOMITted
 		if "`noomitted'" == "" | "`omittest'" != "" {
@@ -341,7 +355,7 @@ program define xtdcce2135 , eclass sortpreserve
 			gen `inital_touse' = 1
 			tsfill, full
 			egen `tvar' = group(`d_tvar')
-			keep if `inital_touse' == 1
+			keep if `inital_touse' == 1 
 			drop `inital_touse'			
 			
 			sort `idvar' `tvar'
@@ -349,7 +363,6 @@ program define xtdcce2135 , eclass sortpreserve
 
 			preserve
 				marksample touse	
-				
 				tsset `idvar' `tvar'
 				* save lr for later use
 				local lr_save "`lr'"
@@ -851,7 +864,7 @@ program define xtdcce2135 , eclass sortpreserve
 				}
 				
 				** Check that lhs not in pooled, rhs, lr_1, lr_rest
-				if "`fast'" == "" {
+				if "`fast'" == "0" {
 					tempname check
 					mata `check' = xtdcce2_mm_which2(`mata_varlist'[.,2],"`lhs'")
 					mata st_local("checker",strofreal(rows(`check')))
@@ -899,18 +912,17 @@ program define xtdcce2135 , eclass sortpreserve
 			** 	renew touse
 			markout `touse' `rhs' `pooled' `endogenous_vars' `exogenous_vars'
 			sort `idvar' `tvar'
-			
+
 			tempname cov_i sd_i t_i stats_i b_i
 			
 			tempvar residuals_var	 
 			local residuals `residuals_var'
 			
-			
 			if "`jackknife'" == "jackknife" {
 				tempvar jack_indicator_a jack_indicator_b
 
 				sum `tvar' if `touse'
-				local jack_T = int(`r(max)' / 2)
+				local jack_T = int((`r(max)'-`r(min)') / 2) + `r(min)'
 				
 				gen `jack_indicator_a' = `touse' * (`tvar' <= `jack_T')
 				gen `jack_indicator_b' = `touse' * (`tvar' > `jack_T')
@@ -932,13 +944,13 @@ program define xtdcce2135 , eclass sortpreserve
 				*i) all pooled
 				if "`pooled'" != "" & "`rhs'" == "" {
 					tempname eb_pi
-					`noisily' mata xtdcce_m_reg("`lhs'","`touse'","`idvar'","`rhs' `pooled'","`lr'","`lr_options'",`num_adjusted',"`residuals'","`eb_pi'","`cov_i'","`sd_i'","`t_i'","`stats_i'","`jack_indicator_a' `jack_indicator_b'",`mata_varlist',`fast')
+					`noisily' mata xtdcce_m_reg("`lhs'","`touse'","`idvar'","`rhs' `pooled'","`lr'","`lr_options'",`num_adjusted',"`residuals'","`eb_pi'","`cov_i'","`sd_i'","`t_i'","`stats_i'","`jack_indicator_a' `jack_indicator_b'",`mata_varlist',`fast',"",`blockdiaguse')
 					matrix `b_i' = `eb_pi'
 				}
 				*ii) as is (inculdes all mg)
 				if "`rhs'" != "" {
 					tempname eb_asisi
-					`noisily' mata xtdcce_m_reg("`lhs' `rhs'","`touse'","`idvar'","`pooled'","`lr'","`lr_options'",`num_adjusted',"`residuals'","`eb_asisi'","`cov_i'","`sd_i'","`t_i'","`stats_i'","`jack_indicator_a' `jack_indicator_b'",`mata_varlist',`fast')
+					`noisily' mata xtdcce_m_reg("`lhs' `rhs'","`touse'","`idvar'","`pooled'","`lr'","`lr_options'",`num_adjusted',"`residuals'","`eb_asisi'","`cov_i'","`sd_i'","`t_i'","`stats_i'","`jack_indicator_a' `jack_indicator_b'",`mata_varlist',`fast',"",`blockdiaguse')
 					matrix `b_i' = 	`eb_asisi'	
 				}
 				*iii) all MG (only needed if pooled var is used). If all MG not used. better speed option
@@ -946,7 +958,7 @@ program define xtdcce2135 , eclass sortpreserve
 				* *_i_pooled not necessary as not used for later use.
 				if "`pooled'" != ""  {
 					tempname eb_mgi cov_i_1_pooled stats_i_pooled sd_i_pooled t_i_pooled
-					`noisily'  mata xtdcce_m_reg("`lhs' `rhs' `pooled'","`touse'","`idvar'","","`lr'","`lr_options'",`num_adjusted',"`residuals'","`eb_mgi'","`cov_i_1_pooled'","`sd_i_pooled'","`t_i_pooled'","`stats_i_pooled'","`jack_indicator_a' `jack_indicator_b'",`mata_varlist',1)
+					`noisily'  mata xtdcce_m_reg("`lhs' `rhs' `pooled'","`touse'","`idvar'","","`lr'","`lr_options'",`num_adjusted',"`residuals'","`eb_mgi'","`cov_i_1_pooled'","`sd_i_pooled'","`t_i_pooled'","`stats_i_pooled'","`jack_indicator_a' `jack_indicator_b'",`mata_varlist',1,"",`blockdiaguse')
 				}
 			}
 			** 2 - IV case
@@ -1081,7 +1093,7 @@ program define xtdcce2135 , eclass sortpreserve
 					}
 					else {
 						tempname eb_mgi  resid2 cov_i1
-						`noisily' mata xtdcce_m_reg("`lhs' `endogenous_vars' `endo_pooled' `rhs' `pooled'","`touse'","`idvar'","","`lr'","`lr_options'",`num_adjusted',"`resid2'","`eb_mgi'","`cov_i1'","`sd_i'","`t_i'","`stats_i'","`jack_indicator_a' `jack_indicator_b'",`mata_varlist',1,"`exogenous_vars' `exo_pooled' `rhs' `pooled'")
+						`noisily' mata xtdcce_m_reg("`lhs' `endogenous_vars' `endo_pooled' `rhs' `pooled'","`touse'","`idvar'","","`lr'","`lr_options'",`num_adjusted',"`resid2'","`eb_mgi'","`cov_i1'","`sd_i'","`t_i'","`stats_i'","`jack_indicator_a' `jack_indicator_b'",`mata_varlist',1,"`exogenous_vars' `exo_pooled' `rhs' `pooled'",`blockdiaguse')
 					}	
 				}
 
@@ -1159,7 +1171,7 @@ program define xtdcce2135 , eclass sortpreserve
 
 			******************************Regression End************************************
 			***CD Test			
-			if "`cd'" == "" {	
+			if "`cd'" == "" & "`fast'" == "0" {	
 				capture xtcd2 `residuals' if `touse', noest 
 				if _rc != 0 {
 					noi display as error "xtcd2 not installed" 
@@ -1347,7 +1359,7 @@ program define xtdcce2135 , eclass sortpreserve
 				local maxT = `r(max)'
 				local meanT = `r(mean)'
 			}
-			
+			if "`oldrestore'" != "" {
 			**put touse into mata to preserve it after restore
 			mata st_view(`touse'=.,.,"`touse' `id_t'")	
 			mata `touse'_s = `touse'			
@@ -1358,6 +1370,16 @@ program define xtdcce2135 , eclass sortpreserve
 		mata st_view(`touse',.,st_addvar("double","`touse'"))
 		mata `touse'[.] = `touse'_s
 		mata mata drop `touse' `touse'_s 
+		}
+		else {
+			mata st_view(`touse'=.,.,"`touse' `id_t'")
+			mata `touse'_p = select(`touse'[.,2],`touse'[.,1])
+		restore
+		sort `id_t'
+		gen byte `touse' = 0
+		`noisily' mata xtdcce_m_touseupdate("`touse'","`id_t'",`touse'_p)
+		mata mata drop `touse'_p
+	}
 	****************************************************************************
 	***********************************Return***********************************
 	****************************************************************************
@@ -1425,7 +1447,7 @@ program define xtdcce2135 , eclass sortpreserve
 			
 			ereturn local cmdline "`cmd_line'"
 			ereturn local cmd "xtdcce2"								
-			ereturn local predict "xtdcce2_p"
+			ereturn local predict "xtdcce2135_p"
 			ereturn local estat_cmd "xtdcce2_estat"
 			*ereturn local version = `xtdcce2_version'
 			
@@ -1951,12 +1973,12 @@ end
 /*
 Mata OLS Program
 returns coefficient, error terms, covariance matrix, statistics
-v3
+v4
 includes
 	- variance/covariance matrix estimation
 	- statistics
 	- long run estimation
-	
+	- new method for blockdiag
 	
 order for stats:
 SSR, SSE, SST, S2, dfr, rmse, F, K, N_g, N
@@ -1980,8 +2002,11 @@ mata:
 									string scalar jackknife_names, ///name of jackknife touse - 14
 									string matrix mata_var_names, /// name of mata matrix with var names - 15
 									|real scalar fast, /// if 1 then no cov and stats are calculated -16
-									string scalar input_exo) /// name of exogenous vars - 17
-	{
+									string scalar input_exo, /// name of exogenous vars - 17
+									real scalar blockdiaguse, /// blockdiag is used rather than own program - 18
+									real scalar bootstrapN , /// number of bootstrap runs - 19
+									string scalar bootstrapName) /// name of bootstrap mata matrix - 20
+		{
 		"start m_reg"
 		(variablenames , ccep , lr_vars)
 		lhs = tokens(variablenames)[1]
@@ -2003,11 +2028,16 @@ mata:
 			fast = 0
 		}
 		if (args() == 17) {
-			exo_vars = tokens(input_exo)
-			if (cols(exo_vars) > 0 ) {
-				exo = 1
-				fast = 1
+			if (input_exo != "") {
+				exo_vars = tokens(input_exo)
+				if (cols(exo_vars) > 0 ) {
+					exo = 1
+					fast = 1
+				}
 			}
+		}
+		if (args() < 18) {
+			blockdiaguse = 0
 		}
 		else {
 			input_exo = ""
@@ -2040,7 +2070,12 @@ mata:
 			outputnames = pooled
 		}
 
+		"rows X"
+		(rows(X),cols(X))
+		
 		if (mg_d == 1 ){
+			"rows X"
+			(rows(X),cols(X))
 			"mg estimation"
 			outputnames = J(1,0,"")
 			X_o = st_data(.,rhs,touse)
@@ -2051,12 +2086,25 @@ mata:
 			XX_cov = J(0,0,.)
 			///seperate data in block diagonal matrix
 			i = 1
+			
 			if (exo == 0) {
+				"exo = 0"
 				uniqueid = uniqrows(id)
+				if (blockdiaguse==0){
+					/// build X block diagonal
+					N = rows(uniqueid)
+					NT = rows(X_o)
+					///"num_k, N, T"
+					///(num_K,N,T)
+					X = J(NT,num_K*N,0)
+					posCol = 1
+					posRow = 1
+				}
+				"start doing cross specific reg"
 				while (i <= rows(uniqueid)) {
 					indic = (id :== uniqueid[i])
 					tmp_x = select(X_o,indic)
-					/// if mg only, do regression for each country seperately
+					/// if mg only, do regression for each country seperately					
 					if (pooled_d == 0) {
 						tmp_y = select(Y,indic)
 						tmp_xx = quadcross(tmp_x,tmp_x)
@@ -2066,12 +2114,26 @@ mata:
 						if (fast == 0) {
 							XX_cov = blockdiag(XX_cov,cholqrinv(tmp_xx))
 						}
+						
 					}
-					X = blockdiag(X,tmp_x)
-					
+					if (blockdiaguse==0){
+						T = rows(tmp_x)
+						///posCol = num_K*i - num_K + 1
+						///posRow = T*i - T + 1
+						posColEnd = posCol + num_K-1
+						posRowEnd = posRow + T-1
+						X[(posRow..posRowEnd),(posCol..posColEnd)] = tmp_x
+						posCol = posColEnd + 1
+						posRow = posRowEnd + 1
+					}
+					else {
+						X = blockdiag(X,tmp_x)
+					}
+								
 					outputnames = (outputnames , (rhs:+"_":+strofreal(uniqueid[i])))
 					i++
 				}
+				"cross specific done"
 				if (pooled_d == 1) {
 					"pooled included, mixed"
 					X = (X, st_data(.,pooled,touse))
@@ -2136,9 +2198,9 @@ mata:
 		if (cols(tokens(jackknife_names)) == 2) {
 			jack_indic_a = tokens(jackknife_names)[1]
 			jack_indic_b = tokens(jackknife_names)[2]
-			b_a = xtdcce_m_reg(variablenames,jack_indic_a,id_var,ccep,"","",0,"e","eb","cov","sd","t","st","jack1",mata_var_names,1,input_exo)
+			b_a = xtdcce_m_reg(variablenames,jack_indic_a,id_var,ccep,"","",0,"e","eb","cov","sd","t","st","jack1",mata_var_names,1,input_exo,blockdiaguse)
 			"in jack"
-			b_b = xtdcce_m_reg(variablenames,jack_indic_b,id_var,ccep,"","",0,"e","eb","cov","sd","t","st","jack2",mata_var_names,1,input_exo)
+			b_b = xtdcce_m_reg(variablenames,jack_indic_b,id_var,ccep,"","",0,"e","eb","cov","sd","t","st","jack2",mata_var_names,1,input_exo,blockdiaguse)
 			b_output = 2:*b_output :- 0.5:*(b_a :+ b_b)
 			"jack done"
 		}
@@ -2168,9 +2230,11 @@ mata:
 				"dimension b_output"
 				(rows(b_output),cols(b_output))
 				sum(b_output)
-				Y_hat = X * b_output
+				Xb_output = X * b_output
+				Y_hat = Xb_output
 				"dimension Y_hat"
 				(rows(Y_hat),cols(Y_hat))
+				"Sum Y_hat"
 				sum(Y_hat)
 				"dimension Y"
 				(rows(Y),cols(Y))
@@ -2277,6 +2341,9 @@ mata:
 			}		
 		}
 		"m_reg done"
+		
+		/// Bootstrap block. 
+		/// if (args() > 
 	}	
 end
 
@@ -2306,7 +2373,7 @@ mata:
 						string scalar output_sd, /// 11
 						string scalar output_t, /// 12
 						| string scalar exclude_p_vars,  /// 13 variables to be excluded for pooled covariance)
-						string matrix mata_varlist ) //// varlist
+						string matrix mata_varlist ) //// 14 varlist
 						
 	{
 		"start mean group program"
@@ -2958,3 +3025,39 @@ mata:
 end
 
 
+*capture mata mata drop xtdcce_m_touseupdate()
+* This program updates touse. 
+mata:
+	function xtdcce_m_touseupdate(string scalar tousename, string scalar idname, real vector id_new)
+	{
+		st_view(touse=.,.,tousename)
+		st_view(id=.,.,idname)
+		done = 0
+		if (rows(id)==rows(id_new)) {
+			if (mean(id:==id_new)==1) {			
+				"all good, copy touse over"
+				touse[(1..rows(touse)),1] = J(rows(touse),1,1)
+				done = 1
+			}
+			
+		}
+		if (done==0) {
+			"uneven dimensions"
+			_sort(id_new,1)
+			rownum = rows(id_new)
+			i = 1
+			j = 1
+			while (j<=rownum) {
+				if (id[i]:==id_new[j]) {
+					touse[i] = 1
+					j++
+					i++
+				}
+				else {
+					touse[i] = 0
+					i++
+				}		
+			}	
+		}	
+	}
+end
