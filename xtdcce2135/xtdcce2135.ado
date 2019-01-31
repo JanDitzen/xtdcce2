@@ -1739,7 +1739,7 @@ program define xtdcce2135 , eclass sortpreserve
 	if stritrim("`pooled'") != "" | stritrim("`lr_pooled'") != "" {
 		di as text  "Pooled Variables: `endo_pooled' `pooled'"
 	}
-	if stritrim("`rhs'" != "") | stritrim("`lr_rest'") != "" {
+	if stritrim("`rhs'") != "" | stritrim("`lr_rest'") != "" {
 		di as text  "Mean Group Variables: `rhs'"
 	}
 	if stritrim("`crosssectional'") != "" {
