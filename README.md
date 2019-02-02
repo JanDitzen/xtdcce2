@@ -23,7 +23,7 @@ __Table of Contents__
 	3. [Dynamic Common Correlated Effects](#73-dynamic-common-correlated-effects)
 	4. [Pooled Estimation](#74-pooled-estimations)
 	5. [Instrumental Variables](#75-instrumental-variables)
-	6. [Error Correction Models (ECM/PMG)](#76-error-correction-model-ecmpmg)
+	6. [Error Correction Models (ECM/PMG)](#76-error-correction-models-ecmpmg)
 	7. [Cross-Section Augmented Distributed Lag (CS-DL)](#78-cross-section-augmented-ardl-cs-ardl)
 	8. [Cross-Section Augmented ARDL(CS-ARDL)](#77-cross-section-augmented-distributed-lag-cs-dl)
 8. [References](#8-references)
