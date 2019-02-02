@@ -156,7 +156,7 @@ The estimated equation is:
 
 Equation (3) can be estimated by using the **nocross** option of `xtdcce2`. The model can be either sta#tic (b(1) = 0) or dynamic (b(1) <> 0).
 
-See [example](##7.1-mean-group-estimation)
+See [example](#71-mean-group-estimation)
 
 ## 4.2 Common Correlated Effects
 
@@ -168,7 +168,7 @@ The model in equation (3) does not account for unobserved common factors between
 
 Equation (4) is the default equation of `xtdcce2`. Including the dependent and independent variables in **crosssectional()** and setting **cr_lags(0)** leads to the same result. **crosssectional()** defines the variables to be included in z(i,t). Important to notice is, that b1(i) is set to zero.
 
-See [example](##7.2-common-correlated-effects)
+See [example](#72-common-correlated-effects)
 
 ## 4.3 Dynamic Common Correlated Effects
 
@@ -182,7 +182,7 @@ Chudik and Pesaran (2015) show that consistency is gained if pT lags of the cros
 
 where s = t,...,t-pT. Equation (5) is estimated if the option **cr_lags()** contains a positive number.
 
-See [example](##7.3-dynamic-common-correlated-effects)
+See [example](#73-dynamic-common-correlated-effects)
 
 ## 4.4 Pooled Estimations
 
@@ -195,13 +195,13 @@ Equations (3) - (5) can be constrained that the parameters are the same across u
 ```
 Variables with pooled (homogenous) coefficients are specified using the **pooled(_varlist_)** option. The constant is pooled by using the option **pooledconstant**. In case of a pooled estimation, the standard errors are obtained from a mean group regression. This regression is performed in the background. See Pesaran (2006).
 
-See [example](##7.4-pooled-estimations)
+See [example](#74-pooled-estimations)
 
 ## 4.5 Instrumental Variables
 
 **xtdcce2** supports estimations of instrumental variables by using the [ivreg2](http://www.stata-journal.com/software/sj5-4/) package. Endogenous variables (to be instrumented) are defined in _varlist_2_ and their instruments are defined in _varlist__iv_.
 
-See [example](##7.5-instrumental-variables)
+See [example](#75-instrumental-variables)
 
 ## 4.6 Error Correction Models (ECM/PMG)
 
@@ -226,7 +226,7 @@ Equation (7) is estimated by including the levels of y and x as long run variabl
 `xtdcce2` estimates equation (7) but automatically calculates estimates for w(i) = (w0(i),...,wk(i)). The advantage estimating equation (7) by OLS is that it is possible to use IV regressions and add cross sectional averages to account for dependencies between units. The variance/covariance matrix is calculated using the delta method,
 for a further discussion, see Ditzen (2018).
 
-See [Example](##7.6-error-correction-model-(pooled-mean-group-estimator))
+See [Example](#76-error-correction-model-ecmpmg)
 
 ## 4.7 Cross-Section Augmented Distributed Lag (CS-DL)
 
@@ -251,7 +251,7 @@ A general ARDL(py,px) model is estimated by:
 
 The mean group coefficients are calculated as the unweighted averages of all cross-sectional specific coefficient estimates. The variance/covariance matrix is estimated as in the case of a Mean Group Estimation.
 
-See [Example](##7.7-cross-sectiona-augmented-distributed-lag-(cs-dl))
+See [Example](#77-cross-sectiona-augmented-distributed-lag-cs-dl)
 
 ## 4.8 Cross-Section Augmented ARDL (CS-ARDL)
 As an alternative approach the long run coefficients can be estimated by first estimating the short run coefficients and then the long run coefficients.
@@ -280,7 +280,7 @@ The variables belonging to w(1,i) need to be enclosed in parenthesis, or  _tsvar
 
 The disadvantage of this approach is, that py and px need to be known. The variance/covariance matrix is calculated using the delta method, see Ditzen (2018b).
 
-See [Example](##7.8-cross-section-augmented-ardl-(cs-ardl))
+See [Example](#78-cross-section-augmented-ardl-cs-ardl)
 
 # 5. Saved Values
 
