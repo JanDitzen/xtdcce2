@@ -610,7 +610,7 @@ Shin, Y., M. H. Pesaran, and R. P. Smith. 1999.
 Pooled Mean Group Estimation of Dynamic Heterogeneous Panels.
 Journal of the American Statistical Association 94(446): 621-634.
 
-# 8. About
+# 9. About
 
 ### Author
 Jan Ditzen (Heriot-Watt University)
