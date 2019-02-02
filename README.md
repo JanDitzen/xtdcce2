@@ -7,11 +7,13 @@ __Table of Contents__
 2. [Description](#2-description)
 3. [Options](#3-options)
 4. [Econometric and Empirical Model](#4-econometric-and-empirical-model)
-4.1 [Mean Group](#4.1-mean-group)
-4.2 [Common Correlated Effects](#4.2-common-correlated-effects)
+
+4.1 [Mean Group](#4#.1-mean-group)
+4.2 [Common Correlated Effects](##4.2-common-correlated-effects)
+
 5. [Saved Values](#5-saved-values)
-6. [Postestimation Commands](6-postestimation-commands)
-7. [Examples](#7-examples
+6. [Postestimation Commands](#6-postestimation-commands)
+7. [Examples](#7-examples)
 8. [References](#8-references)
 9. [About](#9-about)
 
@@ -50,7 +52,7 @@ For a further discussion see Ditzen (2018b).
 Additionally `xtdcce2` tests for cross sectional dependence (see `xtcd2`) and supports instrumental variable estimations (see [ivreg2](http://www.stata-journal.com/software/sj5-4/)).
 
 
-# 4. Options
+# 3. Options
 
 Option | Description
 --- | ---
@@ -304,7 +306,7 @@ Scalars | Description
 **e(Tmax)** | maximum time (only unbalanced panels)
 **e(cr_lags)** | number of lags of cross sectional averages
 
-Macros |
+Macros | Description
 --- | ---
 **e(tvar)** | name of time variable
 **e(idvar)** | name of unit variable
@@ -319,7 +321,7 @@ Macros |
 **e(istd)** | instrumented (endogenous) variables (only IV)
 **e(version)** | xtdcce2 version, if `stata xtdcce2, version` used.
 
-Matrices
+Matrices | Description
 --- | ---
 **e(b)** | coefficient vector
 **e(V)** | variance-covariance matrix
@@ -328,7 +330,7 @@ Matrices
 
 Estimated long run coefficients of the ARDL model are marked with the prefix _lr_.
 
-Functions
+Functions | Description
 --- |---
 **e(sample)** | marks estimation sample
 
