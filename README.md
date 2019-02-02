@@ -13,7 +13,7 @@ __Table of Contents__
 	4. [Pooled Estimations](#44-pooled-estimations)
 	5. [Instrumental Variables](#45-instrumental-variables)
 	6. [Error Correction Models (ECM/PMG)](#46-error-correction-modelsecmpmg)
-	7. [Cross-Section Augmented Distributed Lag (CS-DL)](#47-cross-section-agumented-distributed-lag-(cs-dl))
+	7. [Cross-Section Augmented Distributed Lag (CS-DL)](#47-cross-section-agumented-distributed-lag-cs-dl)
 	8. [Cross-Section Augmented ARDL(CS-ARDL)](#48-cross-section-augmented-ardl-cs-ardl)
 5. [Saved Values](#5-saved-values)
 6. [Postestimation Commands](#6-postestimation-commands)
@@ -23,7 +23,7 @@ __Table of Contents__
 	3. [Dynamic Common Correlated Effects](#73-dynamic-common-correlated-effects)
 	4. [Pooled Estimation](#74-pooled-estimations)
 	5. [Instrumental Variables](#75-instrumental-variables)
-	6. [Error Correction Models (ECM/PMG)](#76-error-correction-models-ecmpmg)
+	6. [Error Correction Model (ECM/PMG)](#76-error-correction-models-ecmpmg)
 	7. [Cross-Section Augmented Distributed Lag (CS-DL)](#78-cross-section-augmented-ardl-cs-ardl)
 	8. [Cross-Section Augmented ARDL(CS-ARDL)](#77-cross-section-augmented-distributed-lag-cs-dl)
 8. [References](#8-references)
@@ -102,7 +102,7 @@ Option | Description
 `xtdcce2` is able to estimate long run coefficients.
 Three models are supported:
 
-The pooled mean group models (Shin et. al 1999), similar to [xtpmg](http://www.stata-journal.com/software/sj7-2/) (see [xtdcce2, ecm](#4.6-error-correction-models(pooled-mean-group-estimator))), the CS-DL (see [xtdcce2, CSDL](#4.7-cross-sectional-augmented-distributed-lag-(cs-dl))) and CS-ARDL method (see [xtdcce2, ardl]((#4.8-cross-section-augmented-ardl-(cs-ardl))) as developed in Chudik et. al 2016. No options for the CS-DL model are necessary.
+The pooled mean group models (Shin et. al 1999), similar to [xtpmg](http://www.stata-journal.com/software/sj7-2/) (see [xtdcce2, ecm](#46-error-correction-modelsecmpmg)), the CS-DL (see [xtdcce2, CSDL](#4.7-cross-sectional-augmented-distributed-lag-cs-dl)) and CS-ARDL method (see [xtdcce2, ardl](#4.8-cross-section-augmented-ardl-cs-ardl)) as developed in Chudik et. al 2016. No options for the CS-DL model are necessary.
 
 Options | Description
 --- | ---
