@@ -91,10 +91,10 @@ Option | Description
 
 Option | Description
 --- | ---
-`ivreg2options(_string_)` | passes further options to `ivreg2`, see `ivreg2, options`
-`e_ivreg2` | posts all available results from `ivreg2` in **e()** with prefix _ivreg2_, see ivreg2, macros.
-`noisily` | displays output of `ivreg2`.
-`ivslow` | For the calculation of standard errors for pooled coefficients an auxiliary regressions is performed. In case of an IV regression, xtdcce2 runs a simple IV regression for the auxiliary regressions. This is faster. If option is used **ivslow**, then xtdcce2 calls ivreg2 for the auxiliary regression.	This is advisable as soon as ivreg2 specific options are used.
+**ivreg2options(_string_)** | passes further options to `ivreg2`, see `ivreg2, options`
+**e_ivreg2** | posts all available results from `ivreg2` in **e()** with prefix _ivreg2_, see ivreg2, macros.
+**noisily** | displays output of `ivreg2`.
+**ivslow** | For the calculation of standard errors for pooled coefficients an auxiliary regressions is performed. In case of an IV regression, xtdcce2 runs a simple IV regression for the auxiliary regressions. This is faster. If option is used **ivslow**, then xtdcce2 calls ivreg2 for the auxiliary regression.	This is advisable as soon as ivreg2 specific options are used.
 
 `xtdcce2` is able to estimate long run coefficients.
 Three models are supported:
@@ -103,10 +103,8 @@ The pooled mean group models (Shin et. al 1999), similar to [xtpmg](http://www.s
 
 Options | Description
 --- | ---
-`lr(_varlist_)` | specifies the variables to be included in the long-run cointegration vector. The first variable(s) is/are the error-correction speed of adjustment term.
-	The default is to use the pmg model. In this case each estimated coefficient is divided by the negative of the long-run cointegration vector (the first variable).
-	If the option **ardl** is used, then the long run coefficients are estimated as the sum over the coefficients relating to a variable, 	divided by the sum of the coefficients of the dependent variable.
-	`lr_options(_string)`| options for the long run coefficients. Options are:
+**lr(_varlist_)** | specifies the variables to be included in the long-run cointegration vector. The first variable(s) is/are the error-correction speed of adjustment term. The default is to use the pmg model. In this case each estimated coefficient is divided by the negative of the long-run cointegration vector (the first variable). If the option **ardl** is used, then the long run coefficients are estimated as the sum over the coefficients relating to a variable, 	divided by the sum of the coefficients of the dependent variable.
+**lr_options(_string_)** | options for the long run coefficients. Options are:
 **ardl** |  estimates the CS-ARDL estimator. For further details see [xtdcce2, ardl](#4.8-cross-section-augmented-ardl-(cs-ardl)).
 **nodivide** | coefficients are not divided by the error correction speed of adjustment vector. Equation (7) is estimated, see [xtdcce2, ecm](#4.6-error-correction-models(pooled-mean-group-estimator)).
 **xtpmgnames** | coefficient names in **e(b_p_mg)** (or **e(b_full)**) and **e(V_p_mg)** (or **e(V_full)**) match the name convention from `xtpmg`.
