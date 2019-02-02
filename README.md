@@ -7,8 +7,8 @@ __Table of Contents__
 2. [Description](#2-description)
 3. [Options](#3-options)
 4. [Econometric and Empirical Model](#4-econometric-and-empirical-model)
-	1. [Mean Group](#41-mean-group)
-	2. [Common Correlated Effects](#42-common-correlated-effects)
+		4.1 [Mean Group](#41-mean-group)
+		4.2 [Common Correlated Effects](#42-common-correlated-effects)
 5. [Saved Values](#5-saved-values)
 6. [Postestimation Commands](#6-postestimation-commands)
 7. [Examples](#7-examples)
@@ -614,7 +614,9 @@ Journal of the American Statistical Association 94(446): 621-634.
 
 ### Author
 Jan Ditzen (Heriot-Watt University)
+
 Email: [j.ditzen@hw.ac.uk](mailto:j.ditzen@hw.ac.uk)
+
 Web: [www.jan.ditzen.net](www.jan.ditzen.net)
 
 ### Acknowledgments
@@ -648,19 +650,23 @@ This version: 1.35 - 31. January 2019
  - Bug fix in calculation of minimal T dimension, added option nodimcheck.
  - Speed improvements (thanks to Achim Ahrens for the suggestions).
  - Bug fix when if statements used and jackknife (thanks to Collin Rabe for the pointer).
+ 
 Version 1.33 to Version 1.34
 - small bug fixes in code and help file.
+
 Version 1.32 to Version 1.33
 - bug in if statements fixed.
 - noomitted added, bug in cr(_all_) fixed.
 - added option "replace" and "cfresiduals" to predict.
 - CS-DL and CS-ARDL method added.
 - Output as in Stata Journal Version.
+
 Version 1.31 to Version 1.32
 - bug number of groups fixed
 - predict, residual produced different results within xtdcce2 and after if panel unbalanced or trend used (thanks to Tullio Gregori for the pointer).
 - check for rank condition.
 - several bugs fixed.
+
 Version 1.2 to Version 1.31
 - code for regression in Mata
 - corrected standard errors for pooled coefficients, option cluster not necessary any longer. Please rerun estimations if used option pooled()
