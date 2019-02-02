@@ -18,6 +18,14 @@ __Table of Contents__
 5. [Saved Values](#5-saved-values)
 6. [Postestimation Commands](#6-postestimation-commands)
 7. [Examples](#7-examples)
+	1. [Mean Group](#71-mean-group-estimation)
+	2. [Common Correlated Effects](#72-common-correlated-effects)
+	3. [Dynamic Common Correlated Effects](#73-dynamic-common-correlated-effects)
+	4. [Pooled Estimation](#74-pooled-estimations)
+	5. [Instrumental Variables](#75-instrumental-variables)
+	6. [Error Correction Models (ECM/PMG)](#76-error-correction-model-ecmpmg)
+	7. [Cross-Section Augmented Distributed Lag (CS-DL)](#78-cross-section-augmented-ardl-cs-ardl)
+	8. [Cross-Section Augmented ARDL(CS-ARDL)](#77-cross-section-augmented-distributed-lag-cs-dl)
 8. [References](#8-references)
 9. [About](#9-about)
 
@@ -251,7 +259,7 @@ A general ARDL(py,px) model is estimated by:
 
 The mean group coefficients are calculated as the unweighted averages of all cross-sectional specific coefficient estimates. The variance/covariance matrix is estimated as in the case of a Mean Group Estimation.
 
-See [Example](#77-cross-sectiona-augmented-distributed-lag-cs-dl)
+See [Example](#77-cross-section-augmented-distributed-lag-cs-dl)
 
 ## 4.8 Cross-Section Augmented ARDL (CS-ARDL)
 As an alternative approach the long run coefficients can be estimated by first estimating the short run coefficients and then the long run coefficients.
@@ -507,7 +515,7 @@ xtdcce2 d.log_rgdpo L.log_rgdpo log_hc log_ck log_ngd  (log_ck = L.log_ck), repo
 Further `ivreg2` options can be passed through using **ivreg2options**. Stored values in **e()** from **ivreg2options** can be posted using the option **fulliv**.
 
 
-## 7.6 Error Correction Models (Pooled Mean Group Estimator)
+## 7.6 Error Correction Models (ECM/PMG)
 
 Variables of the long run cointegration vector are defined in **lr(_varlist_)**, where the first variable is the error correction speed of adjustment term. To ensure homogeneity of the long run effects, the corresponding variables have to be included in the **pooled(_varlist_)** option. Following the example from Blackburne and Frank (2007) with the _jasa2_ dataset
 (the dataset is available at [here](www.econ.cam.ac.uk/people-files/emeritus/mhp1/jasa.exe) from [Pesaran's webpage](www.econ.cam.ac.uk/people/emeritus/mhp1/published-articles#1999):
