@@ -7,10 +7,8 @@ __Table of Contents__
 2. [Description](#2-description)
 3. [Options](#3-options)
 4. [Econometric and Empirical Model](#4-econometric-and-empirical-model)
-
 4.1 [Mean Group](#4#.1-mean-group)
 4.2 [Common Correlated Effects](##4.2-common-correlated-effects)
-
 5. [Saved Values](#5-saved-values)
 6. [Postestimation Commands](#6-postestimation-commands)
 7. [Examples](#7-examples)
