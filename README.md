@@ -280,7 +280,7 @@ See [Example](##7.8-cross-section-augmented-ardl-(cs-ardl))
 
 `xtdcce2` stores the following in **e()**:
 
-Scalars
+Scalars |
 --- | ---
 **e(N)** | number of observations
 **e(N_g)** | number of groups (cross sectional units)
