@@ -29,7 +29,7 @@ xtdcce2 _depvar_ [_indepvars_] [_varlist2_ = _varlist_iv_] [ifin] , crosssection
 
 where _varlist2_ are endogenous variables and _varlist_iv_ the instruments. Data has to be `xtset` before using `xtdcce2`; see `tssst`.
 _varlists_ may contain time-series operators, see `tsvarlist`, or factor variables, see `fvvarlist`.
-`xtdcce2` requires the  [moremata](MOREMATA LINK HERE) package.
+`xtdcce2` requires the  [moremata](https://ideas.repec.org/c/boc/bocode/s455001.html) package.
 
 # 2. Description
 
