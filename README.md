@@ -234,7 +234,7 @@ Equation (7) is estimated by including the levels of y and x as long run variabl
 `xtdcce2` estimates equation (7) but automatically calculates estimates for w(i) = (w0(i),...,wk(i)). The advantage estimating equation (7) by OLS is that it is possible to use IV regressions and add cross sectional averages to account for dependencies between units. The variance/covariance matrix is calculated using the delta method,
 for a further discussion, see Ditzen (2018).
 
-See [Example](#76-error-correction-model-ecmpmg)
+See [Example](#76-error-correction-models-ecmpmg)
 
 ## 4.7 Cross-Section Augmented Distributed Lag (CS-DL)
 
