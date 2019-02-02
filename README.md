@@ -10,8 +10,11 @@ __Table of Contents__
 	1. [Mean Group](#41-mean-group)
 	2. [Common Correlated Effects](#42-common-correlated-effects)
 	3. [Dynamic Common Correlated Effects](#43-dynamic-common-correlated-effects)
-	4. [Instrumental Variables](#44-instrumental-variables)
-	5. [Error Correction Models (ECM/PMG)](#45-error-correction-models(ecm/pmg))
+	4. [Pooled Estimations](#44-ppoled-estimations)
+	5. [Instrumental Variables](#45-instrumental-variables)
+	6. [Error Correction Models (ECM/PMG)](#46-error-correction-models(ecm/pmg))
+	7. [Cross-Section Augmented Distributed Lag (CS-DL)](#47-cross-section-agumented-distributed-lag-(cs-dl))
+	8. [Cross-Section Augmented ARDL(CS-ARDL)](#48-cross-section-augmented-ardl(cs-ardl))
 5. [Saved Values](#5-saved-values)
 6. [Postestimation Commands](#6-postestimation-commands)
 7. [Examples](#7-examples)
@@ -181,7 +184,7 @@ where s = t,...,t-pT. Equation (5) is estimated if the option **cr_lags()** cont
 
 See [example](##7.3-dynamic-common-correlated-effects)
 
-## 4.4 Pooled Estimators
+## 4.4 Pooled Estimations
 
 Equations (3) - (5) can be constrained that the parameters are the same across units. Hence the equations become:
 
