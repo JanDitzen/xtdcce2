@@ -7,8 +7,11 @@ __Table of Contents__
 2. [Description](#2-description)
 3. [Options](#3-options)
 4. [Econometric and Empirical Model](#4-econometric-and-empirical-model)
-		4.1 [Mean Group](#41-mean-group)
-		4.2 [Common Correlated Effects](#42-common-correlated-effects)
+		1. [Mean Group](#41-mean-group)
+		2. [Common Correlated Effects](#42-common-correlated-effects)
+		3. [Dynamic Common Correlated Effects](#43-dynamic-common-correlated-effects)
+		4. [Instrumental Variables](#44-instrumental-variables)
+		5. [Error Correction Models (ECM/PMG)](#45-error-correction-models(ecm/pmg))
 5. [Saved Values](#5-saved-values)
 6. [Postestimation Commands](#6-postestimation-commands)
 7. [Examples](#7-examples)
@@ -197,7 +200,7 @@ See [example](##7.4-pooled-estimations)
 
 See [example](##7.5-instrumental-variables)
 
-## 4.6 Error Correction Models (Pooled Mean Group Estimator)
+## 4.6 Error Correction Models (ECM/PMG)
 
 As an intermediate between the mean group and a pooled estimation, Shin et. al (1999) differentiate between homogenous long run and heterogeneous short run effects. Therefore the model includes mean group as well as pooled coefficients. Equation (1) (without the lag of the explanatory variable x and for a better readability without the cross sectional averages) is transformed into an ARDL model:
 
