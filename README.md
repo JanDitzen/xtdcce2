@@ -54,29 +54,29 @@ Additionally `xtdcce2` tests for cross sectional dependence (see `xtcd2`) and su
 
 Option | Description
 --- | ---
-`cr:osssectional(_varlist_)` | defines the variables which are added as cross sectional averages to the equation. Variables in `crosssectional()` may be included in `pooled()`, `exogenous_vars()`, `endogenous_vars()` and `lr()`. Variables in `crosssectional()` are partialled out, the coefficients not estimated and reported. `crosssectional(_all_)` adds all variables as cross sectional averages. No cross sectional averages are added if `crosssectional(_none_)` is used, which is equivalent to `nocrosssectional`. `crosssectional()` is a required option but can be substituted by `nocrosssectional`.
-`pooled(_varlist_)` | specifies variables which estimated coefficients are constrained to be equal across all cross sectional units. Variables may occur in _indepvars_.
-Variables in `exogenous_vars()`, `endogenous_vars()` and `lr()` may be pooled as well.
-`cr_lags(_integers_)` | sets the number of lags of the cross sectional averages. If not defined but `crosssectional()` contains a _varlist_, then only contemporaneous cross sectional averages are added but no lags. `cr_lags(0)` is the equivalent. The number of lags can be different for different variables, where the order is the same as defined in `cr()`. For example if `cr(y x)` and only contemporaneous cross-sectional averages of y but 2 lags of x are added, then `cr_lags(0 2)`.
-`nocross:sectional` | suppresses adding any cross sectional averages
+**crosssectional(_varlist_)** | defines the variables which are added as cross sectional averages to the equation. Variables in **crosssectional()** may be included in **pooled()**, **exogenous_vars()**, **endogenous_vars()** and **lr()**. Variables in **crosssectional()** are partialled out, the coefficients not estimated and reported. **crosssectional(_all_)** adds all variables as cross sectional averages. No cross sectional averages are added if **crosssectional(_none_)** is used, which is equivalent to **nocrosssectional**. **crosssectional()** is a required option but can be substituted by **nocrosssectional**.
+**pooled(_varlist_)** | specifies variables which estimated coefficients are constrained to be equal across all cross sectional units. Variables may occur in _indepvars_.
+Variables in **exogenous_vars()**, **endogenous_vars()** and **lr()** may be pooled as well.
+**cr_lags(_integers_)** | sets the number of lags of the cross sectional averages. If not defined but **crosssectional()** contains a _varlist_, then only contemporaneous cross sectional averages are added but no lags. **cr_lags(0)** is the equivalent. The number of lags can be different for different variables, where the order is the same as defined in **cr()**. For example if **cr(y x)** and only contemporaneous cross-sectional averages of y but 2 lags of x are added, then **cr_lags(0 2)**.
+**nocross:sectional** | suppresses adding any cross sectional averages
 Results will be equivalent to the Mean Group estimator.
-`pooledconstant` | restricts the constant term to be the same across all cross sectional units.
-`reportconstant` | reports the constant term. If not specified the constant is partialled out.
-`noconstant` | suppresses the constant term.
-`trend` |  adds a linear unit specific trend. May not be combined with `pooledtrend`.
-`pooledtrend` | adds a linear common trend. May not be combined with `trend`.
-`jackknife` | applies the jackknife bias correction method. May not be combined with `recursive`.
-`recursive` | applies the recursive mean adjustment method. May not be combined with `jackknife`.
-`nocd` | suppresses calculation of CD test. For details about the CD test see LINK TO XTCD2.
-`showindividual` | reports unit individual estimates in output.
-`fullsample` | uses entire sample available for calculation of cross sectional averages.
+**pooledconstant** | restricts the constant term to be the same across all cross sectional units.
+**reportconstant** | reports the constant term. If not specified the constant is partialled out.
+**noconstant** | suppresses the constant term.
+**trend** |  adds a linear unit specific trend. May not be combined with **pooledtrend**.
+**pooledtrend** | adds a linear common trend. May not be combined with **trend**.
+**jackknife** | applies the jackknife bias correction method. May not be combined with **recursive**.
+**recursive** | applies the recursive mean adjustment method. May not be combined with **jackknife**.
+**nocd** | suppresses calculation of CD test. For details about the CD test see LINK TO XTCD2.
+**showindividual** | reports unit individual estimates in output.
+**fullsample** | uses entire sample available for calculation of cross sectional averages.
 Any observations which are lost due to lags will be included calculating the cross sectional averages (but are not included in the estimation itself).
-`fast` | omit calculation of unit specific standard errors.
-`blockdiaguse`| uses **mata blockdiag** rather than an alternative algorithm. **mata blockdiag** is slower, but might produce more stable results.
-`nodimcheck`| Does not check for dimension. Before estimating a model, `xtdcce2` automatically checks if the time dimension within each panel is long enough to run a mean group regression. Panel units with an insufficient number are automatically dropped.
-`noomitted` | no omitted variable checks.
+**fast** | omit calculation of unit specific standard errors.
+**blockdiaguse** | uses **mata blockdiag** rather than an alternative algorithm. **mata blockdiag** is slower, but might produce more stable results.
+**nodimcheck** | Does not check for dimension. Before estimating a model, `xtdcce2` automatically checks if the time dimension within each panel is long enough to run a mean group regression. Panel units with an insufficient number are automatically dropped.
+**noomitted** | no omitted variable checks.
 
-`Xtdcce2` supports IV regressions using `ivreg2`. The IV specific options are:
+`xtdcce2` supports IV regressions using `ivreg2`. The IV specific options are:
 
 Option | Description
 --- | ---
@@ -617,7 +617,7 @@ Jan Ditzen (Heriot-Watt University)
 
 Email: [j.ditzen@hw.ac.uk](mailto:j.ditzen@hw.ac.uk)
 
-Web: [www.jan.ditzen.net](www.jan.ditzen.net)
+Web: [www.jan.ditzen.net](http://www.jan.ditzen.net)
 
 ### Acknowledgments
 
@@ -650,7 +650,7 @@ This version: 1.35 - 31. January 2019
  - Bug fix in calculation of minimal T dimension, added option nodimcheck.
  - Speed improvements (thanks to Achim Ahrens for the suggestions).
  - Bug fix when if statements used and jackknife (thanks to Collin Rabe for the pointer).
- 
+
 Version 1.33 to Version 1.34
 - small bug fixes in code and help file.
 
