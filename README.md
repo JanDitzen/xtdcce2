@@ -152,7 +152,7 @@ Equation (3) can be estimated by using the **nocross** option of `xtdcce2`. The 
 
 See [example](##7.1-mean-group-estimation)
 
-# 4.2 Common Correlated Effects
+## 4.2 Common Correlated Effects
 
 The model in equation (3) does not account for unobserved common factors between units. To do so, cross sectional averages are added in the fashion of Pesaran (2006):
 
