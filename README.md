@@ -69,8 +69,7 @@ Additionally `xtdcce2` tests for cross sectional dependence (see `xtcd2`) and su
 Option | Description
 --- | ---
 **crosssectional(_varlist_)** | defines the variables which are added as cross sectional averages to the equation. Variables in **crosssectional()** may be included in **pooled()**, **exogenous_vars()**, **endogenous_vars()** and **lr()**. Variables in **crosssectional()** are partialled out, the coefficients not estimated and reported. **crosssectional(_all_)** adds all variables as cross sectional averages. No cross sectional averages are added if **crosssectional(_none_)** is used, which is equivalent to **nocrosssectional**. **crosssectional()** is a required option but can be substituted by **nocrosssectional**.
-**pooled(_varlist_)** | specifies variables which estimated coefficients are constrained to be equal across all cross sectional units. Variables may occur in _indepvars_.
-Variables in **exogenous_vars()**, **endogenous_vars()** and **lr()** may be pooled as well.
+**pooled(_varlist_)** | specifies variables which estimated coefficients are constrained to be equal across all cross sectional units. Variables may occur in _indepvars_. Variables in **exogenous_vars()**, **endogenous_vars()** and **lr()** may be pooled as well.
 **cr_lags(_integers_)** | sets the number of lags of the cross sectional averages. If not defined but **crosssectional()** contains a _varlist_, then only contemporaneous cross sectional averages are added but no lags. **cr_lags(0)** is the equivalent. The number of lags can be different for different variables, where the order is the same as defined in **cr()**. For example if **cr(y x)** and only contemporaneous cross-sectional averages of y but 2 lags of x are added, then **cr_lags(0 2)**.
 **nocross:sectional** | suppresses adding any cross sectional averages
 Results will be equivalent to the Mean Group estimator.
