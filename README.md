@@ -7,8 +7,8 @@ __Table of Contents__
 2. [Description](#2-description)
 3. [Options](#3-options)
 4. [Econometric and Empirical Model](#4-econometric-and-empirical-model)
-		4.1 [Mean Group](#41-mean-group)
-		4.2 [Common Correlated Effects](#42-common-correlated-effects)
+	1. [Mean Group](#41-mean-group)
+	2. [Common Correlated Effects](#42-common-correlated-effects)
 5. [Saved Values](#5-saved-values)
 6. [Postestimation Commands](#6-postestimation-commands)
 7. [Examples](#7-examples)
@@ -614,8 +614,8 @@ Journal of the American Statistical Association 94(446): 621-634.
 
 ### Author
 Jan Ditzen (Heriot-Watt University)
-Email: {browse "mailto:j.ditzen@hw.ac.uk":j.ditzen@hw.ac.uk}
-Web: {browse "www.jan.ditzen.net":www.jan.ditzen.net}
+Email: [j.ditzen@hw.ac.uk](mailto:j.ditzen@hw.ac.uk)
+Web: [www.jan.ditzen.net](www.jan.ditzen.net)
 
 ### Acknowledgments
 
@@ -634,7 +634,7 @@ Ditzen, J. 2018. xtdcce2: Estimating dynamic common correlated effects in Stata.
 
 The latest versions can be obtained via
 ```
-net from https://github.com/JanDitzen/xtdcce2"
+net from https://github.com/JanDitzen/xtdcce2
 ```
 
 and beta versions including a full history of
