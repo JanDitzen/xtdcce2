@@ -652,9 +652,10 @@ or
 
 ```
 net install xtdcce2 , from("https://github.com/JanDitzen/xtdcce2")
+```
 
-and beta versions including a full history of
-xtdcce2 from
+and beta versions including a full history of xtdcce2 from
+
 ```
 net from http://www.ditzen.net/Stata/xtdcce2_beta
 ```
