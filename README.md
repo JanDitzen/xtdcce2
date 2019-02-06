@@ -648,6 +648,10 @@ The latest versions can be obtained via
 ```
 net from https://github.com/JanDitzen/xtdcce2
 ```
+or
+
+```
+net install xtdcce2 , from("https://github.com/JanDitzen/xtdcce2")
 
 and beta versions including a full history of
 xtdcce2 from
