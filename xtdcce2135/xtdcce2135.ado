@@ -221,6 +221,8 @@ Jan - February
 25.01.2019 - added program xtdcce_m_touseupdate for a more efficient and quicker way to update touse after restore and preserve
 		   - blockdiaguse option for use of block diagonal matrix in m_reg program (thanks to Achim Ahrens!)
 		   - fixed bug in jackknife in combination with if (thanks to Collin Rabe). Changed calculation of jackknife split time point.
+		   - capture around tsfill
+13.02.2019 - fixed bug in alterantive for blockdiag use
 */
 *capture program drop xtdcce2134
 program define xtdcce2135 , eclass sortpreserve
@@ -334,6 +336,10 @@ program define xtdcce2135 , eclass sortpreserve
 			xtdcce_err 199 `d_idvar' `d_tvar' , msg("xtset2 not installed.") msg2("To update, from within Stata type ")	msg_smcl(`"{net "describe xtset2 , from(http://www.ditzen.net/Stata/) "}"')
 		}
 		
+		** check if lr_options are ok. if ardl used, no other can be used
+		if strmatch("`lr_options'","*ardl*") == 1 & wordcount("`lr_options'") > 1 {
+			xtdcce_err 184 `d_idvar' `d_tvar' , msg("options ardl and xtpmgnames or nodivide may not be combined.")			
+		}
 		
 		qui{		
 			tempname m_idt
@@ -353,11 +359,15 @@ program define xtdcce2135 , eclass sortpreserve
 			*is in date format.
 			tempvar inital_touse
 			gen `inital_touse' = 1
-			tsfill, full
-			egen `tvar' = group(`d_tvar')
-			keep if `inital_touse' == 1 
-			drop `inital_touse'			
-			
+			capture tsfill, full
+			if _rc == 0 {
+				egen `tvar' = group(`d_tvar')
+				keep if `inital_touse' == 1 
+				drop `inital_touse'			
+			}
+			else {
+				xtdcce_err 199 `d_idvar' `d_tvar' , msg("Cannot balance panel. Please make sure neither `d_idvar' nor `d_tvar' contain missings.")
+			}
 			sort `idvar' `tvar'
 			gen `id_t' = _n
 
@@ -437,7 +447,7 @@ program define xtdcce2135 , eclass sortpreserve
 					capture ivreg2, version
 					if _rc != 0 {
 						restore					
-						xtdcce_err 199 `d_idvar' `d_tvar' , msg("ivreg2 not installed.") msg2("To update, from within Stata type ")	msg_smcl("{stata ssc install ivreg2, replace :ssc install ivreg2, replace}"	)			
+						xtdcce_err 199 `d_idvar' `d_tvar' , msg("ivreg2 not installed.") msg2("To update, from within Stata type ")	msg_smcl("{stata ssc install ivreg2, replace :ssc install ivreg2, replace}")			
 					}
 					
 				}
@@ -1922,7 +1932,7 @@ mata:
 end
 
 **** Error program
-*capture program drop xtdcce_err
+capture program drop xtdcce_err
 program define xtdcce_err
 	syntax anything , msg(string) [msg2(string) msg_smcl(string)]
 	tokenize `anything'
@@ -1931,10 +1941,10 @@ program define xtdcce_err
 	local tvar `3'
 	
 	tsset `2' `3'
-	di as error _n  "`msg'" 
+	di as error _n  "`msg'"
 	if "`msg2'" != "" {
 		di as error  "`msg2'" _c
-		di in smcl   "`msg_smcl'"
+		di in smcl   `"`msg_smcl'"'
 	}
 	exit `code'
 end
@@ -2015,20 +2025,24 @@ mata:
 		pooled_d = 0
 		exo = 0
 		num_K = 0
+		num_Kp = 0
+		num_Kmg
 		if (cols(tokens(variablenames)) > 1) {
 			rhs = tokens(variablenames)[2..cols(tokens(variablenames))]
 			mg_d = 1
-			num_K = cols(rhs)
+			num_Kmg = cols(rhs)
+			num_K = num_Kmg
 		}
 		if (cols(tokens(ccep)) > 0) {
 			pooled = tokens(ccep)
 			pooled_d = 1
-			num_K = num_K + cols(ccep)
+			num_Kp = cols(ccep)
+			num_K = num_K + num_Kp
 		}
 		if (args() < 16) {
 			fast = 0
 		}
-		if (args() == 17) {
+		if (args() < 17) {
 			if (input_exo != "") {
 				exo_vars = tokens(input_exo)
 				if (cols(exo_vars) > 0 ) {
@@ -2043,7 +2057,7 @@ mata:
 		else {
 			input_exo = ""
 		}
-		if (args() == 16) {
+		if (args() < 16) {
 			if (fast == 1) { 
 				/// dummy output_cov
 				output_cov = .
@@ -2052,8 +2066,16 @@ mata:
 				fast = 0
 			}
 		}
+		"mg - pooled "
+		(mg_d , pooled_d)
 		"fast, exo"
 		(fast, exo)
+		"rhs"
+		(rhs)
+		"blockdiag"
+		(blockdiaguse)
+		"K_mg , K_poolled, K_total"
+		(num_Kmg , num_Kp, num_K)
 		"args processed"
 		id = st_data(.,id_var,touse)
 		
@@ -2070,9 +2092,6 @@ mata:
 			b_output = cholqrsolve(X_p_X_p,X_p_Y)	
 			outputnames = pooled
 		}
-
-		"rows X"
-		(rows(X),cols(X))
 		
 		if (mg_d == 1 ){
 			"rows X"
@@ -2097,12 +2116,17 @@ mata:
 					NT = rows(X_o)
 					///"num_k, N, T"
 					///(num_K,N,T)
-					X = J(NT,num_K*N,0)
+					/// here no pooled vars. if mixed model, pooled vars will be added later
+					X = J(NT,num_Kmg*N,0)
+					"rows X, cols X"
+					(rows(X),cols(X))
 					posCol = 1
 					posRow = 1
 				}
 				"start doing cross specific reg"
 				while (i <= rows(uniqueid)) {
+					"Start cu "
+					i
 					indic = (id :== uniqueid[i])
 					tmp_x = select(X_o,indic)
 					/// if mg only, do regression for each country seperately					
@@ -2121,8 +2145,10 @@ mata:
 						T = rows(tmp_x)
 						///posCol = num_K*i - num_K + 1
 						///posRow = T*i - T + 1
-						posColEnd = posCol + num_K-1
+						posColEnd = posCol + num_Kmg-1
 						posRowEnd = posRow + T-1
+						"posColEnd,posRowEnd,T"
+						(posColEnd,posRowEnd,T)
 						X[(posRow..posRowEnd),(posCol..posColEnd)] = tmp_x
 						posCol = posColEnd + 1
 						posRow = posRowEnd + 1
@@ -3062,3 +3088,4 @@ mata:
 		}	
 	}
 end
+
