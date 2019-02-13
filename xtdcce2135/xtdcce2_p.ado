@@ -8,9 +8,10 @@ Changelog
 August 2018- added ardl and long run function
 		   - added * to drop to all to overwrite cofficients etc.
 Oct   2018 - changed xtdcce2133 to xtdcce2 in line 37
+13.02.2019 - fixed bug if option xtpmgnames used
 */
 *capture program drop xtdcce2_p
-program define xtdcce2_p
+program define xtdcce2135_p
 	syntax anything [in] [if] [, replace *]
 	*local options `*'
 	if "`replace'" != "" {
@@ -23,9 +24,9 @@ program define xtdcce2_p
 	xtdcce2_p_int `anything' `if' `in', `options'
 end
 
-*capture program drop xtdcce2_p_int
+capture program drop xtdcce2_p_int
 program define xtdcce2_p_int 
-	syntax newvarname(max=1 generate) [in] [if] , [Residuals xb COEFFicient stdp se partial CFResiduals ]
+	syntax newvarname(max=1 generate) [in] [if] , [Residuals xb COEFFicient stdp se partial CFResiduals xb2]
 	
 	*marksample for in if of predict command
 	marksample touse, novarlist
@@ -34,7 +35,7 @@ program define xtdcce2_p_int
 		display as error "Only after xtdcce2, last command is `e(cmd)'"
 		exit
 	}
-	qui `e(cmd)' , version
+	qui xtdcce2135 , version
 	if `e(version)' < 1.2 {
 		display as error "predict requires version 1.2 or higher"
 		display as error "To update, from within Stata type " _c
@@ -42,19 +43,27 @@ program define xtdcce2_p_int
 		exit
 	}
 	
-	local nopts : word count `residuals' `xb' `coefficient' `stdp' `se' `partial' `cfresiduals'
+	local nopts : word count `residuals' `xb' `xb2' `coefficient' `stdp' `se' `partial' `cfresiduals'
     if `nopts' >1 {
         display "{err}only one statistic may be specified"
         exit 498
     }
 	else if `nopts' == 0 {
-		display in gr "(option xb assumed; fitted values)"
+		display in gr "(option xb assumed; fitted values; common factors partialled out)"
 		local xb "xb"
 	}
+	
+	if "`xb2'" == "xb2" {
+		display in gr "(option xb assumed; fitted values; common factors included)"
+	}
+	
 	**For residuals including common factors, first predict xb, then subtract them from Y
 	if "`cfresiduals'" != "" {
 		local xb "xb"
 	}
+	
+
+	
 	qui{
 		tsset
 
@@ -85,6 +94,7 @@ program define xtdcce2_p_int
 		local cr_options "`e(cr_options)'"		
 		local lr_vars "`e(lr)'"	
 		
+		
 		** check if constant in lr_vars
 		local cons_lr = strmatch("`lr_vars'","*_cons*")
 		
@@ -98,14 +108,39 @@ program define xtdcce2_p_int
 			local lr_vars = subinword("`lr_vars'","_cons","",.)
 		}		
 		
+		** if xtpmgnames used, rename ec into first of LR. Check all varlists and change names in ebi and evi
+		
+		tempname ebi evi
+		matrix `ebi' = e(bi)
+		matrix `evi' = e(Vi)
+		local xtpmgnames = 0
+		local lr_options "`e(lr_options)'"
+		
+		if strmatch("`lr_options'","*xtpmgnames*") == 1 {
+			local xtpmgnames = 1
+			local lr1 "`e(p_lr_1)'"
+			local pooled_vars = subinword("`pooled_vars'","ec","`lr1'",.)
+			local mg_vars = subinword("`mg_vars'","ec","`lr1'",.)
+			local cr_vars = subinword("`cr_vars'","ec","`lr1'",.)
+			local lr_vars = subinword("`lr_vars'","ec","`lr1'",.)
+			
+			local coln : colnames `ebi'
+			local coln = subinword("`coln'","ec","`lr1'",.)
+			matrix colnames `ebi' = `coln'
+			local coln : colnames `evi'
+			local coln = subinword("`coln'","ec","`lr1'",.)
+			matrix colnames `evi' = `coln'
+			matrix rownames `evi' = `coln'
+			
+		}
+		
 		local o_lhs `lhs'
 		local o_mg_vars `mg_vars'
 		local o_pooled_vars `pooled_vars'
-		local o_lr_vars "`lr_vars'"
+		local o_lr_vars "`lr_vars'"		
 		
-		local lr_options "`e(lr_options)'"
 		
-				** trend
+		** trend
 		if strmatch("`pooled_vars' `mg_vars' `cr_vars' `lr_vars'","*trend*") == 1 {
 			tempvar trend
 			gen double `trend' = `tvar'
@@ -310,11 +345,11 @@ program define xtdcce2_p_int
 
 		**calculate coefficients
 		tempname coeff xbc
-		matrix `coeff' = e(bi)
+		matrix `coeff' = `ebi'
 		if "`se'" == "se" {
-			matrix `coeff' = e(Vi)
+			matrix `coeff' = `evi'
 			mata st_matrix("`coeff'",sqrt(diagonal(st_matrix("`coeff'")))')
-			local coln : colnames e(Vi)
+			local coln : colnames `evi'
 			matrix colnames `coeff' = `coln'
 		}
 		gen double `xbc' = 0 if `touse'
@@ -348,13 +383,21 @@ program define xtdcce2_p_int
 				
 			}
 		}
-		  
-		foreach var in `mg_vars' `pooled_vars' {
-			replace `xbc' = `xbc' + `c_`var'' * `var'  if `touse'
-			
+		if "`xb2'" == "" {  
+			foreach var in `mg_vars' `pooled_vars' {
+				replace `xbc' = `xbc' + `c_`var'' * `var'  if `touse'
+			}
+		}
+		else {
+			local j = 1
+			foreach var in `o_mg_vars' `o_pooled_vars' {			
+				local ji = word("`mg_vars' `pooled_vars'",`j')
+				replace `xbc' = `xbc' + `c_`ji'' * `var'  if `touse'
+				local j = `j' + 1
+			}
 		}
 		
-		if "`xb'" == "xb" {
+		if "`xb'" == "xb" | "`xb2'" == "xb2" {
 			replace `newvar' = `xbc'   if `touse'
 			label var `newvar' "xb"
 		}
@@ -409,7 +452,7 @@ program define xtdcce2_p_int
 			}
 		}
 		if "`stdp'" == "stdp" {
-			local v_order: colnames e(Vi)
+			local v_order: colnames `evi'
 			foreach var in `o_mg_vars' {
 				foreach i in `ctry_list' { 
 					local o_mg_vars_id `o_mg_vars_id' `var'_`i'
@@ -431,7 +474,7 @@ program define xtdcce2_p_int
 				}			
 				tempname m_V m_x m_h
 				putmata `m_x' = (`v_order_n') `idt' if `touse' , replace
-				mata `m_V' = st_matrix("e(Vi)")
+				mata `m_V' = st_matrix("`evi'")
 				mata `newvar' = `m_x'*`m_V'*`m_x''
 				mata `newvar'  = sqrt(diagonal(`newvar'))
 			restore
@@ -457,9 +500,11 @@ program define xtdcce2_p_int
 			replace `newvar' = `lhs' - `newvar' if `touse'
 			label var `newvar' "Residuals + cf"
 		}
-	
-		capture drop ec
-		capture rename `ec_save' ec
+		
+		if `xtpmgnames' == 1 {
+			capture rename `newvar'_`=strtoname("`lr1'")' `newvar'_ec
+		}	
+		
 		tsset `d_idvar' `d_tvar'
 	} 
 end
