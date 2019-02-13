@@ -646,15 +646,14 @@ Ditzen, J. 2018. xtdcce2: Estimating dynamic common correlated effects in Stata.
 
 The latest versions can be obtained via
 ```
-net from https://github.com/JanDitzen/xtdcce2
+net install xtdcce2 , from("https://janditzen.github.io/xtdcce2/")
 ```
-or
+or including beta versions
+```
+net from https://janditzen.github.io/xtdcce2/
+```
 
-```
-net install xtdcce2 , from("https://github.com/JanDitzen/xtdcce2")
-```
-
-and beta versions including a full history of xtdcce2 from
+and a full history of xtdcce2, pre version 1.34 from
 
 ```
 net from http://www.ditzen.net/Stata/xtdcce2_beta
