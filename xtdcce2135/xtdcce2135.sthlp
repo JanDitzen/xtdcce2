@@ -212,6 +212,10 @@ It will, however, continue estimating the cross sectional sepecific coefficients
 The mean group estimates will be consistent.
 For further reading see, Chudik, Pesaran (2015, Journal of Econometrics), Assumption 6 and page 398.{p_end}
 
+{p 4 4} {cmd:xtdcce2} evaluates the rank condition further. 
+The rank condition can fail if the constant is partialled out and one or more variables are binary.
+In the case {cmd:xtdcce2} restarts, however forces the constant to be calculated.{p_end}
+
 {p 2}{ul: i) Mean Group}{p_end}
 
 {p 4 4} If no cross sectional averages are added (d(i) = 0), then the estimator is the Mean Group Estimator as proposed by Pesaran and Smith (1995).
@@ -684,11 +688,11 @@ xtdcce2 from {stata "net from http://www.ditzen.net/Stata/xtdcce2_beta"}.{p_end}
 
 {marker ChangLog}{title:Changelog}
 {p 4 8}This version: 1.35 - 26. February 2019{p_end}
-{p 4 10} - Bug fix in calculation of minimal T dimension, added option nodimcheck.{p_end}
-{p 4 10} - Speed improvements (thanks to Achim Ahrens for the suggestions).{p_end}
-{p 4 10} - Bug fixes for jackknife (thanks to Collin Rabe for the pointer).{p_end}
-{p 4 10} - Bug fix in predict (thanks for Deniey A. Purwanto and Tullio Gregoi for the pointers).{p_end}
-{p 4 10} - Bug fix if binary variable used and constant partialled out.{p_end}
+{p 8 10} - Bug fix in calculation of minimal T dimension, added option nodimcheck.{p_end}
+{p 8 10} - Speed improvements (thanks to Achim Ahrens for the suggestions).{p_end}
+{p 8 10} - Bug fixes for jackknife (thanks to Collin Rabe for the pointer).{p_end}
+{p 8 10} - Bug fix in predict (thanks for Deniey A. Purwanto and Tullio Gregoi for the pointers).{p_end}
+{p 8 10} - Bug fix if binary variable used and constant partialled out.{p_end}
 {p 4 8}Version 1.33 to Version 1.34{p_end}
 {p 8 10} - small bug fixes in code and help file.{p_end}
 {p 4 8}Version 1.32 to Version 1.33{p_end}
