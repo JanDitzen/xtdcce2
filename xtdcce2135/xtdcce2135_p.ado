@@ -38,13 +38,6 @@ program define xtdcce2_p_int
 		display as error "Only after xtdcce2, last command is `e(cmd)'"
 		exit
 	}
-	*qui xtdcce2135 , version
-	*if `e(version)' < 1.2 {
-	*	display as error "predict requires version 1.2 or higher"
-	*	display as error "To update, from within Stata type " _c
-	*	display as smcl	"{stata ssc install xtdcce2, replace :ssc install xtdcce2, replace}"
-	*	exit
-	*}
 	
 	local nopts : word count `residuals' `xb' `xb2' `coefficient' `stdp' `se' `partial' `cfresiduals'
     if `nopts' >1 {
@@ -381,7 +374,6 @@ program define xtdcce2_p_int
 				if strmatch("`options'","*nodivide*") == 0 & "`residuals'`xb'" != ""  {
 					gettoken first rest : lr_vars_adj					
 					foreach var in `rest' {						
-						*replace `var' = - `var' * `first' if `touse'
 						replace `c_`var'' = -`c_`var'' * `c_`first'' if `touse'
 					}
 				}
