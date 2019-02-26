@@ -1,6 +1,6 @@
 {smcl}
 {hline}
-{hi:help xtdcce2}{right: v. 135 - 14. February 2019}
+{hi:help xtdcce2}{right: v. 135 - 26. February 2019}
 {right:SJ18-3: st0536}
 {hline}
 {title:Title}
@@ -675,7 +675,7 @@ Journal of the American Statistical Association 94(446): 621-634.{p_end}
 {p 4 4}{cmd:xtdcce2} was formally called {cmd:xtdcce}.{p_end}
 
 {p 4 8}Please cite as follows:{break}
-Ditzen, J. 2018. xtdcce2: Estimating dynamic common correlated effects in Stata. The Stata Journal. Forthcoming.
+Ditzen, J. 2018. xtdcce2: Estimating dynamic common correlated effects in Stata. The Stata Journal. 18:3, 585 - 617.
 {p_end}
 
 {p 4 8}The latest versions can be obtained via {stata "net from https://github.com/JanDitzen/xtdcce2"} 
@@ -683,11 +683,12 @@ and beta versions including a full history of
 xtdcce2 from {stata "net from http://www.ditzen.net/Stata/xtdcce2_beta"}.{p_end}
 
 {marker ChangLog}{title:Changelog}
-{p 4 8}This version: 1.35 - 31. January 2019{p_end}
-{p 4 10}  - Bug fix in calculation of minimal T dimension, added option nodimcheck.{p_end}
-{p 4 10}  - Speed improvements (thanks to Achim Ahrens for the suggestions).{p_end}
-{p 4 10}  - Bug fixes for jackknife (thanks to Collin Rabe for the pointer).
-{p 4 10}  - Bug fix in predict when option xtpmgnames used (thanks for Deniey A. Purwanto for the pointer).{p_end}
+{p 4 8}This version: 1.35 - 26. February 2019{p_end}
+{p 4 10} - Bug fix in calculation of minimal T dimension, added option nodimcheck.{p_end}
+{p 4 10} - Speed improvements (thanks to Achim Ahrens for the suggestions).{p_end}
+{p 4 10} - Bug fixes for jackknife (thanks to Collin Rabe for the pointer).{p_end}
+{p 4 10} - Bug fix in predict (thanks for Deniey A. Purwanto and Tullio Gregoi for the pointers).{p_end}
+{p 4 10} - Bug fix if binary variable used and constant partialled out.{p_end}
 {p 4 8}Version 1.33 to Version 1.34{p_end}
 {p 8 10} - small bug fixes in code and help file.{p_end}
 {p 4 8}Version 1.32 to Version 1.33{p_end}
