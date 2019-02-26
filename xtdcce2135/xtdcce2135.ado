@@ -213,7 +213,7 @@ Jan - February
 28.08.2018 - check if dependend variable occurs multiple times on rhs.
 29.08.2018 - added lr_pooled and lr_mg to hidden output for predict
 ----------------------------------------xtdcce2134
-26.10.2018 - fixed bug that mean group variables are not show for CS ARDL model
+26.10.2018 - fixed bug that mean group variables are not showen for CS ARDL model
 		   - renamed p and estat to xtdcce2_p and xtdcce2_estat rather than including the version.
 		   - removed capture program drop for program definitions
 ----------------------------------------xtdcce2135
@@ -225,6 +225,7 @@ Jan - February
 13.02.2019 - fixed bug in alterantive for blockdiag use
 14.02.2019 - fixed bug in jackknife, see https://github.com/JanDitzen/xtdcce2/issues/1
 		   - added option trace instead of noi
+21.02.2019 - fixed bug if binary variable and no reportconstant is used, partialling out can fail. if fails, then xtdcce2 restarts but does not partial the constant out	   
 */
 *capture program drop xtdcce2134
 program define xtdcce2135 , eclass sortpreserve
@@ -234,7 +235,7 @@ program define xtdcce2135 , eclass sortpreserve
 		exit
 	}
 	version 11.1
-	local xtdcce2_version = 1.34
+	local xtdcce2_version = 1.35
 	if replay() {
 		syntax [, VERsion replay * ] 
 		if "`version'" != "" {
@@ -276,9 +277,11 @@ program define xtdcce2135 , eclass sortpreserve
 			*/ EXOgenous_vars(varlist ts fv) ENDOgenous_vars(varlist ts fv) RESiduals(string) /*
 			Working options: */ oldrestore demean demeant demeanid  Weight(string)  xtdcceold ]
 		
-		tempvar  esmpl Y_tilde 
+		tempvar  esmpl Y_tilde
 		
-		local cmd_line xtdcce2 `0'
+		local xtdcce2v xtdcce2135
+		local cmd_line `xtdcce2v' `0'
+		
 		* Legacy Locals
 		if "`e_ivreg2'" != "" {
 			local fulliv "fulliv"
@@ -507,7 +510,7 @@ program define xtdcce2135 , eclass sortpreserve
 				local n_vars : list sizeof all_vars
 				
 				tempname mata_varlist
-				mata `mata_varlist' = (J(1,2,tokens("`all_vars'")') , J(`n_vars',10,"0"))			
+				mata `mata_varlist' = (J(1,1,tokens("`all_vars'")') , J(`n_vars',11,"0"))			
 				**change var lists such that all vars only included once (with exception for crosssectional
 				
 				
@@ -532,11 +535,14 @@ program define xtdcce2135 , eclass sortpreserve
 				local new_names : list new_names1 - full_list
 				local change: list  full_list - new_names1
 				
-
+			
 				**insert list in col 2:
 				if "`change'" != "" {
 					mata `mata_varlist'[ xtdcce2_mm_which2(`mata_varlist'[.,1] , tokens("`change'")),2] = tokens("`new_names'")'
 				}
+				
+
+				
 				**get those with more than 24 string char
 				mata st_local("list_long",invtokens(`mata_varlist'[xtdcce_m_selectindex(strlen(`mata_varlist'[.,2]):>23),2]'))
 				local i = 1
@@ -544,7 +550,7 @@ program define xtdcce2135 , eclass sortpreserve
 					tempname short_`i'
 					rename `var' `short_`i''
 					mata `mata_varlist'[xtdcce_m_selectindex(`mata_varlist'[.,1]:=="`var'"),2] = "`short_`i''"
-				}
+				}			
 				
 				*process lr list
 				local rest "`lr'"
@@ -559,6 +565,19 @@ program define xtdcce2135 , eclass sortpreserve
 					mata `mata_varlist'[`mata_indic',12] = J(rows(`mata_indic'),1,"`=word("`r(varlist)'",1)'")
 				}
 				capture mata mata drop `mata_indic'
+				
+				
+				** make all other vars tempnames
+				mata st_local("varsToChange",strofreal(rows(`mata_varlist')))
+				forvalues s = 1(1)`varsToChange' {
+					mata st_local("VarTemp",`mata_varlist'[`s',2])
+					if "`VarTemp'" == "0" {
+						mata st_local("VarToChange",`mata_varlist'[`s',1])
+						tempname short_`VarToChange'
+						rename `VarToChange' `short_`VarToChange''
+						mata `mata_varlist'[`s',2] = "`short_`VarToChange''"
+					}
+				}			
 				
 				**change varlists
 				local i = 3
@@ -789,7 +808,6 @@ program define xtdcce2135 , eclass sortpreserve
 						**refresh stats
 						drop `idvar'
 						egen `idvar' = group(`d_idvar') if `touse'
-						noi sum `idvar' `d_idvar' `touse'
 						xtset2 `idvar' `tvar' if `touse'
 						local N_g = `r(N_g)'
 						local N = `r(N)'
@@ -854,6 +872,7 @@ program define xtdcce2135 , eclass sortpreserve
 						}
 						drop `cr_mean' 
 					}
+					
 				}
 				**Add constant if heterogenous to list with variable to partialled out
 				if  "`constant_type'" == "1" {
@@ -864,7 +883,7 @@ program define xtdcce2135 , eclass sortpreserve
 				local num_adjusted = `num_partialled_out' 
 				*Restrict set and exclude variables with missings (25.1.2017 added clist)
 				markout `touse' `lhs' `pooled' `rhs' `exogenous_vars' `endogenous_vars' `endo_pooled' `exo_pooled' 	`clist1'
-
+				
 				** Check for omitted variables
 				if "`omitted'" == "" {
 					
@@ -952,16 +971,47 @@ program define xtdcce2135 , eclass sortpreserve
 						tempvar touse_ctry_jack
 						gen double `touse_ctry_jack' = 0
 						replace `touse_ctry_jack' = `touse_ctry' * `jack_indicator_a'
-						`noi' mata xtdcce_m_partialout("`jackvars'","`clist1'","`touse_ctry_jack'",`mrk'=.)
+						`tracenoi' mata xtdcce_m_partialout("`jackvars'","`clist1'","`touse_ctry_jack'",`mrk'=.)
 						replace `touse_ctry_jack' = `touse_ctry' * `jack_indicator_b'
-						`noi' mata xtdcce_m_partialout("`jackvars'","`clist1'","`touse_ctry_jack'",`mrk'=.)
+						`tracenoi' mata xtdcce_m_partialout("`jackvars'","`clist1'","`touse_ctry_jack'",`mrk'=.)
 					}
 					replace `touse_ctry' =  0
 					
 				}
 				drop `touse_ctry'
 				capture drop `touse_ctry_jack'
+				
+				**** If rank_cond fails, at least one variable is a dummy and reportc not used (const_type ==1), then restart but with reportc on
+				if `rank_cond' == 1 & `constant_type' == 1 {
+				
+					** Check if dummy variable
+					foreach var in `lhs' `pooled' `rhs' `exogenous_vars' `endogenous_vars' `endo_pooled' `exo_pooled' {
+						sum `var'
+						capture assert `var' == `r(max)' | `var' == `r(min)'
+						if _rc != 0 {						
+							mata st_local("tmp_var",`mata_varlist'[selectindex(`mata_varlist'[.,2]:=="`var'"),1])
+							local dummy_var "`dummy_var' `tmp_var'"
+						}
+					}
+					if "`dummy_var'" != "" {
+						noi disp as error "xtdcce2 detected dummy or binary variables and constant partialled out."
+						noi disp as error "Partialling failed likely due to binary variables."
+						noi disp as text "binary variables are: `dummy_var'."
+						noi disp as text "xtdcce2 restarts with option reportconstant."
+						noi disp as text "********************************************"
+						restore
+						tsset `d_idvar' `d_tvar'
+						noi `cmd_line' reportconst
+						exit
+					}					
+				}
 			}
+			`tracenoi' disp "Partialled out with touse"			
+			`tracenoi' tabstat `lhs' `pooled' `rhs' `exogenous_vars' `endogenous_vars' `endo_pooled' `exo_pooled' if `touse', s(N mean sd min max) save
+			tempname PartialOutStat
+			matrix `PartialOutStat' = r(StatTotal)
+			cap mata st_local("RowNameP",invtokens(`mata_varlist'[mm_which2(`mata_varlist'[.,2],tokens("`lhs' `pooled' `rhs' `exogenous_vars' `endogenous_vars' `endo_pooled' `exo_pooled'")),1]'))
+			cap matrix colnames `PartialOutStat' = `RowNameP'
 	*************************************************************************************************************
 	**************************************Regression*************************************************************
 	*************************************************************************************************************
@@ -970,7 +1020,6 @@ program define xtdcce2135 , eclass sortpreserve
 			sort `idvar' `tvar'
 
 			tempname cov_i sd_i t_i stats_i b_i
-			
 			tempvar residuals_var	 
 			local residuals `residuals_var'
 				
@@ -1253,11 +1302,19 @@ program define xtdcce2135 , eclass sortpreserve
 			******************************Regression End************************************
 			***CD Test			
 			if "`cd'" == "" & "`fast'" == "0" {	
+				`tracenoi' display "Residuals"
+				`tracenoi' sum `residuals' if `touse'
+				tempname res_check
+				matrix `res_check' = (r(N),r(mean),r(sd),r(min),r(max))
 				capture xtcd2 `residuals' if `touse', noest 
-				if _rc != 0 {
+				if _rc == 199 {
 					noi display as error "xtcd2 not installed" 
-					local nocd nocd
+					local cd nocd
 					}
+				else if _rc != 0 {
+					noi display as error "xtcd2 caused error. Please do test by hand."
+					local cd nocd
+				}
 				else {
 					tempname cds cdp
 					scalar `cds' = r(CD)
@@ -1285,7 +1342,7 @@ program define xtdcce2135 , eclass sortpreserve
 					mata `lr_bases' =  `lr_bases'[`lr_select']
 					mata `lr_pooled' = `lr_pooled'[`lr_select']
 					
-					mata st_local("num_lr_vars_pooled",strofreal(sum(`lr_pooledm':==1)))
+					mata st_local("num_lr_vars_pooled",strofreal(sum(`lr_pooled':==1)))
 					if `num_lr_vars_pooled' > 0 {
 						mata st_local("lr_vars_pooled1",invtokens("lr_":+`lr_bases'[xtdcce_m_selectindex(`lr_pooled':==1)]'))
 					}
@@ -1452,6 +1509,9 @@ program define xtdcce2135 , eclass sortpreserve
 		mata st_view(`touse',.,st_addvar("double","`touse'"))
 		mata `touse'[.] = `touse'_s
 		mata mata drop `touse' `touse'_s 
+		
+		
+		
 		}
 		else {
 			mata st_view(`touse'=.,.,"`touse' `id_t'")
@@ -1462,6 +1522,7 @@ program define xtdcce2135 , eclass sortpreserve
 		`tracenoi' mata xtdcce_m_touseupdate("`touse'","`id_t'",`touse'_p)
 		mata mata drop `touse'_p
 	}
+	
 	****************************************************************************
 	***********************************Return***********************************
 	****************************************************************************
@@ -1557,6 +1618,8 @@ program define xtdcce2135 , eclass sortpreserve
 			ereturn hidden local p_in "`in'"
 			ereturn hidden scalar constant_type = `constant_type'
 			ereturn hidden local lr_options "`lr_options'"
+			ereturn hidden matrix ResidualStat = `res_check'
+			ereturn hidden matrix PartialOutStat = `PartialOutStat'
 		}
 		if "`cd'" == "" {
 			ereturn scalar cd = `cds'
@@ -1991,7 +2054,10 @@ mata:
 		p_ncols = ncols
 		p_nrows = nrows
 		p_expres = expres
-		
+		"Point by Point"
+		(p_ncols )
+		(p_nrows)
+		(p_expres)
 		if (cols(p_ncols) == 1 & cols(p_nrows) > 1) p_ncols = J(1,cols(p_nrows),p_ncols)
 		if (cols(p_ncols) > 1 & cols(p_nrows) == 1) p_nrows = J(1,cols(p_ncols),p_nrows)
 		if (cols(expres) == 1 & rows(expres) == 1& cols(p_nrows) > 1 & cols(p_ncols) > 1) p_expres = J(1,cols(p_nrows),p_expres)
@@ -2012,6 +2078,7 @@ program define xtdcce_err
 	local tvar `3'
 	
 	tsset `2' `3'
+	
 	di as error _n  "`msg'"
 	if "`msg2'" != "" {
 		di as error  "`msg2'" _c
@@ -2217,8 +2284,6 @@ mata:
 						///posRow = T*i - T + 1
 						posColEnd = posCol + num_Kmg-1
 						posRowEnd = posRow + T-1
-						"posColEnd,posRowEnd,T"
-						(posColEnd,posRowEnd,T)
 						X[(posRow..posRowEnd),(posCol..posColEnd)] = tmp_x
 						posCol = posColEnd + 1
 						posRow = posRowEnd + 1
@@ -2576,10 +2641,7 @@ mata:
 			j = 1
 			while (j <= N) {				
 				varn = v_names_mg[1,i]+"_"+strofreal(uniqueid[j])
-				varn
-				xtdcce_m_selectindex(bi_names:==varn)
 				b_mg_w[i,j] = bi[1,xtdcce_m_selectindex(bi_names:==varn)]
-				(i,j)
 				j++
 			}
 			i++
@@ -2609,7 +2671,7 @@ mata:
 			b_1p = b_mg_wmix :- b_mg4p'
 		}
 		"coff done"
-		///covariance for pooled vars
+		///covariance for pooled varsF
 		if (ind_pooled != -1) {
 			"in pooled"
 			///construct R and PSI for Cov	
@@ -2672,9 +2734,10 @@ mata:
 			
 			"covariance for pooled done"
 			cov_p
-			"covariance for LR pooled vars start"
-			if (args() >12) {
+			
+			if (args() >12) {				
 				if (exclude_p_vars[1]!= "") {
+					"covariance for LR pooled vars start"
 					cov_srp = cov_p[1..cols(input_pooled_vnames_tmp),1..cols(input_pooled_vnames_tmp)]					
 					i = 1
 					m_g = J(cols(exclude_p_vars),cols(cov_srp),0)
@@ -2693,7 +2756,9 @@ mata:
 					cov_lrp = m_g * cov_srp * m_g'
 					///input_pooled_vnames = (input_pooled_vnames,exclude_p_vars)
 					cov_p = blockdiag(cov_srp,cov_lrp)
-				}
+					"lr cov with delta method"
+					cov_p
+				}				
 			}
 			
 		}		
@@ -2777,7 +2842,7 @@ mata:
 		
 		if (cols(lr_vars)>1) {
 			"Long Run corrections"
-			//// pmg part
+			//// ecm/pmg part
 			if (strmatch(lr_options,"*ardl*") == 0) {
 				if (strmatch(lr_options,"*nodivide*") == 0) {			
 					lr_1 = lr_vars[1]
@@ -3176,3 +3241,4 @@ mata:
 		}	
 	}
 end
+
