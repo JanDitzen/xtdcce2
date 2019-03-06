@@ -988,7 +988,7 @@ program define xtdcce2135 , eclass sortpreserve
 					foreach var in `lhs' `pooled' `rhs' `exogenous_vars' `endogenous_vars' `endo_pooled' `exo_pooled' {
 						sum `var'
 						capture assert `var' == `r(max)' | `var' == `r(min)'
-						if _rc != 0 {						
+						if _rc == 0 {						
 							mata st_local("tmp_var",`mata_varlist'[selectindex(`mata_varlist'[.,2]:=="`var'"),1])
 							local dummy_var "`dummy_var' `tmp_var'"
 						}
