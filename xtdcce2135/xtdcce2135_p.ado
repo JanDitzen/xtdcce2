@@ -48,14 +48,16 @@ program define xtdcce2_p_int
 		display in gr "(option xb assumed; fitted values; common factors partialled out)"
 		local xb "xb"
 	}
+
 	
 	if "`xb2'" == "xb2" {
-		display in gr "(option xb assumed; fitted values; common factors included)"
+		display in gr "(option xb2 assumed; fitted values; common factors included)"
 	}
+	
 	
 	**For residuals including common factors, first predict xb, then subtract them from Y
 	if "`cfresiduals'" != "" {
-		local xb "xb"
+		local xb2 "xb2"
 	}
 	
 
@@ -303,14 +305,19 @@ program define xtdcce2_p_int
 			
 			local cr_options "`cr_options' `exo_cr'"
 			
+			sort `idvar' `tvar'
+			
 			tokenize "`cr_options'" 
 			while "`1'" != "" {
 				local var `1'
 				local lags_i `2'
 				macro shift
 				macro shift
-				** create var
-				by `tvar' , sort: egen double `cr_mean' = mean(`var') if `smpl' /*was touse*/
+				** check if variable has ts operators
+				tsrevar `var'
+				local var `r(varlist)'
+				
+				by `tvar'  , sort: egen double `cr_mean' = mean(`var') if `smpl' /*was touse*/
 				forvalues lag=0(1)`lags_i' {
 					sort `idvar' `tvar'
 					tempvar L`lag'_m_`var'
@@ -494,7 +501,7 @@ program define xtdcce2_p_int
 			}
 		}
 		if "`cfresiduals'" != "" {
-			replace `newvar' = `lhs' - `newvar' if `touse'
+			replace `newvar' = `o_lhs' - `newvar' if `touse'
 			label var `newvar' "Residuals + cf"
 		}
 		
