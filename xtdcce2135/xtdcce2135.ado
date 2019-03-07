@@ -226,6 +226,7 @@ Jan - February
 14.02.2019 - fixed bug in jackknife, see https://github.com/JanDitzen/xtdcce2/issues/1
 		   - added option trace instead of noi
 21.02.2019 - fixed bug if binary variable and no reportconstant is used, partialling out can fail. if fails, then xtdcce2 restarts but does not partial the constant out	   
+07.03.2019 - fixed bug if "if" used on panel ids. In old version the partialling out was done on the wrong units.
 */
 *capture program drop xtdcce2134
 program define xtdcce2135 , eclass sortpreserve
@@ -842,13 +843,15 @@ program define xtdcce2135 , eclass sortpreserve
 						replace `touse' = 0 if `tvar' <= `cr_lags' 
 					}
 				}
-				
+*******************************************************************************************************		
+********************** Calculation of CSA
+*******************************************************************************************************					
 				***Specify sample - if fullsample then ignore touse
 				if "`fullsample'" != "" {
 					local tousecr
 					if "`if'" != "" {
 						local tousecr "`tousecr' if `if'"
-					}
+										}
 					if "`in'" != "" {
 						local tousecr "`tousecr' in `in'"
 					}
@@ -857,14 +860,14 @@ program define xtdcce2135 , eclass sortpreserve
 				else {
 					local tousecr "if `touse'"
 				}
-		
+	
 				*create CR Lags
 				if "`crosssectional'" != "" {					
 					tempvar cr_mean					
 					foreach var in `crosssectional' {
 						*get number of lags						
 						mata st_local("n_lag",`mata_varlist'[xtdcce2_mm_which2(`mata_varlist'[.,2],"`var'"),11])
-						by `tvar' , sort: egen double `cr_mean' = mean(`var')  `tousecr'
+						by `tvar' , sort: egen double `cr_mean' = mean(`var')  `tousecr' 
 						sort `idvar' `tvar'
 						forvalues lag=0(1)`n_lag' {							
 							gen double L`lag'_m_`var' = L`lag'.`cr_mean'  if `touse'
@@ -953,9 +956,12 @@ program define xtdcce2135 , eclass sortpreserve
 				tempname mrk
 				local mata_drop `mata_drop' `mrk'
 				gen double `touse_ctry' = 0
-				sort `idvar' `tvar'	
-				forvalues ctry = 1(1)`N_g' {
-					replace `touse_ctry' =  1 if `touse'  & `ctry' == `idvar'
+				*sort `idvar' `tvar'	
+				tempvar idvarpart
+				egen `idvarpart' = group(`idvar') if `touse'
+				sum `idvarpart'
+				forvalues ctry = 1(1)`r(max)' {
+					replace `touse_ctry' =  1 if `touse'  & `ctry' == `idvarpart'
 					`noi' mata xtdcce_m_partialout("`lhs' `pooled' `rhs' `exogenous_vars' `endogenous_vars' `endo_pooled' `exo_pooled'","`clist1'","`touse_ctry'",`mrk'=.)
 					
 					*Check if X1X1 matrix is full rank
@@ -2101,7 +2107,7 @@ mata:
 		"start partial out"
 		real matrix X1
 		real matrix X2
-		real matrix to
+		
 		st_view(X2,.,tokens(X2_n),touse)
 		st_view(X1,.,tokens(X1_n),touse)
 		X1X1 = quadcross(X1,X1)
@@ -2249,6 +2255,8 @@ mata:
 			if (exo == 0) {
 				"exo = 0"
 				uniqueid = uniqrows(id)
+				"over following ids"
+				uniqueid
 				if (blockdiaguse==0){
 					/// build X block diagonal
 					N = rows(uniqueid)
