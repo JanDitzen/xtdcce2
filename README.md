@@ -437,13 +437,13 @@ xtdcce2 d.log_rgdpo log_hc log_ck log_ngd , cr(_all) reportc
 Note, that as this is a static model, the lagged dependent variable does not occur and only contemporaneous cross sectional averages are used. Defining all independent and dependent variables in **crosssectional(_varlist_)** leads to the same result:
 
 ```
-xtdcce2 d.log_rgdpo log_hc log_ck log_ngd , reportc cr(d.log_rgdpo log_hc log_ck log_ngd)
+xtdcce2 d.log_rgdpo log_hc log_ck log_ngd , reportc cr(log_rgdpo log_hc log_ck log_ngd)
 ```
 
 The default for the number of cross sectional lags is zero, implying only contemporaneous cross sectional averages are used. Finally the number of lags can be specified as well using the **cr_lags** option.
 
 ```
-xtdcce2 d.log_rgdpo log_hc log_ck log_ngd , reportc cr(d.log_rgdpo log_hc log_ck log_ngd) cr_lags(0)
+xtdcce2 d.log_rgdpo log_hc log_ck log_ngd , reportc cr(log_rgdpo log_hc log_ck log_ngd) cr_lags(0)
 ```
 
 All three command lines are equivalent and lead to the same estimation results.
@@ -453,7 +453,7 @@ All three command lines are equivalent and lead to the same estimation results.
 The lagged dependent variable is added to the model again. To estimate the mean group coefficients consistently, the number of lags is set to 3:
 
 ```
-xtdcce2 d.log_rgdpo L.log_rgdpo log_hc log_ck log_ngd , reportc cr(d.log_rgdpo L.log_rgdpo  log_hc log_ck log_ngd) cr_lags(3)
+xtdcce2 d.log_rgdpo L.log_rgdpo log_hc log_ck log_ngd , reportc cr(log_rgdpo  log_hc log_ck log_ngd) cr_lags(3)
 ```
 
 ### Using predict
@@ -496,7 +496,7 @@ If the option **replace** is used, then the _newvar_ is replaced if it exists.
 All coefficients can be pooled by including them in **pooled(_varlist_)**. The constant is pooled by using the **pooledconstant** option:
 
 ```
-xtdcce2 d.log_rgdpo L.log_rgdpo log_hc log_ck log_ngd , reportc cr(d.log_rgdpo L.log_rgdpo  log_hc log_ck log_ngd) pooled(L.log_rgdpo  log_hc log_ck log_ngd) cr_lags(3) pooledconstant
+xtdcce2 d.log_rgdpo L.log_rgdpo log_hc log_ck log_ngd , reportc cr(log_rgdpo  log_hc log_ck log_ngd) pooled(L.log_rgdpo  log_hc log_ck log_ngd) cr_lags(3) pooledconstant
 ```
 
 ## 7.5 Instrumental Variables
@@ -504,7 +504,7 @@ xtdcce2 d.log_rgdpo L.log_rgdpo log_hc log_ck log_ngd , reportc cr(d.log_rgdpo L
 Endogenous variables can be instrumented by using options **endogenous_vars(_varlist_)** and **exogenous_vars(_varlist_)**. Internally `ivreg2` estimates the individual coefficients. Using the lagged level of physical capital as an instrument for the contemporaneous level, leads to:
 
 ```
-xtdcce2 d.log_rgdpo L.log_rgdpo log_hc log_ck log_ngd  (log_ck = L.log_ck), reportc cr(d.log_rgdpo L.log_rgdpo  log_hc log_ck log_ngd) cr_lags(3) ivreg2options(nocollin noid)
+xtdcce2 d.log_rgdpo L.log_rgdpo log_hc log_ck log_ngd  (log_ck = L.log_ck), reportc cr(log_rgdpo  log_hc log_ck log_ngd) cr_lags(3) ivreg2options(nocollin noid)
 ```
 
 Further `ivreg2` options can be passed through using **ivreg2options**. Stored values in **e()** from **ivreg2options** can be posted using the option **fulliv**.
