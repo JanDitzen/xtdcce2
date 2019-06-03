@@ -227,6 +227,7 @@ Jan - February
 		   - added option trace instead of noi
 21.02.2019 - fixed bug if binary variable and no reportconstant is used, partialling out can fail. if fails, then xtdcce2 restarts but does not partial the constant out	   
 07.03.2019 - fixed bug if "if" used on panel ids. In old version the partialling out was done on the wrong units.
+03.06.2019 - fixed bug in T. SSR and SSE were mixed up.
 */
 *capture program drop xtdcce2134
 program define xtdcce2135 , eclass sortpreserve
@@ -259,6 +260,7 @@ program define xtdcce2135 , eclass sortpreserve
 			*/ POOLEDConstant /*
 			*/ REPORTConstant /*
 			*/ NOCONSTant /*
+			*/ pooledvce(string) /*
 			*/ full /* keep for legacy, replaced by showindividual
 			*/ SHOWIndividual /*
 			*/ nocd /*
@@ -314,6 +316,16 @@ program define xtdcce2135 , eclass sortpreserve
 		if "`residuals'" != "" {
 			local residuals_old `residuals'
 		}
+		
+		* alternative vce estimator for pooled covariance
+		*if "`pooledvce'" != "" {
+			if "`pooledvce'" == "wpn" {
+				local pooledvce = 1
+			}
+			else {
+				local pooledvce = 0
+			}
+		*}
 		
 		* fast option
 		if "`fast'" == "fast" {
@@ -1372,7 +1384,7 @@ program define xtdcce2135 , eclass sortpreserve
 			
 			***MG program
 			tempname b_mg cov sd t
-			`tracenoi' mata xtdcce_m_meangroup("`eb_asisi'","`eb_mgi'","`eb_pi'","`rhs' `endogenous_vars'  `lr_vars_mg'","`pooled' `endo_pooled' `lr_vars_pooled'","","`idvar'","`touse'","`b_mg'","`cov'","`sd'","`t'","`lr_vars_pooled'",`mata_varlist')
+			`tracenoi' mata xtdcce_m_meangroup("`eb_asisi'","`eb_mgi'","`eb_pi'","`rhs' `endogenous_vars'  `lr_vars_mg'","`pooled' `endo_pooled' `lr_vars_pooled'","","`idvar'","`touse'","`b_mg'","`cov'","`sd'","`t'","`lr_vars_pooled'",`mata_varlist',`pooledvce',"`residuals'" )
 			**read varlists back
 			local i = 3
 			foreach list in lhs rhs pooled crosssectional exogenous_vars endogenous_vars lr_1 lr_rest  {
@@ -2159,9 +2171,8 @@ mata:
 									string matrix mata_var_names, /// name of mata matrix with var names - 15
 									|real scalar fast, /// if 1 then no cov and stats are calculated -16
 									string scalar input_exo, /// name of exogenous vars - 17
-									real scalar blockdiaguse, /// blockdiag is used rather than own program - 18
-									real scalar bootstrapN , /// number of bootstrap runs - 19
-									string scalar bootstrapName) /// name of bootstrap mata matrix - 20
+									real scalar blockdiaguse) /// blockdiag is used rather than own program - 18
+									
 		{
 		"start m_reg"
 		(variablenames , ccep , lr_vars)
@@ -2441,20 +2452,18 @@ mata:
 				output_cov = XX_cov * s2
 				// check if constant	
 				has_c = 0
-				r2 = SSR/(SSR+SSE)	
+				///r2 = SSR/(SSR+SSE)	
+				r2 = SSE/(SSR+SSE)	
 				
 				if (sum((colsum(X):==rows(X)))) {
 					has_c = 1	
-
-                     r2 = 1 - SSR/(SSR+SSE)
-                    /// r2_a = 1 - (1-r2) * (N - 1) / (N - K - 1)
+					r2 = 1 - SSE/SST
+                    ///r2 = 1 - SSR/(SSR+SSE)                  
 
 				} 
-				else {
-					
+				else {					
                         SSR = sum((Y_hat):^2)
-                        r2 = SSR/(SSR+SSE)
-                      ///  r2_a = r2
+                        r2 = 1- SSE/SST
 
 				}
 				r2_a = 1 - (1-r2) * (N - 1) / (N - K - 1)
@@ -2525,9 +2534,6 @@ mata:
 			}		
 		}
 		"m_reg done"
-		
-		/// Bootstrap block. 
-		/// if (args() > 
 	}	
 end
 
@@ -2557,9 +2563,16 @@ mata:
 						string scalar output_sd, /// 11
 						string scalar output_t, /// 12
 						| string scalar exclude_p_vars,  /// 13 variables to be excluded for pooled covariance)
-						string matrix mata_varlist ) //// 14 varlist
+						string matrix mata_varlist , //// 14 varlist
+						real scalar FixedTVCE_name , //// 15 fixed T VCE estimator for pooled models, 1 then WPN estimator used, 0 otherwise
+						string scalar residuals_name) //// 16 name of residuals variable in stata. needed for fixed t vce estimator
 						
 	{
+		FixedTVCE = 0
+		if (args() > 14) {
+			FixedTVCE = FixedTVCE_name
+		}		
+		
 		"start mean group program"
 		id = st_data(.,idvar,touse) 
 		
@@ -2679,7 +2692,7 @@ mata:
 			b_1p = b_mg_wmix :- b_mg4p'
 		}
 		"coff done"
-		///covariance for pooled varsF
+		///covariance for pooled vars
 		if (ind_pooled != -1) {
 			"in pooled"
 			///construct R and PSI for Cov	
@@ -2708,38 +2721,75 @@ mata:
 				X = st_data(.,input_pooled_vnames,touse)
 			}			
 			
-			/// PSI is directly calculated in gauss
-			PSI = J(rows(b_pooled),cols(b_pooled),0)
-			/// R is Omega HS in gauss file
-			R = J(rows(b_pooled),cols(b_pooled),0)		
-			i = 1	
-			/// w contains weights, w_s is the sum of the squares.
-			w = J(N,1,1/N)
-			w_s = sum(w:^2)
-			while (i <= N) {			
-					///weight	
-					w_i = w[i]
-					w_tilde = w_i :/ sqrt(1/N :* w_s)
-					b_i1 = b_1p[.,i]
-					indic = (id :== uniqueid[i])
-					tmp_x = select(X,indic)
-					tmptmp = quadcross(tmp_x,tmp_x):/ rows(tmp_x)
-					///:/ rows(tmp_x)
-					///tmptmp1 = cholqrinv(tmptmp)
-					///eq. 68 Pesaran 2006
-					PSI = PSI :+ w_i :* tmptmp
-					/// eq. 26 from Pesaran, Tosetti (2011); no difference as long as weights 1/N
-					///PSI = PSI :+ w_i :* tmptmp 
-					///eq. 67 Pesaran 2006
-					R = R :+ w_tilde:^2 :* tmptmp*b_i1*b_i1'*tmptmp
-					i++
+			if (FixedTVCE == 0) {
+				"standard vce"
+				/// Standard VarianceCovarianceEstimator from Pesaran 2006
+				/// PSI is directly calculated as in gauss
+				PSI = J(rows(b_pooled),cols(b_pooled),0)
+				/// R is Omega HS in gauss file
+				R = J(rows(b_pooled),cols(b_pooled),0) 					
+				/// w contains weights, w_s is the sum of the squares.
+				w = J(N,1,1/N)
+				w_s = sum(w:^2)
+				i = 1	
+				while (i <= N) {			
+						///weight	
+						w_i = w[i]
+						w_tilde = w_i :/ sqrt(1/N :* w_s)
+						b_i1 = b_1p[.,i]
+						indic = (id :== uniqueid[i])
+						tmp_x = select(X,indic)
+						tmptmp = quadcross(tmp_x,tmp_x):/ rows(tmp_x)
+						///eq. 68 Pesaran 2006
+						PSI = PSI :+ w_i :* tmptmp
+						/// eq. 26 from Pesaran, Tosetti (2011); no difference as long as weights 1/N
+						///PSI = PSI :+ w_i :* tmptmp 
+						///eq. 67 Pesaran 2006
+						R = R :+ w_tilde:^2 :* tmptmp*b_i1*b_i1'*tmptmp
+						i++
+				}
+				///divide by N-1
+				R = R / (N - 1)
+				PSI1 = cholqrinv(PSI)
+				//// eq. 69 Pesaran 2006
+				cov_p =  w_s :* PSI1 * R * PSI1 
 			}
-			///divide by N-1
-			R = R / (N - 1)
-			PSI1 = cholqrinv(PSI)
-			//// eq. 69 Pesaran 2006
-			cov_p =  w_s :* PSI1 * R * PSI1 
-			
+			if (FixedTVCE == 1)  {
+				"wpn vce"
+				/// fixed T covariance estimator, from Westerlund et. al 2019. 
+				/// follows Cov = sigma^-1 S sigma^-1 with 
+				/// S = 1/N sum VeeV (Eq. 11)
+				/// sigma = 1/N sum VV (Eq. 10)
+				/// where V is X partialled out with cross sectional averages
+				
+				/// get b_p and order in same order as X
+				/// bpTfixed = st_matrix(b_pooled_name)
+				/// bpTfixed
+				/// (input_pooled_vnames,b_pooled_name)
+				/// mm_which2(input_pooled_vnames,b_pooled_name)
+				/// bpTfixed = bpTfixed[1,mm_which2(input_pooled_vnames,b_pooled_name)]
+				/// bpTfixed
+				/// Y = mata_varlist[selectindex(mata_varlist[.,3]:==1),2]
+				/// Y = st_data(.,Y,touse)
+				
+				e = st_data(.,residuals_name,touse)
+				sigma= J(cols(X),cols(X),0)
+				S = J(cols(X),cols(X),0) 
+				
+				i = 1
+				while (i <= N) {			
+						indic = (id :== uniqueid[i])
+						tmp_x = select(X,indic)
+						tmp_e = select(e,indic)
+						sigma = sigma :+  quadcross(tmp_x,tmp_x)
+						S = S:+ tmp_x' * tmp_e * tmp_e' * tmp_x
+						i++
+				}				
+				S = S:/N
+				sigma = cholqrinv(sigma:/N)
+				///sigma = cholqrinv(sigma)
+				cov_p = (sigma:*S:*sigma):/N
+			}
 			"covariance for pooled done"
 			cov_p
 			
