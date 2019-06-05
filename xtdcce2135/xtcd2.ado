@@ -1,4 +1,4 @@
-*! xtcd2 2.0 09Jan2017
+*! xtcd2 2.1 05June2019
 *! author Jan Ditzen
 *! see viewsource xtcd2.ado for more info.
 
@@ -33,6 +33,7 @@ Changelog:
 	10.03.2017 Changed output of CD and p-value
 	01.06.2017 Added version function.
 	31.10.2017 Cross sectional into cross-sectional renamed
+	05.06.2019 Added check which command used before.
 */
 cap program drop xtcd2
 program define xtcd2, rclass
@@ -41,18 +42,35 @@ program define xtcd2, rclass
 	version 10
 	
 	if "`version'" != "" {
-			di in gr "Version 1.2"
+			di in gr "Version 1.21"
 			*ereturn clear
-			ereturn local version 1.2
+			ereturn local version 1.21
 			exit	
 	}
 	
 	tempvar id_n time_new 
 	
-	display "Pesaran (2015) test for weak cross-sectional dependence"
+	display "Pesaran (2015) test for weak cross-sectional dependence."
 	preserve
 		if "`if'" != "" {
 			qui keep `if'
+		}
+		
+		** Check which estimation command
+		if "`noestimation'" == ""  & "`varlist'" == "" {
+			*** xtdcce2
+			if regexm("`e(cmd)'","xtdcce2") == 1 {
+				local restype residuals
+				disp in smcl "Residuals calculated using {it: predict, residuals} from {it:xtdcce2}."
+			}
+			else if regexm("`e(cmd)'","xtreg") == 1 {
+				local restype e
+				disp in smcl "Residuals calculated using {it: predict, e} from {it:`e(cmd)'}."
+			}
+			else {
+				local restype residuals
+				disp in smcl "Residuals calculated using {it: predict, residuals}."
+			}
 		}
 		
 		**Check if estimation
@@ -61,8 +79,9 @@ program define xtcd2, rclass
 
 			if "`varlist'" == "" {
 				tempname varlist
-				predict `varlist'  , residuals
-				display "Postestimation." , _continue
+				
+				predict `varlist'  , `restype'
+				
 			}
 			qui keep if e(sample) & `varlist' != .
 		}
@@ -73,6 +92,7 @@ program define xtcd2, rclass
 		**Test if sample exists
 		qui sum `varlist'
 		if "`r(N)'" == "0" {
+
 			display in red "Error: no sample set"
 			exit
 		}
@@ -106,6 +126,7 @@ program define xtcd2, rclass
 		mata: CD = sqrt(2/(`N'*(`N'-1)))*sum(RHO) // equation 62 and 69 in Chudik, Pesaran (2013) - note: the sqrt(T) from 62 is missing and moved to calculations above
 		mata: st_numscalar("CD", CD)
 		scalar p_value = 2*(1-normal(abs(CD)))
+		disp ""
 		display "H0: errors are weakly cross-sectional dependent." , 
 		return scalar p = p_value
 		return scalar CD = CD
