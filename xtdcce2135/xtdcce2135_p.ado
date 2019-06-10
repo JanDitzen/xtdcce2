@@ -284,6 +284,8 @@ program define xtdcce2_p_int
 		
 		
 		*create CR Lags
+		noi disp "ct `constant_type'"
+		noi disp ("`cr_vars'" != "" & "`xb'" == "") | `constant_type' == 1 | "`e(insts)'" != "" 
 		if ("`cr_vars'" != "" & "`xb'" == "") | `constant_type' == 1 | "`e(insts)'" != ""  {
 			tempvar cr_mean
 			
@@ -301,10 +303,11 @@ program define xtdcce2_p_int
 			}
 			if `constant_type' == 1 {
 				local cr_options "`cr_options' `constant' 0"
+				
 			}
 			
 			local cr_options "`cr_options' `exo_cr'"
-			
+			noi disp "options `cr_options'"
 			sort `idvar' `tvar'
 			
 			tokenize "`cr_options'" 
