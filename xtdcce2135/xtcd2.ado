@@ -1,4 +1,4 @@
-*! xtcd2 2.1 05June2019
+*! xtcd2 2.1 10Jun2019
 *! author Jan Ditzen
 *! see viewsource xtcd2.ado for more info.
 
@@ -33,7 +33,8 @@ Changelog:
 	10.03.2017 Changed output of CD and p-value
 	01.06.2017 Added version function.
 	31.10.2017 Cross sectional into cross-sectional renamed
-	05.06.2019 Added check which command used before.
+	05.06.2019 Added check which command used before
+	10.06.2019 Uses xtset2 to detect type of panel rather than xtset.
 */
 cap program drop xtcd2
 program define xtcd2, rclass
@@ -100,15 +101,11 @@ program define xtcd2, rclass
 		qui tsset 
 		local id "`r(panelvar)'" 
 		local timevar "`r(timevar)'"
-		local balanced = "`r(balanced)'"
+		local balanced  "`r(balanced)'"
 		sort `id' `timevar'
 		
 		egen `id_n' = group(`id')
 		egen `time_new' = group(`timevar')
-		qui sum `id_n'
-		local N = r(max)
-		qui sum `time_new' 
-		local T = r(max)
 		
 		if  "`balanced'" != "strongly balanced" {
 			local balanced = 0
@@ -119,7 +116,19 @@ program define xtcd2, rclass
 		if "`balanced'" == "strongly balanced" {
 			local balanced = 1
 		}
-				
+		cap qui xtset2 
+		if _rc != 0 {
+			noi disp "Please install xtset2 from xtdcce2 package."
+			noi disp "Panel information might be incorrect."
+			sum `id_n'
+			local N = r(max)
+			sum `time_new'
+			local T = r(max)
+		}
+		else {
+			local T = r(Tmax)
+			local N = r(N_g)
+		}
 		qui putmata r= `varlist'  , replace
 		mata: r = colshape(r,`T')'
 		mata: RHO = xtcd2_make_rho(r,`N',`T',`balanced')
