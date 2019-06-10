@@ -229,6 +229,8 @@ Jan - February
 07.03.2019 - fixed bug if "if" used on panel ids. In old version the partialling out was done on the wrong units.
 03.06.2019 - fixed bug in T. SSR and SSE were mixed up.
 		   - added option pooledvce(wpn) for westerlund et al standard errors for pooled regression with fixed T.
+10.06.2019 - added R2 for pooled and mg regressions. 
+		   - t-statistic in mg_reg was 1/t
 */
 *capture program drop xtdcce2134
 program define xtdcce2135 , eclass sortpreserve
@@ -2583,7 +2585,7 @@ mata:
 				st_matrix(output_sd_name,SD)
 				st_matrixcolstripe(output_sd_name,outputnames)
 				
-				t = SD:/b_output'			
+				t = b_output':/SD			
 				st_matrix(output_t_name,t)
 				st_matrixcolstripe(output_t_name,outputnames)
 				
@@ -3399,3 +3401,4 @@ mata:
 		}	
 	}
 end
+
