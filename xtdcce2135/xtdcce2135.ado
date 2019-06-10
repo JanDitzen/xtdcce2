@@ -228,6 +228,7 @@ Jan - February
 21.02.2019 - fixed bug if binary variable and no reportconstant is used, partialling out can fail. if fails, then xtdcce2 restarts but does not partial the constant out	   
 07.03.2019 - fixed bug if "if" used on panel ids. In old version the partialling out was done on the wrong units.
 03.06.2019 - fixed bug in T. SSR and SSE were mixed up.
+		   - added option pooledvce(wpn) for westerlund et al standard errors for pooled regression with fixed T.
 */
 *capture program drop xtdcce2134
 program define xtdcce2135 , eclass sortpreserve
@@ -319,8 +320,11 @@ program define xtdcce2135 , eclass sortpreserve
 		
 		* alternative vce estimator for pooled covariance
 		*if "`pooledvce'" != "" {
-			if "`pooledvce'" == "wpn" {
+			if strlower("`pooledvce'") == "wpn" {
 				local pooledvce = 1
+			}
+			else if strlower("`pooledvce'") == "nw" {
+				local pooledvce = 2
 			}
 			else {
 				local pooledvce = 0
@@ -1037,7 +1041,7 @@ program define xtdcce2135 , eclass sortpreserve
 			markout `touse' `rhs' `pooled' `endogenous_vars' `exogenous_vars'
 			sort `idvar' `tvar'
 
-			tempname cov_i sd_i t_i stats_i b_i
+			tempname cov_i sd_i t_i stats_i b_i 
 			tempvar residuals_var	 
 			local residuals `residuals_var'
 				
@@ -1551,10 +1555,19 @@ program define xtdcce2135 , eclass sortpreserve
 		
 		**load stats
 		local i = 1
-		foreach stat in SSR SSE SST S2 dfr rmse F K N_g N r2 r2_a{
+		foreach stat in SSR SSE SST S2 dfr rmse F K N_g N r2 r2_a r2_pmg {
 			scalar `stat' = `stats_i'[1,`i']		
 			local i = `i' + 1
 		}
+		** correct r2_pmg
+		tempname yybar yybarv yybarm
+		
+		gen `yybarv' = `lhs'
+		by `d_idvar' (`d_tvar') , sort : egen `yybarm' = mean(`yybarv')
+		replace `yybarv' = (`yybarv' - `yybarm')^2
+		sum `yybarv'  if `touse', meanonly
+		scalar `yybar' = r(sum)
+		
 		return clear
 		ereturn clear
 		ereturn post b V , obs(`N') esample(`touse') depname(`lhs') 
@@ -1585,15 +1598,20 @@ program define xtdcce2135 , eclass sortpreserve
 		novarabbrev {		
 			ereturn scalar N = N
 			ereturn scalar N_g = N_g
+			ereturn scalar T = e(N) / `N_g'
 			if "`d_balanced'" != "strongly balanced" {
 				ereturn scalar Tmin = `minT'
 				ereturn scalar Tmax = `maxT'
-				ereturn scalar Tbar = `meanT'		
+				ereturn scalar Tbar = `meanT'
+				scalar r2_pmg = 1 - r2_pmg / (`yybar' / (e(N_g) * (e(Tbar) - 1)))
 			}
-			ereturn scalar T = e(N) / `N_g'
+			else {
+				scalar r2_pmg = 1 - r2_pmg / (`yybar' / (e(N_g) * (e(T) - 1 )))
+			}
 			ereturn scalar df_m = K
 			ereturn scalar K_mg = K - `num_partialled_out'
 			ereturn scalar K_partial = `num_partialled_out'
+			ereturn scalar r2_pmg = r2_pmg
 			ereturn scalar F = F
 			ereturn scalar r2 = r2
 			ereturn scalar r2_a = r2_a
@@ -1746,6 +1764,21 @@ program define xtdcce2135 , eclass sortpreserve
 	else {
 		local cr_lags_disp "none"
 	}
+	
+	if `num_pooled' > 0 & `num_mg_regression' == 0 {
+		ereturn scalar r2_pmg = r2_pmg
+		local tmp_r2pmg = e(r2_pmg)
+		local tmp_r2text "R-squared (P)"
+	}
+	else if `num_pooled' == 0 & `num_mg_regression' > 0 {
+		ereturn scalar r2_pmg = r2_pmg
+		local tmp_r2pmg = e(r2_pmg)
+		local tmp_r2text "R-squared (MG)"
+	}
+	else {
+		local tmp_r2pmg = e(r2_a)
+		local tmp_r2text "Adj. R-squared"
+	}
 	#delimit ;
 		di in gr "Number of "
 					_col(`=`maxline'-80+50') in gr "F(`e(df_m)', `e(df_r)')" _col(`=`maxline'-80+68') "="
@@ -1760,8 +1793,8 @@ program define xtdcce2135 , eclass sortpreserve
 					_col(`=`maxline'-80+71') in ye %9.2f e(r2) ;
 		di in gr _col(2) "variables partialled out"
 					_col(37) "=" _col(39)  "`num_partialled_out'"
-					_col(`=`maxline'-80+50') in gr "Adj. R-squared" _col(`=`maxline'-80+68') "="
-					_col(`=`maxline'-80+71') in ye %9.2f e(r2_a) ;
+					_col(`=`maxline'-80+50') in gr "`tmp_r2text'" _col(`=`maxline'-80+68') "="
+					_col(`=`maxline'-80+71') in ye %9.2f `tmp_r2pmg' ;
 	#delimit cr			
 	
 	if e(K_omitted) != 0 {
@@ -2171,7 +2204,8 @@ mata:
 									string matrix mata_var_names, /// name of mata matrix with var names - 15
 									|real scalar fast, /// if 1 then no cov and stats are calculated -16
 									string scalar input_exo, /// name of exogenous vars - 17
-									real scalar blockdiaguse) /// blockdiag is used rather than own program - 18
+									real scalar blockdiaguse, /// blockdiag is used rather than own program - 18
+									real scalar r2_pmg) 	/// scalar of R2_P or R2_PMG
 									
 		{
 		"start m_reg"
@@ -2452,22 +2486,54 @@ mata:
 				output_cov = XX_cov * s2
 				// check if constant	
 				has_c = 0
-				///r2 = SSR/(SSR+SSE)	
-				r2 = SSE/(SSR+SSE)	
 				
 				if (sum((colsum(X):==rows(X)))) {
 					has_c = 1	
-					r2 = 1 - SSE/SST
-                    ///r2 = 1 - SSR/(SSR+SSE)                  
+					r2 = 1 - SSE/SST       
 
 				} 
 				else {					
                         SSR = sum((Y_hat):^2)
-                        r2 = 1- SSE/SST
+                        r2 = 1- SSR/SST
 
 				}
 				r2_a = 1 - (1-r2) * (N - 1) / (N - K - 1)
 				F = SSR/(K-has_c) / (SSE/(N-K))
+				
+				/// R2 from pesaraHolly, Pesaran, Yamagata 2011
+				/// Pooled Only Case
+				r2_pmg = 0
+				if (pooled_d == 1 & mg_d == 0) {
+					"r2 adjusted for pooled"
+					
+					/// Eq. 3.15, where SSE = e'e
+					K2 = K - input_no_partial
+					
+					"N_g,T,K"
+					(N_g,N/N_g,K2)
+					
+					r2_pmg = SSE / (N_g * ( N/N_g - K2 - 2 ) - K2)
+					"SSE, SST, r2_pmg"
+					(SSE, SST, r2_pmg)
+					1 - r2_pmg / (SST / (N_g * (N/N_g -1)))
+					
+				
+				}
+				if (pooled_d == 0 & mg_d == 1) {
+					"r2 adjusted for mg"
+					SSE
+					/// Eq. 3.14, where SSE = e'e
+					/// divide by K by N_g because it includes mean group coefficients
+					K2 = K - input_no_partial
+					"N_g,T,K"
+					(N_g,T,K2/N_g)
+					
+					r2_pmg = SSE / (N_g * ( T - 2* K2/N_g -2))
+					
+					1 - r2_pmg / (SST / (N_g * (T-1)))
+					"SSE, SST, r2_pmg"
+					(SSE, SST, r2_pmg)
+				}
 				
 			}
 			"outputnames before lr"
@@ -2507,7 +2573,7 @@ mata:
 				"cov written"
 				///stats into matrix
 				(K,N_g,N)
-				stats = (0, 0, 0, 0, 0, 0,0, K, N_g,N,0,0)
+				stats = (0, 0, 0, 0, 0, 0,0, K, N_g,N,0,0,0)
 				st_matrix(output_stats_name,stats)	
 				"done with fast SD"
 			}
@@ -2527,7 +2593,7 @@ mata:
 				st_matrixrowstripe(output_cov_name,outputnames) 
 				
 				///stats into matrix
-				stats = (SSR, SSE, SST, s2, dfr, rmse,F, K, N_g,N,r2,r2_a)
+				stats = (SSR, SSE, SST, s2, dfr, rmse,F, K, N_g,N,r2,r2_a,r2_pmg)
 				st_matrix(output_stats_name,stats)	
 				"output written"
 			
@@ -2723,7 +2789,7 @@ mata:
 			
 			if (FixedTVCE == 0) {
 				"standard vce"
-				/// Standard VarianceCovarianceEstimator from Pesaran 2006
+				/// Standard VarianceCovarianceEstimator from Pesaran 2006, Eq 67 - 69.
 				/// PSI is directly calculated as in gauss
 				PSI = J(rows(b_pooled),cols(b_pooled),0)
 				/// R is Omega HS in gauss file
@@ -2740,11 +2806,10 @@ mata:
 						indic = (id :== uniqueid[i])
 						tmp_x = select(X,indic)
 						tmptmp = quadcross(tmp_x,tmp_x):/ rows(tmp_x)
-						///eq. 68 Pesaran 2006
+						/// eq. 68 Pesaran 2006
 						PSI = PSI :+ w_i :* tmptmp
-						/// eq. 26 from Pesaran, Tosetti (2011); no difference as long as weights 1/N
-						///PSI = PSI :+ w_i :* tmptmp 
-						///eq. 67 Pesaran 2006
+						/// eq. 26 from Pesaran, Tosetti (2011); no difference as long as weights 1/N then w_tilde = 1
+						/// eq. 67 Pesaran 2006
 						R = R :+ w_tilde:^2 :* tmptmp*b_i1*b_i1'*tmptmp
 						i++
 				}
@@ -2760,18 +2825,8 @@ mata:
 				/// follows Cov = sigma^-1 S sigma^-1 with 
 				/// S = 1/N sum VeeV (Eq. 11)
 				/// sigma = 1/N sum VV (Eq. 10)
-				/// where V is X partialled out with cross sectional averages
-				
-				/// get b_p and order in same order as X
-				/// bpTfixed = st_matrix(b_pooled_name)
-				/// bpTfixed
-				/// (input_pooled_vnames,b_pooled_name)
-				/// mm_which2(input_pooled_vnames,b_pooled_name)
-				/// bpTfixed = bpTfixed[1,mm_which2(input_pooled_vnames,b_pooled_name)]
-				/// bpTfixed
-				/// Y = mata_varlist[selectindex(mata_varlist[.,3]:==1),2]
-				/// Y = st_data(.,Y,touse)
-				
+				/// where V is X partialled out with cross sectional averages				
+					
 				e = st_data(.,residuals_name,touse)
 				sigma= J(cols(X),cols(X),0)
 				S = J(cols(X),cols(X),0) 
@@ -2789,6 +2844,51 @@ mata:
 				sigma = cholqrinv(sigma:/N)
 				///sigma = cholqrinv(sigma)
 				cov_p = (sigma:*S:*sigma):/N
+			}
+			if (FixedTVCE == 2) {
+				"NW estimator for pooled coefficients"
+				/// Eq 50 - 52 from Pesaran 2006, with p = round(4 * (Ti/100)^(2/9)), see Gauss code
+				e = st_data(.,residuals_name,touse)
+				Sigma = J(cols(X),cols(X),0)
+				Shat = J(cols(X),cols(X),0)
+				
+				w = J(N,1,1/N)						
+				
+				i = 1
+				while ( i <= N) {
+					/// select data
+					indic = (id :== uniqueid[i])
+					tmp_x = select(X,indic)
+					tmp_e = select(e,indic)
+					tmp_xe = tmp_e :* tmp_x
+					
+					Ti = rows(tmp_x)					
+					
+					w_i = w[i]
+					
+					
+					p = round( 4 * (Ti:/100)^(2/9))						
+					sij = 0
+					sij0 = quadcross(tmp_xe,tmp_xe)					
+					j = 1
+					while (j <= p) {
+						tmp_xep =  tmp_xe[j+1..Ti,.]
+						tmp_xepJ = tmp_xe[1..Ti-j,.]						
+						tmp_tmp = tmp_xep' * tmp_xepJ :/ Ti			
+						sij = sij :+  (1- j/(p+1)) :* (tmp_tmp + tmp_tmp')						
+						j++
+					}
+					tmp_tmp = tmp_tmp :/ Ti
+					Shat = Shat + w_i:^2 * (sij + sij0)					
+					
+					tmp_xx = quadcross(tmp_x,tmp_x)
+					Sigma = Sigma + 1/Ti * tmp_xx
+					
+					i++
+				}
+				sigma1 = cholqrinv(Sigma)
+				//// Eq. 74 
+				cov_p = 1/Ti *  sigma1 * Shat * sigma1
 			}
 			"covariance for pooled done"
 			cov_p
@@ -3299,4 +3399,3 @@ mata:
 		}	
 	}
 end
-
