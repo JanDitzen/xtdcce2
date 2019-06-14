@@ -1612,11 +1612,11 @@ program define xtdcce2135 , eclass sortpreserve
 			}
 			ereturn scalar df_m = K
 			ereturn scalar K_mg = K - `num_partialled_out'
-			ereturn scalar K_partial = `num_partialled_out'
-			ereturn scalar r2_pmg = r2_pmg
+			ereturn scalar K_partial = `num_partialled_out'			
 			ereturn scalar F = F
 			ereturn scalar r2 = r2
 			ereturn scalar r2_a = r2_a
+			ereturn scalar r2_pmg = r2_pmg
 			ereturn scalar rmse = rmse
 			ereturn scalar df_r = dfr
 			ereturn scalar rss = SSR
@@ -1979,6 +1979,7 @@ program define xtdcce2135 , eclass sortpreserve
 	
 	if strtrim("`omitted_var'") != "" {
 		display  as text "Omitted Variables:"
+		mata st_local("omitted_var",`mata_varlist'[mm_which2(`mata_varlist'[.,2],tokens("`omitted_var'")'),1])
 		display  as text _col(2) "`omitted_var'"
 	}
 	if "`constant_type'" == "1" {
@@ -2526,7 +2527,8 @@ mata:
 					SSE
 					/// Eq. 3.14, where SSE = e'e
 					/// divide by K by N_g because it includes mean group coefficients
-					K2 = K - input_no_partial
+					K2 = K - input_no_partial					
+					
 					"N_g,T,K"
 					(N_g,T,K2/N_g)
 					
@@ -2871,21 +2873,21 @@ mata:
 					
 					p = round( 4 * (Ti:/100)^(2/9))						
 					sij = 0
-					sij0 = quadcross(tmp_xe,tmp_xe)					
+					sij0 = quadcross(tmp_xe,tmp_xe)	:/ Ti		
 					j = 1
 					while (j <= p) {
 						tmp_xep =  tmp_xe[j+1..Ti,.]
 						tmp_xepJ = tmp_xe[1..Ti-j,.]						
-						tmp_tmp = tmp_xep' * tmp_xepJ :/ Ti			
+						tmp_tmp = tmp_xep' * tmp_xepJ :/ Ti		
 						sij = sij :+  (1- j/(p+1)) :* (tmp_tmp + tmp_tmp')						
 						j++
 					}
-					tmp_tmp = tmp_tmp :/ Ti
-					Shat = Shat + w_i:^2 * (sij + sij0)					
-					
+					///tmp_tmp = tmp_tmp :/ Ti
+					///wi^2 here because it is in the sums			
+					Shat = Shat +  w_i:^2 * (sij + sij0 )	
 					tmp_xx = quadcross(tmp_x,tmp_x)
-					Sigma = Sigma + 1/Ti * tmp_xx
-					
+					//// Ti from tmp_xx, w_i from the sum
+					Sigma = Sigma + 1/Ti * tmp_xx *w_i					
 					i++
 				}
 				sigma1 = cholqrinv(Sigma)
