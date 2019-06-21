@@ -283,7 +283,7 @@ program define xtdcce2135 , eclass sortpreserve
 			*/ EXOgenous_vars(varlist ts fv) ENDOgenous_vars(varlist ts fv) RESiduals(string) /*
 			Working options: */ oldrestore demean demeant demeanid  Weight(string)  xtdcceold ]
 		
-		tempvar  esmpl Y_tilde
+		
 		
 		local xtdcce2v xtdcce2135
 		local cmd_line `xtdcce2v' `0'
@@ -392,7 +392,8 @@ program define xtdcce2135 , eclass sortpreserve
 			if _rc == 0 {
 				egen `tvar' = group(`d_tvar')
 				keep if `inital_touse' == 1 
-				drop `inital_touse'			
+				drop `inital_touse'	
+				`tracenoi' disp "Panel balanced."
 			}
 			else {
 				xtdcce_err 199 `d_idvar' `d_tvar' , msg("Cannot balance panel. Please make sure neither `d_idvar' nor `d_tvar' contain missings.")
@@ -606,8 +607,9 @@ program define xtdcce2135 , eclass sortpreserve
 				}
 				local lr `lr_1' `lr_rest'		
 				
+				* all variables as doubles
 				recast double `lhs' `rhs' `crosssectional' `pooled' `exogenous_vars' `endogenous_vars' `lr'
-						
+				
 				*Remove pooled variables from rhs
 				local rhs : list rhs - pooled
 				local rhs : list rhs - endogenous_vars
@@ -630,9 +632,7 @@ program define xtdcce2135 , eclass sortpreserve
 				local pooled: list pooled - endo_pooled
 				local pooled: list pooled - exo_pooled
 			
-				sort `idvar' `tvar'
-				
-				
+				sort `idvar' `tvar'				
 				
 				**Recursive Mean adjustment - before constant and trends are added
 				if "`recursive'" == "recursive" {
@@ -861,6 +861,7 @@ program define xtdcce2135 , eclass sortpreserve
 						replace `touse' = 0 if `tvar' <= `cr_lags' 
 					}
 				}
+
 *******************************************************************************************************		
 ********************** Calculation of CSA
 *******************************************************************************************************					
@@ -913,8 +914,7 @@ program define xtdcce2135 , eclass sortpreserve
 					local omitted_N  = r(k_omitted)
 					local omitted_var `r(varlist)'
 					local omitted_var : list omitted - omitted_var
-					
-					
+										
 					local rhs : list rhs - omitted_var
 					local pooled : list pooled - omitted_var
 					local endo_pooled : list endo_pooled - omitted_var
@@ -974,7 +974,7 @@ program define xtdcce2135 , eclass sortpreserve
 				tempname mrk
 				local mata_drop `mata_drop' `mrk'
 				gen double `touse_ctry' = 0
-				*sort `idvar' `tvar'	
+				sort `idvar' `tvar'	
 				tempvar idvarpart
 				egen `idvarpart' = group(`idvar') if `touse'
 				sum `idvarpart'
@@ -1042,7 +1042,7 @@ program define xtdcce2135 , eclass sortpreserve
 			** 	renew touse
 			markout `touse' `rhs' `pooled' `endogenous_vars' `exogenous_vars'
 			sort `idvar' `tvar'
-
+			noi sum `lhs' `rhs' if `touse'
 			tempname cov_i sd_i t_i stats_i b_i 
 			tempvar residuals_var	 
 			local residuals `residuals_var'
@@ -1541,7 +1541,7 @@ program define xtdcce2135 , eclass sortpreserve
 			mata st_view(`touse'=.,.,"`touse' `id_t'")
 			mata `touse'_p = select(`touse'[.,2],`touse'[.,1])
 		restore
-		sort `id_t'
+		sort `id_t' 
 		gen byte `touse' = 0
 		`tracenoi' mata xtdcce_m_touseupdate("`touse'","`id_t'",`touse'_p)
 		mata mata drop `touse'_p
@@ -1565,11 +1565,12 @@ program define xtdcce2135 , eclass sortpreserve
 		tempname yybar yybarv yybarm
 		
 		gen `yybarv' = `lhs'
-		by `d_idvar' (`d_tvar') , sort : egen `yybarm' = mean(`yybarv')
+		by `d_idvar' (`d_tvar') , sort : egen `yybarm' = mean(`yybarv') if `touse'
 		replace `yybarv' = (`yybarv' - `yybarm')^2
 		sum `yybarv'  if `touse', meanonly
 		scalar `yybar' = r(sum)
-		
+		*noi scalar list r2_pmg
+		*noi scalar list `yybar'
 		return clear
 		ereturn clear
 		ereturn post b V , obs(`N') esample(`touse') depname(`lhs') 
@@ -1605,10 +1606,18 @@ program define xtdcce2135 , eclass sortpreserve
 				ereturn scalar Tmin = `minT'
 				ereturn scalar Tmax = `maxT'
 				ereturn scalar Tbar = `meanT'
+				scalar tt = `yybar' / (e(N_g) * (e(Tbar) - 1))
+				*noi scalar list tt
 				scalar r2_pmg = 1 - r2_pmg / (`yybar' / (e(N_g) * (e(Tbar) - 1)))
+				*noi scalar list r2_pmg
 			}
 			else {
+				*noi scalar list `yyvar'
+				*noi display (e(N_g) * (e(T) - 1 ))
+				*noi disp e(N_g)
+				*noi disp e(T)
 				scalar r2_pmg = 1 - r2_pmg / (`yybar' / (e(N_g) * (e(T) - 1 )))
+				*noi scalar list r2_pmg
 			}
 			ereturn scalar df_m = K
 			ereturn scalar K_mg = K - `num_partialled_out'
@@ -2055,6 +2064,7 @@ mata:
 							numeric matrix B,
 						  | real scalar useqr)
 	{
+			
 			if (args()==2) useqr = 0
 			
 			real matrix C
@@ -2080,7 +2090,7 @@ mata:
 						  | real scalar useqr)
 	{
 			if (args()==2) useqr = 0
-			
+
 			real matrix C
 
 			if (!useqr) {
@@ -2297,9 +2307,7 @@ mata:
 			sum(X_o)
 			b_output = J(0,1,.)
 			XX_cov = J(0,0,.)
-			///seperate data in block diagonal matrix
-			i = 1
-			
+	
 			if (exo == 0) {
 				"exo = 0"
 				uniqueid = uniqrows(id)
@@ -2319,6 +2327,7 @@ mata:
 					posRow = 1
 				}
 				"start doing cross specific reg"
+				i = 1
 				while (i <= rows(uniqueid)) {
 					indic = (id :== uniqueid[i])
 					tmp_x = select(X_o,indic)
@@ -2334,6 +2343,7 @@ mata:
 						}
 						
 					}
+					/// now build X matrix for later use. needed if mixed model and for residual calculation
 					if (blockdiaguse==0){
 						T = rows(tmp_x)
 						///posCol = num_K*i - num_K + 1
@@ -3234,9 +3244,6 @@ mata:
 	} 
 end
 
-
-
-
 **Wrapper for selectindex, checks if version is smaller than 13, then runs code, otherwise uses mata function
 capture mata mata drop xtdcce_m_selectindex()
 mata: 
@@ -3311,7 +3318,6 @@ program define xtdcce2_separate , rclass
 end
 
 capture mata mata drop xtdcce2_mm_which2()
-version 10
 mata:
 	function xtdcce2_mm_which2(source,search,|real scalar exact )
 	{		
