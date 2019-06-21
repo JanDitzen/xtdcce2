@@ -57,12 +57,15 @@ Under the null hypothesis the statistic is asymptotically{p_end}
 
 {p 4 4}distributed. 
 
-{p 4 4}{cmd:xtcd2} calculates the CD test statistic for a given variable, or if run after an estimation command which supports {cmd:predict, residuals} and {cmd:e(sample)}.
+{p 4 4}{cmd:xtcd2} calculates the CD test statistic for a given variable, or if run after an estimation command which supports {cmd:predict} and {cmd:e(sample)}.
 In the latter case {cmd:xtcd2} calculates the error term using {cmd:predict, residuals} and then applies the CD test from above.
 In the former case and if the option {cmd:noestimation} is set, {cmd:e(sample)} is not needed and any variable can be tested for cross sectional dependence.
 In this setting, all available observations are used. {cmd:xtcd2} supports balanced as well as unbalanced panels.
-Furthermore by specifying the {cmd:kdensity} option, a kernel density plot with the distribution of the cross correlations is drawn.
+Furthermore by specifying the {cmd:kdensity} option, a kernel density plot with the distribution of the cross correlations is drawn.{p_end}
 
+{p 4 4}If {cmd:xtcd2} is used after {help xtreg}, then the residuals are calculated using {cmd: predict, e} rather than {cmd: predict, res}.
+That is the residuals including the fixed- or random-error componen, see {help xtreg postestimation##predict: xtreg postestimation}.
+In all other cases {cmd: predict, residuals} is used to calculate the residuals.{p_end}
 
 {marker options}{title:Options}
 
@@ -109,9 +112,9 @@ Estimating a simple panel version of the Solow model and run the CD test afterwa
 {p 4 4}The test statistic is 36.34 and the p-value is 0,
 therefore rejecting the null hypothesis of weak cross sectional dependence.{p_end}
 
-{p 4 4}To draw a histogram with the cross correlations the {cmd:histogram} option is used:{p_end}
+{p 4 4}To draw a density plot with the cross correlations the {cmd:kdensity} option is used:{p_end}
 
-{p 8}{stata xtcd2 res, histogram}{p_end}
+{p 8}{stata xtcd2 res, kdensity}{p_end}
 
 {p 4 4}Testing the variable {it:log_rgdpo} for cross sectional dependence reads:{p_end}
 
@@ -132,7 +135,7 @@ Econometric Reviews 34(6-10): 1089-1117.{p_end}
 {marker about}{title:Author}
 
 {p 4}Jan Ditzen (Heriot-Watt University){p_end}
-{p 4}Email: {browse "mailto:jd219@hw.ac.uk":jd219@hw.ac.uk}{p_end}
+{p 4}Email: {browse "mailto:j.ditzen@hw.ac.uk":j.ditzen@hw.ac.uk}{p_end}
 {p 4}Web: {browse "www.jan.ditzen.net":www.jan.ditzen.net}{p_end}
 
 {p 4}Thanks to Achim Ahrens for providing many helpful comments to the code and an anonymous reviewer for many helpful comments.{p_end}
