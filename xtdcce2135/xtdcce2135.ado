@@ -231,8 +231,9 @@ Jan - February
 		   - added option pooledvce(wpn) for westerlund et al standard errors for pooled regression with fixed T.
 10.06.2019 - added R2 for pooled and mg regressions. 
 		   - t-statistic in mg_reg was 1/t
+28.06.2019 - new program for matrix inversion and solver. 
 */
-*capture program drop xtdcce2134
+
 program define xtdcce2135 , eclass sortpreserve
 	** Stata Version check - version > 11.1 needed for putmata commands
 	if `c(version)' < 11.1 {
@@ -278,7 +279,9 @@ program define xtdcce2135 , eclass sortpreserve
 			*/ fast /*
 			*/ BLOCKDIAGuse /* Use block diagonal rather than own routine. Much slower!
 			*/ NODIMcheck /* time dimension check
-			*/ NOOMITted omittest  /* option included again for omitting omitted variable tests.
+			*/ NOOMITted  /* option included again for omitting omitted variable tests.
+			*/ useqr useinvsym /* use qrinversion rather than invsym; or use invsym rather than cholinv
+			*/ showomitted /* detailed overview of omitted variables
 			For Legacy:
 			*/ EXOgenous_vars(varlist ts fv) ENDOgenous_vars(varlist ts fv) RESiduals(string) /*
 			Working options: */ oldrestore demean demeant demeanid  Weight(string)  xtdcceold ]
@@ -348,7 +351,7 @@ program define xtdcce2135 , eclass sortpreserve
 			local blockdiaguse = 1
 		}
 		*change noomitted NOOMITted
-		if "`noomitted'" == "" | "`omittest'" != "" {
+		if "`noomitted'" == ""  {
 			local noomitted noomitted
 			local omitted
 		}
@@ -368,6 +371,20 @@ program define xtdcce2135 , eclass sortpreserve
 		** check if lr_options are ok. if ardl used, no other can be used
 		if strmatch("`lr_options'","*ardl*") == 1 & wordcount("`lr_options'") > 1 {
 			xtdcce_err 184 `d_idvar' `d_tvar' , msg("options ardl and xtpmgnames or nodivide may not be combined.")			
+		}
+		
+		** Which inverter to use 
+		if "`useqr'" != "" & "`useinvsym'" != "" {
+			xtdcce_err 184 `d_idvar' `d_tvar' , msg("options useqr and useinvsym may not be combined.")	
+		}
+		if "`useqr'" == "" {
+			local useqr = 0
+		}
+		else {
+			local useqr = 1
+		}
+		if "`useinvsym'" != "" {
+			local useqr = 2
 		}
 		
 		qui{		
@@ -980,10 +997,9 @@ program define xtdcce2135 , eclass sortpreserve
 				sum `idvarpart'
 				forvalues ctry = 1(1)`r(max)' {
 					replace `touse_ctry' =  1 if `touse'  & `ctry' == `idvarpart'
-					`noi' mata xtdcce_m_partialout("`lhs' `pooled' `rhs' `exogenous_vars' `endogenous_vars' `endo_pooled' `exo_pooled'","`clist1'","`touse_ctry'",`mrk'=.)
+					`tracenoi' mata xtdcce_m_partialout("`lhs' `pooled' `rhs' `exogenous_vars' `endogenous_vars' `endo_pooled' `exo_pooled'","`clist1'","`touse_ctry'",`useqr',`mrk'=.)
 					
 					*Check if X1X1 matrix is full rank
-
 					mata st_local("rk",strofreal(`mrk'[1,1]))
 					mata st_local("rkrow",strofreal(`mrk'[1,2]))
 
@@ -995,9 +1011,9 @@ program define xtdcce2135 , eclass sortpreserve
 						tempvar touse_ctry_jack
 						gen double `touse_ctry_jack' = 0
 						replace `touse_ctry_jack' = `touse_ctry' * `jack_indicator_a'
-						`tracenoi' mata xtdcce_m_partialout("`jackvars'","`clist1'","`touse_ctry_jack'",`mrk'=.)
+						`tracenoi' mata xtdcce_m_partialout("`jackvars'","`clist1'","`touse_ctry_jack'",`useqr',`mrk'=.)
 						replace `touse_ctry_jack' = `touse_ctry' * `jack_indicator_b'
-						`tracenoi' mata xtdcce_m_partialout("`jackvars'","`clist1'","`touse_ctry_jack'",`mrk'=.)
+						`tracenoi' mata xtdcce_m_partialout("`jackvars'","`clist1'","`touse_ctry_jack'",`useqr',`mrk'=.)
 					}
 					replace `touse_ctry' =  0
 					
@@ -1042,11 +1058,12 @@ program define xtdcce2135 , eclass sortpreserve
 			** 	renew touse
 			markout `touse' `rhs' `pooled' `endogenous_vars' `exogenous_vars'
 			sort `idvar' `tvar'
-			noi sum `lhs' `rhs' if `touse'
-			tempname cov_i sd_i t_i stats_i b_i 
+			*noi sum `lhs' `rhs' if `touse'
+			tempname cov_i sd_i t_i stats_i b_i RankReg UsedCols
 			tempvar residuals_var	 
 			local residuals `residuals_var'
-				
+			local mata_drop `mata_drop'	`RankReg' `UsedCols' `useqr'
+			matrix `UsedCols' = 0
 			*1 check if IV
 			*2 run for IV and none IV 3 regressions: 
 			*		i) all pooled, 
@@ -1054,29 +1071,27 @@ program define xtdcce2135 , eclass sortpreserve
 			*		iii) full mg
 			*3 run program for mg calculation to correct b and V
 			
-			*** 1 - non IV case
-			
+			*** 1 - non IV case			
 			if `IV' == 0 {
-				gen double `residuals' = 0
-				
+				gen double `residuals' = 0				
 				*i) all pooled
 				if "`pooled'" != "" & "`rhs'" == "" {
 					tempname eb_pi
-					`tracenoi' mata xtdcce_m_reg("`lhs'","`touse'","`idvar'","`rhs' `pooled'","`lr'","`lr_options'",`num_adjusted',"`residuals'","`eb_pi'","`cov_i'","`sd_i'","`t_i'","`stats_i'","`jack_indicator_a' `jack_indicator_b'",`mata_varlist',`fast',"",`blockdiaguse')
+					`tracenoi' mata xtdcce_m_reg("`lhs'","`touse'","`idvar'","`rhs' `pooled'","`lr'","`lr_options'",`num_adjusted',"`residuals'","`eb_pi'","`cov_i'","`sd_i'","`t_i'","`stats_i'","`jack_indicator_a' `jack_indicator_b'",`mata_varlist',`fast',"",`blockdiaguse',`useqr',"`RankReg'","`UsedCols'")
 					matrix `b_i' = `eb_pi'
 				}
 				*ii) as is (inculdes all mg)
 				if "`rhs'" != "" {
 					tempname eb_asisi
-					`tracenoi' mata xtdcce_m_reg("`lhs' `rhs'","`touse'","`idvar'","`pooled'","`lr'","`lr_options'",`num_adjusted',"`residuals'","`eb_asisi'","`cov_i'","`sd_i'","`t_i'","`stats_i'","`jack_indicator_a' `jack_indicator_b'",`mata_varlist',`fast',"",`blockdiaguse')
+					`tracenoi' mata xtdcce_m_reg("`lhs' `rhs'","`touse'","`idvar'","`pooled'","`lr'","`lr_options'",`num_adjusted',"`residuals'","`eb_asisi'","`cov_i'","`sd_i'","`t_i'","`stats_i'","`jack_indicator_a' `jack_indicator_b'",`mata_varlist',`fast',"",`blockdiaguse',`useqr',"`RankReg'","`UsedCols'")
 					matrix `b_i' = 	`eb_asisi'	
 				}
-				*iii) all MG (only needed if pooled var is used). If all MG not used. better speed option
+				*iii) all MG (only needed if pooled var is used, needed for cov estimation). If all MG not used. better speed option
 				* Use fast option which does not calculate residuals, covariance and stats.
 				* *_i_pooled not necessary as not used for later use.
 				if "`pooled'" != ""  {
 					tempname eb_mgi cov_i_1_pooled stats_i_pooled sd_i_pooled t_i_pooled
-					`tracenoi'  mata xtdcce_m_reg("`lhs' `rhs' `pooled'","`touse'","`idvar'","","`lr'","`lr_options'",`num_adjusted',"`residuals'","`eb_mgi'","`cov_i_1_pooled'","`sd_i_pooled'","`t_i_pooled'","`stats_i_pooled'","`jack_indicator_a' `jack_indicator_b'",`mata_varlist',1,"",`blockdiaguse')
+					`tracenoi'  mata xtdcce_m_reg("`lhs' `rhs' `pooled'","`touse'","`idvar'","","`lr'","`lr_options'",`num_adjusted',"`residuals'","`eb_mgi'","`cov_i_1_pooled'","`sd_i_pooled'","`t_i_pooled'","`stats_i_pooled'","`jack_indicator_a' `jack_indicator_b'",`mata_varlist',1,"",`blockdiaguse',`useqr')
 				}
 			}
 			** 2 - IV case
@@ -1247,7 +1262,7 @@ program define xtdcce2135 , eclass sortpreserve
 					}
 					else {
 						tempname eb_mgi  resid2 cov_i1
-						`tracenoi' mata xtdcce_m_reg("`lhs' `endogenous_vars' `endo_pooled' `rhs' `pooled'","`touse'","`idvar'","","`lr'","`lr_options'",`num_adjusted',"`resid2'","`eb_mgi'","`cov_i1'","`sd_i'","`t_i'","`stats_i'","`jack_indicator_a' `jack_indicator_b'",`mata_varlist',1,"`exogenous_vars' `exo_pooled' `rhs' `pooled'",`blockdiaguse')
+						`tracenoi' mata xtdcce_m_reg("`lhs' `endogenous_vars' `endo_pooled' `rhs' `pooled'","`touse'","`idvar'","","`lr'","`lr_options'",`num_adjusted',"`resid2'","`eb_mgi'","`cov_i1'","`sd_i'","`t_i'","`stats_i'","`jack_indicator_a' `jack_indicator_b'",`mata_varlist',1,"`exogenous_vars' `exo_pooled' `rhs' `pooled'",`blockdiaguse',`useqr',"`RankReg'","`UsedCols'")
 					}	
 				}
 
@@ -1390,7 +1405,7 @@ program define xtdcce2135 , eclass sortpreserve
 			
 			***MG program
 			tempname b_mg cov sd t
-			`tracenoi' mata xtdcce_m_meangroup("`eb_asisi'","`eb_mgi'","`eb_pi'","`rhs' `endogenous_vars'  `lr_vars_mg'","`pooled' `endo_pooled' `lr_vars_pooled'","","`idvar'","`touse'","`b_mg'","`cov'","`sd'","`t'","`lr_vars_pooled'",`mata_varlist',`pooledvce',"`residuals'" )
+			`tracenoi' mata xtdcce_m_meangroup("`eb_asisi'","`eb_mgi'","`eb_pi'","`rhs' `endogenous_vars'  `lr_vars_mg'","`pooled' `endo_pooled' `lr_vars_pooled'","","`idvar'","`touse'","`b_mg'","`cov'","`sd'","`t'","`lr_vars_pooled'",`mata_varlist',`pooledvce',"`residuals'",`useqr' )
 			**read varlists back
 			local i = 3
 			foreach list in lhs rhs pooled crosssectional exogenous_vars endogenous_vars lr_1 lr_rest  {
@@ -1557,7 +1572,7 @@ program define xtdcce2135 , eclass sortpreserve
 		
 		**load stats
 		local i = 1
-		foreach stat in SSR SSE SST S2 dfr rmse F K N_g N r2 r2_a r2_pmg {
+		foreach stat in SSR SSE SST S2 dfr rmse F K N_g N r2 r2_a  {
 			scalar `stat' = `stats_i'[1,`i']		
 			local i = `i' + 1
 		}
@@ -1569,8 +1584,6 @@ program define xtdcce2135 , eclass sortpreserve
 		replace `yybarv' = (`yybarv' - `yybarm')^2
 		sum `yybarv'  if `touse', meanonly
 		scalar `yybar' = r(sum)
-		*noi scalar list r2_pmg
-		*noi scalar list `yybar'
 		return clear
 		ereturn clear
 		ereturn post b V , obs(`N') esample(`touse') depname(`lhs') 
@@ -1606,26 +1619,33 @@ program define xtdcce2135 , eclass sortpreserve
 				ereturn scalar Tmin = `minT'
 				ereturn scalar Tmax = `maxT'
 				ereturn scalar Tbar = `meanT'
-				scalar tt = `yybar' / (e(N_g) * (e(Tbar) - 1))
-				*noi scalar list tt
-				scalar r2_pmg = 1 - r2_pmg / (`yybar' / (e(N_g) * (e(Tbar) - 1)))
-				*noi scalar list r2_pmg
-			}
+				
+				scalar Ttmp = e(Tmax)
+			}	
 			else {
-				*noi scalar list `yyvar'
-				*noi display (e(N_g) * (e(T) - 1 ))
-				*noi disp e(N_g)
-				*noi disp e(T)
-				scalar r2_pmg = 1 - r2_pmg / (`yybar' / (e(N_g) * (e(T) - 1 )))
-				*noi scalar list r2_pmg
+				scalar Ttmp = e(T)
 			}
+			*** Calculation of r2_tmp
+			scalar Ki = `num_pooled' + `num_mg_regression' / `N_g' + `num_partialled_out' / `N_g' 
+			** Pooled
+			if `num_pooled' > 0 & `num_mg_regression' == 0 {
+				*** use Ki, error in HPY pooled only takes partialled out into account
+				scalar r2_pmg = 1 - (SSE / (N_g * (Ttmp - Ki)  ) ) / (`yybar' / (N_g * (Ttmp - 1)))
+				ereturn scalar r2_pmg = r2_pmg
+			}
+			else if `num_pooled' == 0 & `num_mg_regression' > 0 {
+				*** use Ki as it includes CSA, HPY do not include CSA in k, ignore -2
+				scalar r2_pmg = 1 - (SSE / (N_g * (Ttmp - Ki))) / (`yybar' / (N_g * (Ttmp - 1)))
+				ereturn scalar r2_pmg = r2_pmg
+			}
+			
 			ereturn scalar df_m = K
 			ereturn scalar K_mg = K - `num_partialled_out'
 			ereturn scalar K_partial = `num_partialled_out'			
 			ereturn scalar F = F
 			ereturn scalar r2 = r2
 			ereturn scalar r2_a = r2_a
-			ereturn scalar r2_pmg = r2_pmg
+			
 			ereturn scalar rmse = rmse
 			ereturn scalar df_r = dfr
 			ereturn scalar rss = SSR
@@ -1665,12 +1685,15 @@ program define xtdcce2135 , eclass sortpreserve
 			ereturn hidden local p_in "`in'"
 			ereturn hidden scalar constant_type = `constant_type'
 			ereturn hidden local lr_options "`lr_options'"
-			ereturn hidden matrix ResidualStat = `res_check'
+			if "`res_check'" != "" {
+				ereturn hidden matrix ResidualStat = `res_check'
+			}
 			ereturn hidden matrix PartialOutStat = `PartialOutStat'
+			ereturn hidden scalar useqr = `useqr'
 		}
 		if "`cd'" == "" {
-			ereturn scalar cd = `cds'
-			ereturn scalar cdp = `cdp'
+			cap ereturn scalar cd = `cds'
+			cap ereturn scalar cdp = `cdp'
 		}
 		*local pf = 1- chi2(`=`e(df_r)'-1',e(F))
 		local pf = Ftail(e(df_m),e(df_r),e(F))
@@ -1776,13 +1799,11 @@ program define xtdcce2135 , eclass sortpreserve
 		local cr_lags_disp "none"
 	}
 	
-	if `num_pooled' > 0 & `num_mg_regression' == 0 {
-		ereturn scalar r2_pmg = r2_pmg
+	if `num_pooled' > 0 & `num_mg_regression' == 0 {		
 		local tmp_r2pmg = e(r2_pmg)
 		local tmp_r2text "R-squared (P)"
 	}
-	else if `num_pooled' == 0 & `num_mg_regression' > 0 {
-		ereturn scalar r2_pmg = r2_pmg
+	else if `num_pooled' == 0 & `num_mg_regression' > 0 {	
 		local tmp_r2pmg = e(r2_pmg)
 		local tmp_r2text "R-squared (MG)"
 	}
@@ -2008,9 +2029,85 @@ program define xtdcce2135 , eclass sortpreserve
 		display  as text "Recursive mean adjustment used to correct for small sample time series bias." , _c
 		ereturn local bias_correction = "recursive mean correction" 
 	}
+	if `pooledvce' == 1 {
+		display as text "Westerlund, Perova, Norkute fixed-T standard errors for pooled coefficients."
+	}
+	if `pooledvce' == 2 {
+		display as text "Newey-West standard errors for pooled coefficients."
+	}
+	** check for failure of rank condition for CSA regression
 	if `rank_cond' > 0 {
 		display in red "Warning:"
 		display as text "Rank condition on matrix of cross product of cross sectional averages not satisfied!" _n "Only mean group estimates are consistent, unit specific estimates are inconsistent." /*_n "See Chudik, Pesaran (2015, Journal of Econometrics), Assumption 6 and page 398." */ , _newline
+	}
+	** check for failure of rank condition for main regression, only for non-IV case
+	if `IV' == 0 {
+		mata `RankReg' = st_matrix("`RankReg'")
+		mata `UsedCols' = st_matrix("`UsedCols'")
+		mata: st_local("rk_indic",strofreal(all(`RankReg'[.,1]:==`RankReg'[.,2])))
+		if `rk_indic' != 1 {
+			display in red "Warning:"
+			if "`showomitted'" == "" {
+				display as text "Collinearities detected. One or more variables are dropped and set to zero. Use option " , _c 
+				display as result "showomitted" , _c
+				display as text " to show more details."
+			}
+			else {
+				display as text "Collinearities detected. Structure of dropped coefficients is:"
+				disp ""
+				*** Output Table
+				** get length of variables
+				local tbl_interval  7
+				local j = 1
+				foreach var in `rhs_vars' `pooled_vars' {
+					local tmp = 2 + length(abbrev("`var'",`abname')) + `=word("`tbl_interval'",`j')'
+					local tbl_interval `tbl_interval'  `tmp'
+					local j = `j' + 1
+				}
+				local j = `j' - 1			
+				*** Output Header
+				disp as text _column(3) "CSA" , _c 
+				local i = 1
+				foreach var in `rhs_vars' `pooled_vars' {
+					local cols = word("`tbl_interval'",`i')
+					if `i' < `j' {
+						local cont "_c"
+					}
+					else {
+						local cont ""
+					}
+					disp as text _column(`cols') abbrev("`var'",`abname'), `cont'
+					local i = `i' + 1
+				}
+				*disp as text "" , _n
+				forvalues s=1(1)`N_g' {
+					disp as text _column(4) "`s'" , _c
+					forvalues ii = 1(1)`=`i'-1' {
+						local cols_start = word("`tbl_interval'",`ii')
+						*if `ii' < `i' {
+							local cols_end = word("`tbl_interval'",`=`ii'+1')
+						*else {
+						*	local cols_end = 
+						*}
+						local cols = round(`cols_start' + (`cols_end'-`cols_start')/2)
+						if `=`i'-1' > `ii' {
+							local cont "_c"
+						}
+						else {
+							local cont = ""
+						}
+						disp as text _col(`cols') `UsedCols'[`s',`ii'] , `cont'
+						local `ii' = `ii' + 1
+					}
+					*disp as text "", _n
+				}
+				disp "where CSA is the number of the cross section."
+				disp "0 implies coefficient is set to zero."
+				matrix colnames `UsedCols' = `rhs_vars' `pooled_vars'
+				ereturn matrix omitted_var_i = `UsedCols'
+				ereturn hidden matrix rankreg = `RankReg'
+			}
+		}
 	}
 	capture mata mata drop `mata_drop' `cov_i1'
 
@@ -2107,6 +2204,141 @@ mata:
 	};
 end
 
+///Program for matrix inversion.
+///Default is cholesky
+///if not full rank use invsym (Stata standard) 
+///and obtain columns to use
+///options: 
+///1. if columns are specified, force use invsym
+///2. allow for old method (cholinv, if fails qrinv)
+///output
+///return: inverse
+///indicator for rank (1x2, rank and rows), which method used and variables used
+
+capture mata mata drop m_xtdcce_inverter()
+mata:
+	function m_xtdcce_inverter(	numeric matrix A,
+								| real scalar useold,
+								real matrix rank,
+								real matrix coln,
+								string scalar method)
+								
+	{
+		real matrix C
+		
+		if (args() == 1) {
+			useold = 0
+			coln = 0
+		}
+		if (args() == 2){
+			coln = 0
+		}
+		if (useold == 2) {
+			coln = (1..cols(A))
+		}
+		
+		if (useold == 1) {			
+			C = cholqrinv(A)
+			qrinv(A,rank)
+			method = "cholqr"		
+		}
+		else {
+			if (coln[1,1] == 0) {
+				/// calculate rank seperate. if A is not full rank, cholinv still produces results
+				/// 1..cols(A) makes sure variables from left are not dropped
+				C = invsym(A,(1..cols(A)))
+				rank = rows(C)-diag0cnt(C)
+				
+				if (rank < rows(A)) {	
+					/// not full rank, use invsym
+					method = "invsym"
+					coln = selectindex(colsum(A1:==0):==rows(A1):==0)			
+				}
+				else {
+					/// full rank use cholsolve
+					C = cholinv(A)
+					method = "chol"
+				}				
+			}
+			else {
+				C = invsym(A,coln)
+				rank = rows(C)-diag0cnt(C)
+				method = "invsym"
+			}			
+		}
+		rank = (rank, rows(C))
+		return(C)
+	}
+
+end
+/// same as inverter, rank is for matrix A (which is inverted) 
+capture mata mata drop m_xtdcce_solver()
+mata:
+	function m_xtdcce_solver(	numeric matrix A,
+								numeric matrix B,
+								| real scalar useold,
+								real matrix rank,
+								real matrix coln,
+								string scalar method)
+								
+	{
+		real matrix C
+		
+		if (args() == 2) {
+			useold = 0
+			coln = 0
+		}
+		if (args() < 5){
+			coln = 0
+		}		
+		
+		if (useold == 2) {
+			coln = (1..cols(A))
+		}
+		
+		if (useold == 1) {			
+			C = cholqrsolve(A,B)
+			qrinv(A,rank)
+			method = "cholqr"
+			rank = (rank, rows(C))
+		}
+		else {
+			if (coln[1,1] == 0) {
+				
+				/// calculate rank seperate. if A is not full rank, cholsolve still produces results
+				/// 1..cols(A) makes sure variables from left are not dropped
+				A1 = invsym(A,(1..cols(A)))
+				rank = rows(A1)-diag0cnt(A1)
+				
+				if (rank < rows(A)) {	
+					/// not full rank, solve by hand
+					C = A1 * B
+					method = "invsym"
+					coln = selectindex(colsum(A1:==0):==rows(A1):==0)			
+				}
+				else {
+					/// full rank use cholsolve
+					C = cholsolve(A,B)
+					method = "chol"
+					coln = 0
+				}
+			}
+			else {
+				/// coln is defined, use invsym on specified columns
+				A1 = invsym(A,coln)
+				C = A1 * B
+				method = "invsym"
+				rank = rows(A1)-diag0cnt(A1)
+			}
+			rank = (rank, rows(A1))
+		}		
+		return(C)		
+	}
+
+end
+
+
+
 ***Point by point mata program
 capture mata mata drop xtdcce_PointByPoint()
 mata:
@@ -2160,7 +2392,8 @@ mata:
 	function xtdcce_m_partialout (  string scalar X2_n,
 									string scalar X1_n, 
 									string scalar touse,
-									| real matrix rk)
+									real scalar useold,
+									| real scalar rk)
 	{
 		"start partial out"
 		real matrix X1
@@ -2171,14 +2404,8 @@ mata:
 		X1X1 = quadcross(X1,X1)
 		X1X2 = quadcross(X1,X2)
 		"x1x1 and x1x2 calculated"
-		//Get Rank
-		//s = qrinv(X1X1,rk=.)		
-		//output rank and then number of rows
-		///rk = (rk,rows(X1X1))
 		//Get rank
-		//s = rank(X1)
-		rk = (rank(X1),cols(X1))
-		X2[.,.] = (X2 - X1*cholqrsolve(X1X1,X1X2))
+		X2[.,.] = (X2 - X1*m_xtdcce_solver(X1X1,X1X2,useold,rk))
 		"partial out done"
 		"rank condition:"
 		rk
@@ -2218,8 +2445,9 @@ mata:
 									|real scalar fast, /// if 1 then no cov and stats are calculated -16
 									string scalar input_exo, /// name of exogenous vars - 17
 									real scalar blockdiaguse, /// blockdiag is used rather than own program - 18
-									real scalar r2_pmg) 	/// scalar of R2_P or R2_PMG
-									
+									real scalar useqr,		/// use qr for matrix inversion - 19
+									string scalar rank_name,		/// name of rank matrix - 20
+									string scalar UsedCols_name) /// name of used columns matrix - 21
 		{
 		"start m_reg"
 		(variablenames , ccep , lr_vars)
@@ -2269,6 +2497,18 @@ mata:
 				fast = 0
 			}
 		}
+		if (args() < 19) {
+			useqr = 0
+		}
+		/// arg 20
+		rank = .
+		
+		if (args() < 21) {
+			UsedCols = 0
+		}
+		else {
+			UsedCols = st_matrix(UsedCols_name)
+		}
 		"mg - pooled "
 		(mg_d , pooled_d)
 		"fast, exo"
@@ -2291,9 +2531,10 @@ mata:
 			X_p_X_p = quadcross(X,X)
 			X_p_Y = quadcross(X,Y)
 			XX_cov = X_p_X_p
-			
-			b_output = cholqrsolve(X_p_X_p,X_p_Y)	
+			b_output = m_xtdcce_solver(X_p_X_p,X_p_Y,useqr,rank,UsedCols=0,method="")	
 			outputnames = pooled
+			"inverter used:"
+			method
 		}
 		
 		if (mg_d == 1 ){
@@ -2307,15 +2548,14 @@ mata:
 			sum(X_o)
 			b_output = J(0,1,.)
 			XX_cov = J(0,0,.)
-	
+			uniqueid = uniqrows(id)
+			N = rows(uniqueid)
 			if (exo == 0) {
-				"exo = 0"
-				uniqueid = uniqrows(id)
+				"exo = 0"				
 				"over following ids"
 				uniqueid
 				if (blockdiaguse==0){
-					/// build X block diagonal
-					N = rows(uniqueid)
+					/// build X block diagonal					
 					NT = rows(X_o)
 					///"num_k, N, T"
 					///(num_K,N,T)
@@ -2328,6 +2568,8 @@ mata:
 				}
 				"start doing cross specific reg"
 				i = 1
+				rank = J(rows(uniqueid),2,.)
+				UsedCols = J(rows(uniqueid),cols(X_o),0)
 				while (i <= rows(uniqueid)) {
 					indic = (id :== uniqueid[i])
 					tmp_x = select(X_o,indic)
@@ -2336,20 +2578,33 @@ mata:
 						tmp_y = select(Y,indic)
 						tmp_xx = quadcross(tmp_x,tmp_x)
 						tmp_xy = quadcross(tmp_x,tmp_y)
-						b_output = (b_output \ cholqrsolve(tmp_xx,tmp_xy))						
+						"start calculating b"
+						b_output = (b_output \ m_xtdcce_solver(tmp_xx,tmp_xy,useqr,ranki=.,colni=0,method=""))
+						"inverter used:"
+						method
+						rank[i,.] = ranki
+						colni
+						if (colni == 0) {
+							UsedCols[i,.] = J(1,cols(X_o),1)
+						}
+						else {
+							UsedCols[i,colni] = J(1,cols(colni),1)
+						}
+						UsedCols
 						//for covariance
 						if (fast == 0) {
-							XX_cov = blockdiag(XX_cov,cholqrinv(tmp_xx))
+							XX_cov = blockdiag(XX_cov,m_xtdcce_inverter(tmp_xx,useqr))
 						}
 						
-					}
+					} 
 					/// now build X matrix for later use. needed if mixed model and for residual calculation
+					
 					if (blockdiaguse==0){
-						T = rows(tmp_x)
+						Ti = rows(tmp_x)
 						///posCol = num_K*i - num_K + 1
 						///posRow = T*i - T + 1
 						posColEnd = posCol + num_Kmg-1
-						posRowEnd = posRow + T-1
+						posRowEnd = posRow + Ti-1
 						X[(posRow..posRowEnd),(posCol..posColEnd)] = tmp_x
 						posCol = posColEnd + 1
 						posRow = posRowEnd + 1
@@ -2369,11 +2624,29 @@ mata:
 					(rows(X),cols(X))
 					XX = quadcross(X,X)
 					XY = quadcross(X,Y)
-					b_output = cholqrsolve(XX,XY)	
+					b_output = m_xtdcce_solver(XX,XY,useqr,rank,UsedCols=0,method="")
+					"inverter used"
+					method
+					UsedCols
+					/// Used Cols are zero, create a 1xK vector with ones
+					if (cols(UsedCols)==1) {
+						UsedCols = J(1,cols(X),1)
+					}
+					/// build matrix in case MG coefficients exist
+					if (num_Kmg > 0) {
+						"adjust UsedCols for mixed model"
+						UsedMG = UsedCols[1..num_Kmg*N]
+						UsedMG
+						UsedPooled = UsedCols[num_Kmg*N+1..cols(UsedCols)]
+						UsedMG
+						rowshape(UsedMG,N)
+						UsedCols = (rowshape(UsedMG,N),J(N,1,UsedPooled))
+					}
+					
 					outputnames = (outputnames , pooled)				
 					//for covariance
 					if (fast == 0) {
-						XX_cov = cholqrinv(XX)				
+						XX_cov = m_xtdcce_inverter(XX,useqr)				
 					}
 					"done"
 				}
@@ -2397,7 +2670,7 @@ mata:
 					if (cols(tmp_x) == cols(tmp_z)) {
 						tmp_zx = quadcross(tmp_z,tmp_x)
 						tmp_zy = quadcross(tmp_z,tmp_y)
-						tmp_b = cholqrsolve(tmp_zx,tmp_zy)
+						tmp_b = m_xtdcce_solver(tmp_zx,tmp_zy,useqr)
 					}
 					else {
 						tmp_zz = qrinv(quadcross(tmp_z,tmp_z))
@@ -2410,7 +2683,7 @@ mata:
 						(rows(lower),cols(lower))
 						"upper"
 						(rows(upper),cols(upper))
-						tmp_b = cholqrsolve(lower,upper)						
+						tmp_b = m_xtdcce_solver(lower,upper,qrinv)						
 					}
 					(rows(b_output),cols(b_output))
 					(rows(tmp_b),cols(tmp_b))
@@ -2440,9 +2713,9 @@ mata:
 				input_exo_j = ""
 			}
 			"start regs"
-			b_a = xtdcce_m_reg(variabaljack,jack_indic_a,id_var,ccep_jack,"","",0,"e","eb","cov","sd","t","st","jack1",mata_var_names,1,input_exo_j,blockdiaguse)
+			b_a = xtdcce_m_reg(variabaljack,jack_indic_a,id_var,ccep_jack,"","",0,"e","eb","cov","sd","t","st","jack1",mata_var_names,1,input_exo_j,blockdiaguse,useqr)
 			"in jack"
-			b_b = xtdcce_m_reg(variabaljack,jack_indic_b,id_var,ccep_jack,"","",0,"e","eb","cov","sd","t","st","jack2",mata_var_names,1,input_exo_j,blockdiaguse)
+			b_b = xtdcce_m_reg(variabaljack,jack_indic_b,id_var,ccep_jack,"","",0,"e","eb","cov","sd","t","st","jack2",mata_var_names,1,input_exo_j,blockdiaguse,useqr)
 			b_output = 2:*b_output :- 0.5:*(b_a :+ b_b)
 			"jack done"
 		}
@@ -2513,41 +2786,7 @@ mata:
 				r2_a = 1 - (1-r2) * (N - 1) / (N - K - 1)
 				F = SSR/(K-has_c) / (SSE/(N-K))
 				
-				/// R2 from pesaraHolly, Pesaran, Yamagata 2011
-				/// Pooled Only Case
-				r2_pmg = 0
-				if (pooled_d == 1 & mg_d == 0) {
-					"r2 adjusted for pooled"
-					
-					/// Eq. 3.15, where SSE = e'e
-					K2 = K - input_no_partial
-					
-					"N_g,T,K"
-					(N_g,N/N_g,K2)
-					
-					r2_pmg = SSE / (N_g * ( N/N_g - K2 - 2 ) - K2)
-					"SSE, SST, r2_pmg"
-					(SSE, SST, r2_pmg)
-					1 - r2_pmg / (SST / (N_g * (N/N_g -1)))
-					
 				
-				}
-				if (pooled_d == 0 & mg_d == 1) {
-					"r2 adjusted for mg"
-					SSE
-					/// Eq. 3.14, where SSE = e'e
-					/// divide by K by N_g because it includes mean group coefficients
-					K2 = K - input_no_partial					
-					
-					"N_g,T,K"
-					(N_g,T,K2/N_g)
-					
-					r2_pmg = SSE / (N_g * ( T - 2* K2/N_g -2))
-					
-					1 - r2_pmg / (SST / (N_g * (T-1)))
-					"SSE, SST, r2_pmg"
-					(SSE, SST, r2_pmg)
-				}
 				
 			}
 			"outputnames before lr"
@@ -2607,11 +2846,21 @@ mata:
 				st_matrixrowstripe(output_cov_name,outputnames) 
 				
 				///stats into matrix
-				stats = (SSR, SSE, SST, s2, dfr, rmse,F, K, N_g,N,r2,r2_a,r2_pmg)
+				stats = (SSR, SSE, SST, s2, dfr, rmse,F, K, N_g,N,r2,r2_a)
 				st_matrix(output_stats_name,stats)	
 				"output written"
 			
 			}		
+		}
+		if (args() > 19) {
+			st_matrix(rank_name,rank)
+		}
+		if (args() > 20) {
+			"omitted list:"
+			UsedCols
+			st_matrix(UsedCols_name,UsedCols)
+			colnames = (J(1,rows(UsedCols),"")\strofreal((1..rows(UsedCols))))'
+			st_matrixrowstripe(UsedCols_name,colnames)
 		}
 		"m_reg done"
 	}	
@@ -2645,14 +2894,17 @@ mata:
 						| string scalar exclude_p_vars,  /// 13 variables to be excluded for pooled covariance)
 						string matrix mata_varlist , //// 14 varlist
 						real scalar FixedTVCE_name , //// 15 fixed T VCE estimator for pooled models, 1 then WPN estimator used, 0 otherwise
-						string scalar residuals_name) //// 16 name of residuals variable in stata. needed for fixed t vce estimator
-						
+						string scalar residuals_name, //// 16 name of residuals variable in stata. needed for fixed t vce estimator
+						real scalar useqr)			//// 17 useqr
 	{
 		FixedTVCE = 0
 		if (args() > 14) {
 			FixedTVCE = FixedTVCE_name
 		}		
 		
+		if (args() < 17) {
+			useqr = 0
+		}
 		"start mean group program"
 		id = st_data(.,idvar,touse) 
 		
@@ -2829,7 +3081,7 @@ mata:
 				}
 				///divide by N-1
 				R = R / (N - 1)
-				PSI1 = cholqrinv(PSI)
+				PSI1 = m_xtdcce_inverter(PSI,useqr)
 				//// eq. 69 Pesaran 2006
 				cov_p =  w_s :* PSI1 * R * PSI1 
 			}
@@ -2850,14 +3102,19 @@ mata:
 						indic = (id :== uniqueid[i])
 						tmp_x = select(X,indic)
 						tmp_e = select(e,indic)
-						sigma = sigma :+  quadcross(tmp_x,tmp_x)
-						S = S:+ tmp_x' * tmp_e * tmp_e' * tmp_x
+						sigma = sigma +  quadcross(tmp_x,tmp_x)
+						///xe = quadcross(tmp_x,tmp_e)
+						///xexe = quadcross(xe,xe)
+						S = S+ tmp_x' * tmp_e * tmp_e'*tmp_x
+						///S = S:+ quadcross(tmp_x',tmp_e) * quadcross(tmp_e,tmp_x)
 						i++
 				}				
-				S = S:/N
-				sigma = cholqrinv(sigma:/N)
+				S = S
+				sigma = sigma
+				///sigma1 = pinv(sigma)
+				sigma1 = m_xtdcce_inverter(sigma,useqr)
 				///sigma = cholqrinv(sigma)
-				cov_p = (sigma:*S:*sigma):/N
+				cov_p = (sigma1*S*sigma1)
 			}
 			if (FixedTVCE == 2) {
 				"NW estimator for pooled coefficients"
@@ -2900,7 +3157,7 @@ mata:
 					Sigma = Sigma + 1/Ti * tmp_xx *w_i					
 					i++
 				}
-				sigma1 = cholqrinv(Sigma)
+				sigma1 = m_xtdcce_inverter(Sigma,useqr)
 				//// Eq. 74 
 				cov_p = 1/Ti *  sigma1 * Shat * sigma1
 			}
