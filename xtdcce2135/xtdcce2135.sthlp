@@ -1,6 +1,6 @@
 {smcl}
 {hline}
-{hi:help xtdcce2}{right: v. 135 - xx. June 2019}
+{hi:help xtdcce2}{right: v. 135 - xx. July 2019}
 {right:SJ18-3: st0536}
 {hline}
 {title:Title}
@@ -35,6 +35,9 @@ with a large number of observations over groups and time periods.{p_end}
 {cmd:fast}
 {cmdab:blockdiag:use}
 {cmdab:nodim:check}
+{cmd:useqr}
+{cmd:useinvsym}
+{cmd:showomitted}
 {cmdab:NOOMIT:ted}]{p_end}
 
 
@@ -49,6 +52,10 @@ with a large number of observations over groups and time periods.{p_end}
 {p 4}{help xtdcce2##description:Description}{p_end}
 {p 4}{help xtdcce2##options:Options}{p_end}
 {p 4}{help xtdcce2##model:Econometric and Empirical Model}{p_end}
+{p 8}{help xtdcce2##EconometricModel:Econometric Model}{p_end}
+{p 8}{help xtdcce2##EmpiricalModel:Empirical Model}{p_end}
+{p 8}{help xtdcce2##R2:Coefficient of Determination (R2)}{p_end}
+{p 8}{help xtdcce2##collinearity:Issues with Collinearity}{p_end}
 {p 4}{help xtdcce2##saved_vales:Saved Values}{p_end}
 {p 4}{help xtdcce2##postestimation: Postestimation commands}{p_end}
 {p 4}{help xtdcce2##examples:Examples}{p_end}
@@ -169,12 +176,28 @@ time dimension within each panel is long enough to run a mean group regression.
 Panel units with an insufficient number are automatically dropped.
 {p_end}
 
-{p 4 8 12}{cmdab:noomit:ted} no omitted variable checks.{p_end}
+{p 4 8}{cmd:xtdcce2} checks for collinearity in three different ways.
+It checks if matrix of the cross-sectional averages is of full rank.
+After partialling out the cross-sectional averages, it checks if the entire model
+across all cross-sectional units exhibits multicollinearity. 
+The final check is on a cross-sectional level. 
+The outcome of the checks influence which method is used to invert matrices.
+If a check fails {cmd:xtdcce2} posts a warning message.
+The default is {help mata cholinv:cholinv} and {help mata invsym:invsym} 
+if a matrix is of rank-deficient.
+For a further discussion see {help xtdcce2##collinearity: collinearity issues}.{break}
+The following options are available to alter the behaviour of {cmd:xtdcce2}
+with respect to matrices of not full rank:{p_end}
+{col 12}{cmd:useqr} calculates the generalized inverse via QR decomposition. This was the default for rank-deficient matrices for {cmd:xtdcce2} pre version 1.35.
+{col 12}{cmd:useinvsym} calculates the generalized invers via {help mata invsym}.
+{col 12}{cmd:showomitted} displays a cross-sectional unit - variable breakdown of omitted coefficients.
+{col 12}{cmdab:noomit:ted} no omitted variable checks on the entire model.
+
 
 {marker model}{title:Econometric and Empirical Model}
 
 {p 2}{ul: Econometric Model}{p_end}
-
+{marker EconometricModel}
 {p 4}Assume the following dynamic panel data model with heterogeneous coefficients:{p_end}
 
 {col 10} (1) {col 20} y(i,t) = b0(i) + b1(i)*y(i,t-1) + x(i,t)*b2(i) + x(i,t-1)*b3(i) + u(i,t)
@@ -207,7 +230,7 @@ On the other hand a dataset with lets say N = 30 and T = 34 would qualify as app
 {col 10} var(pi(mg)) = 1/N sum(i=1,N) (pi(i) - pi(mg))(p(i)-pi(mg))'
 
 {p 2}{ul: Empirical Model}{p_end}
-
+{marker EmpiricalModel}
 {p 4 4}The empirical model of equation (1) without the lag of variable x is:{p_end}
 
 {col 10}(2){col 20} y(i,t) = b0(i) + b1(i)*y(i,t-1) + x(i,t)*b2(i) + sum[d(i)*z(i,s)] + e(i,t),
@@ -219,45 +242,16 @@ On the other hand a dataset with lets say N = 30 and T = 34 would qualify as app
 For consistency of the cross sectional specific estimates, the matrix z = (z(1,1),...,z(N,T)) has to be of full column rank.
 This condition is checked for each cross section. 
 {cmd:xtdcce2} will return a warning if z is not full column rank. 
-It will, however, continue estimating the cross sectional sepecific coefficients and then calculate the mean group estimates.
+It will, however, continue estimating the cross sectional sepecific coefficients and then calculate the mean group estimates,
+see {help xtdcce2##collinearity: collinearity issues}.
 The mean group estimates will be consistent.
 For further reading see, Chudik, Pesaran (2015, Journal of Econometrics), Assumption 6 and page 398.{p_end}
 
 {p 4 4} {cmd:xtdcce2} evaluates the rank condition further. 
 The rank condition can fail if the constant is partialled out and one or more variables are binary.
-In the case {cmd:xtdcce2} restarts, however forces the constant to be calculated.{p_end}
+In this case {cmd:xtdcce2} restarts, however forces the constant to be calculated.{p_end}
 
-{p 2}{ul:Coefficient of Determination (R2)}
-
-{p 4 4}{cmd:xtdcce2} calculates calculates up to three different coefficients of determination (R2).
-It calculates the standard un-adjusted R2 and the adjusted R2 as common in the literature.
-If all coefficients are either pooled or heterogenous, {cmd:xtdcce2} calculates 
-an adjusted R2 following Holly et. al (2010); Eq. 3.14 and 3.15.
-The R2 and adjusted R2 are calculated even if the pooled or mean group adjusted 
-R2 is calculated. 
-However the pooled or mean group adjusted R2 is displayed instead of the adjusted R2
-if calculated.{p_end}
-
-{p 4 4}In the case of a pure homogenous model, the adjusted R2 is calculated as:{p_end}
-
-{col 10}R2(CCEP) = 1 - s(p)^2 / s^2
-
-{p 4 4}where {it:s(p)^2} is the error variance estimator from the pooled regressions 
-and {it:s^2} the overall error variance estimator. They are defined as{p_end}
-
-{col 10}s(p)^2 = sum(i=1,N) e(i)'e(i) / [N ( T - k - 2) - k],
-
-{col 10}s^2 = 1/(N (T -1)) sum(i=1,N) sum(t=1,T) (y(i,t) - ybar(i) )^2.
-
-{p 4 4}k is the number of regressors, {cmd:e(i)} is a vector of residuals 
-and {cmd:ybar(i)} is the cross sectional specific mean of the dependent variable.{p_end}
-
-{p 4 4}For mean group regressions the adjusted R2 is the mean of the cross-sectional 
-individual R2 weighted by the overall error variance:{p_end}
-
-{col 10}R2(CCEMG) = 1 - s(mg)^2 / s^2
-
-{col 10}s(mg)^2 = 1/N sum(i=1,N) e(i)'e(i) / [T - 2k - 2].
+{p 4 4}The follwing models can be estimated:{p_end}
 
 {p 2}{ul: i) Mean Group}{p_end}
 
@@ -389,6 +383,106 @@ The disadvantage of this approach is, that py and px need to be known.
 The variance/covariance matrix is calculated using the delta method, see Ditzen (2019).{p_end}
 {p 4}{help xtdcce2##example_ardl:See example}{p_end}
 
+{p 2}{ul:Coefficient of Determination (R2)}{p_end}
+{marker R2}
+{p 4 4}{cmd:xtdcce2} calculates up to three different coefficients of determination (R2).
+It calculates the standard un-adjusted R2 and the adjusted R2 as common in the literature.
+If all coefficients are either pooled or heterogeneous, {cmd:xtdcce2} calculates 
+an adjusted R2 following Holly et. al (2010); Eq. 3.14 and 3.15.
+The R2 and adjusted R2 are calculated even if the pooled or mean group adjusted 
+R2 is calculated. 
+However the pooled or mean group adjusted R2 is displayed instead of the adjusted R2
+if calculated.{p_end}
+
+{p 4 4}In the case of a pure homogenous model, the adjusted R2 is calculated as:{p_end}
+
+{col 10}R2(CCEP) = 1 - s(p)^2 / s^2
+
+{p 4 4}where {it:s(p)^2} is the error variance estimator from the pooled regressions 
+and {it:s^2} the overall error variance estimator. They are defined as{p_end}
+
+{col 10}s(p)^2 = sum(i=1,N) e(i)'e(i) / [N ( T - k - 2) - k],
+
+{col 10}s^2 = 1/(N (T -1)) sum(i=1,N) sum(t=1,T) (y(i,t) - ybar(i) )^2.
+
+{p 4 4}k is the number of regressors, {cmd:e(i)} is a vector of residuals 
+and {cmd:ybar(i)} is the cross sectional specific mean of the dependent variable.{p_end}
+
+{p 4 4}For mean group regressions the adjusted R2 is the mean of the cross-sectional 
+individual R2 weighted by the overall error variance:{p_end}
+
+{col 10}R2(CCEMG) = 1 - s(mg)^2 / s^2
+
+{col 10}s(mg)^2 = 1/N sum(i=1,N) e(i)'e(i) / [T - 2k - 2].
+
+{p 2}{ul: Collinearity Issues}{marker collinearity}
+
+{p 4 4}(Multi-)Collinearity in a regression models means that two or more 
+explanatory variables are linearly dependent. 
+The individual effect of a collinear explanatory variable on the dependent variable
+cannot be differentiated from the effect of another collinear explanatory variable.
+This implies it is impossible to estimate the individual coefficient of the collinear explanatory variables.
+If the explanatory variables are stacked into matrix X, one or more variables (columns) in x
+are collinear, then X'X is rank deficient. 
+Therefore it cannot be inverted and the OLS estimate of beta = inverse(X'X)X'Y does not exist.{p_end}
+
+{p 4 4}In a model in which cross-sectional dependence in which dependence is approximated
+by cross-sectional averages, collinearity can easily occur. 
+The empirical model ({help xtdcce2##EmpiricalModel:2}) can exhibit collinearity in four ways:{p_end}
+{col 10}1. In the cross-sectional averages (z(i,s)) stacked in Z are collinear.
+{col 10}2. The cross-sectional averages and the explanatory variables are collinear.
+{col 10}3. In the global set of model of explanatory variables (the constant, y(i,t-1), x(i,t), x(i,t-1) stacked in X) are collinear for {cmd:all i}.
+{col 10}4. In a cross-sectional unit specific model of explanatory variables (the constant, y(i,t-1), x(i,t), x(i,t-1) stacked in X(i)) are collinear for {cmd:some i}.
+
+{p 4 4}{cmd:xtdcce2} checks all types of collinearity and according to the 
+prevalent type decides how to continue and invert (X'X).
+It uses as a default {help mata cholinv:cholinv}. 
+If a matrix is rank deficient it uses {help mata invsym:invsym}, where variables (columns)
+are removed from the right. 
+If X = (X1 X2 X3 X4) and X1 and X4 are collinear, then X4 will be removed. 
+This is done by {help mf_invsym##remarks2:invsym, specifying the order in which columns are dropped}.{break}
+Older versions of {cmd:xtdcce2} used {help mata qrinv:qrinv} for rank deficient matrices. 
+However results can be unstable and no order of which columns to be dropped can be specified.
+The use of {help mata qrinv:qrinv} for rank deficient matrices can be enforced 
+with the option {cmd:useqr}.{p_end}
+
+{p 4 4}{cmd:xtdcce2} takes the following steps if:{p_end}
+{p 6}{cmd:1. Z'Z is not of full rank}{p_end}
+{p 6 6}Before partialling out {cmd:xtdcce2} checks of Z'Z is of full rank. 
+In case Z'Z is rank deficient, then {cmd:xtdcce2} will return a warning. 
+Cross-section unit specific estimates are not consistent, however the mean group
+estimates are. 
+See  Chudik, Pesaran (2015, Journal of Econometrics), Assumption 6 and page 398.{p_end}
+
+{p 6}{cmd:2. The cross-sectional averages and the explanatory variables are collinear.}{p_end}
+{p 6 6}In this case regressors from the right are dropped, 
+this means the cross-sectional averages are dropped.
+This case corresponds to the first because the cross-sectional averages
+are regressors for the partialling out.{p_end}
+
+{p 6}{cmd:3. X'X is collinear for all i.}{p_end}
+{p 6 6}{cmd:xtdcce2} uses {help _rmcoll} to remove any 
+variables which are collinear on the global level. 
+A message with the list of omitted variables will be posted.
+A local of omitted variables is posted in {cmd:e(omitted_var)} 
+and the number in {cmd:e(K_omitted)}.
+{p_end}
+
+{p 6}{cmd:4. X(i)'X(i) is collinear for some i.}{p_end}
+{p 6 6}{cmd:xtdcce2} automatically drops variables (columns) from the right
+for those cross-sectional units with collinear variables (columns).
+An error message appears. More details can be obtained using
+the option {cmd:showomitted} by showing a matrix with a detailed
+break down on a cross-section - variable level. 
+The matrix is stored in {cmd:e(omitted_var_i)} as well.{p_end}
+
+{p 4 4}Results obtained with {cmd:xtdcce2} can differ from those obtained
+with {help reg} or {help xtmg}. 
+The reasons are that {cmd:xtdcce2}, partialles out the 
+cross-sectional averages and enforces the use of doubles, both is 
+not done in {cmd:xtmg}. 
+In addition it use as a default a different alogorithm to invert matrices.{p_end}
+
 {marker saved_vales}{title:Saved Values}
 
 {cmd:xtdcce2} stores the following in {cmd:e()}:
@@ -399,7 +493,7 @@ The variance/covariance matrix is calculated using the delta method, see Ditzen 
 {col 8}{cmd: e(T)}{col 27} number of time periods
 {col 8}{cmd: e(K_mg)}{col 27} number of regressors (excluding variables partialled out)
 {col 8}{cmd: e(N_partial)}{col 27} number of partialled out variables
-{col 8}{cmd: e(N_omitted)}{col 27} number of omitted variables
+{col 8}{cmd: e(K_omitted)}{col 27} number of omitted variables (global level)
 {col 8}{cmd: e(N_pooled)}{col 27} number of pooled (homogenous) coefficients
 {col 8}{cmd: e(mss)}{col 27} model sum of squares
 {col 8}{cmd: e(rss)}{col 27} residual sum of squares
@@ -429,7 +523,9 @@ The variance/covariance matrix is calculated using the delta method, see Ditzen 
 {col 8}{cmd: e(cmdline)}{col 27} command line including options
 {col 8}{cmd: e(insts)}{col 27} instruments (exogenous) variables (only IV)
 {col 8}{cmd: e(istd)}{col 27} instrumented (endogenous) variables (only IV)
-{col 8}{cmd: e(version)}{col 27} xtdcce2 version, if {stata xtdcce2, version} used.
+{col 8}{cmd: e(omitted_var)}{col 27} variable list with omitted variables (global)
+{col 8}{cmd: e(omitted_var_i)}{col 27} matrix of omitted variables on cross-section - variable level
+{col 8}{cmd: e(version)}{col 27} xtdcce2 version, if {stata xtdcce2, version} used
 
 {col 4} Matrices
 {col 8}{cmd: e(b)}{col 27} coefficient vector 
@@ -747,10 +843,13 @@ Journal of Applied Econometrics: 1-6.{p_end}
 {p 4}Email: {browse "mailto:j.ditzen@hw.ac.uk":j.ditzen@hw.ac.uk}{p_end}
 {p 4}Web: {browse "www.jan.ditzen.net":www.jan.ditzen.net}{p_end}
 
-{p 4 8}I am grateful to Arnab Bhattacharjee, David M. Drukker, Markus Eberhardt, Tullio Gregori, Erich Gundlach and Mark Schaffer, to the participants of the
-2016 Stata Users Group meeting in London and two anonymous referees of The Stata Journal for many valuable comments and suggestions.{p_end}
+{p 4 8}I am grateful to Arnab Bhattacharjee, David M. Drukker, Markus Eberhardt, Tullio Gregori, Erich Gundlach, 
+Sean Holly and Mark Schaffer, to the participants of the
+2016 Stata Users Group meeting in London, 2018 Stata User Group meeting in Zuerich,
+ and two anonymous referees of The Stata Journal for many valuable comments and suggestions.
+ All remaining errors are my own.{p_end}
 
-{p 4}The routine to check for  positive definite or singular matrices was provided by Mark Schaffer, Heriot-Watt University, Edinburgh, UK.{p_end}
+{p 4}The routine to check for positive definite or singular matrices was provided by Mark Schaffer, Heriot-Watt University, Edinburgh, UK.{p_end}
 
 {p 4 4}{cmd:xtdcce2} was formally called {cmd:xtdcce}.{p_end}
 
@@ -763,7 +862,7 @@ and beta versions including a full history of
 xtdcce2 from {stata "net from http://www.ditzen.net/Stata/xtdcce2_beta"}.{p_end}
 
 {marker ChangLog}{title:Changelog}
-{p 4 8}This version: 1.35 - 06. March 2019{p_end}
+{p 4 8}This version: 1.35 - xx July 2019{p_end}
 {p 8 10} - Bug fix in calculation of minimal T dimension, added option nodimcheck.{p_end}
 {p 8 10} - Speed improvements (thanks to Achim Ahrens for the suggestions).{p_end}
 {p 8 10} - Bug fixes for jackknife (thanks to Collin Rabe for the pointer).{p_end}
@@ -771,6 +870,7 @@ xtdcce2 from {stata "net from http://www.ditzen.net/Stata/xtdcce2_beta"}.{p_end}
 {p 8 10} - Bug fix if binary variable used and constant partialled out.{p_end}
 {p 8 10} - Bug fixed in calculation of R2, added adjusted R2 for pooled and MG regressions.{p_end}
 {p 8 10} - Newey West and Westerlund, Petrova, Norkute standard errors for pooled regressions.{p_end}
+{p 8 10} - invsym for rank deficient matrices.{p_end}
 {p 4 8}Version 1.33 to Version 1.34{p_end}
 {p 8 10} - small bug fixes in code and help file.{p_end}
 {p 4 8}Version 1.32 to Version 1.33{p_end}
