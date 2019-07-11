@@ -60,7 +60,8 @@ program define xtdcce2_p_int
 		local xb2 "xb2"
 	}
 	
-
+	** Which inverter
+	local useqr = e(useqr)
 	
 	qui{
 		tsset
@@ -336,7 +337,7 @@ program define xtdcce2_p_int
 			
 			foreach ctry in `ctry_list' {
 				qui replace `touse_ctry' =  1 if `smpl'  & `ctry' == `idvar' 
-				mata xtdcce_m_partialout("`lhs' `pooled_vars' `mg_vars'","`clist1'","`touse_ctry'",`mrk'=.)
+				mata xtdcce_m_partialout("`lhs' `pooled_vars' `mg_vars'","`clist1'","`touse_ctry'",`useqr',`mrk'=.)
 				qui replace `touse_ctry' =  0				
 			}
 			
@@ -516,25 +517,31 @@ end
 
 *** Partial Out Program
 ** quadcross automatically removes missing values and therefore only uses (and updates) entries without missing values
+*** Partial Out Program
+** quadcross automatically removes missing values and therefore only uses (and updates) entries without missing values
+** X1 variable which is partialled out
 capture mata mata drop xtdcce_m_partialout()
 mata:
 	function xtdcce_m_partialout (  string scalar X2_n,
 									string scalar X1_n, 
 									string scalar touse,
-									| real matrix rk)
+									real scalar useold,
+									| real scalar rk)
 	{
+		"start partial out"
 		real matrix X1
 		real matrix X2
-		real matrix to
+		
 		st_view(X2,.,tokens(X2_n),touse)
 		st_view(X1,.,tokens(X1_n),touse)
 		X1X1 = quadcross(X1,X1)
 		X1X2 = quadcross(X1,X2)
-		//Get Rank
-		s = qrinv(X1X1,rk=.)		
-		rk = (rk=rows(X1X1))
-		rk = (rk,rows(X1X1))
-		X2[.,.] = (X2 - X1*cholqrsolve(X1X1,X1X2))
+		"x1x1 and x1x2 calculated"
+		//Get rank
+		X2[.,.] = (X2 - X1*m_xtdcce_solver(X1X1,X1X2,useold,rk))
+		"partial out done"
+		"rank condition:"
+		rk
 	}
 end
 
@@ -549,6 +556,7 @@ mata:
 							numeric matrix B,
 						  | real scalar useqr)
 	{
+			
 			if (args()==2) useqr = 0
 			
 			real matrix C
@@ -574,7 +582,7 @@ mata:
 						  | real scalar useqr)
 	{
 			if (args()==2) useqr = 0
-			
+
 			real matrix C
 
 			if (!useqr) {
@@ -589,4 +597,126 @@ mata:
 			return(C)
 
 	};
+end
+
+///Program for matrix inversion.
+///Default is cholesky
+///if not full rank use invsym (Stata standard) 
+///and obtain columns to use
+///options: 
+///1. if columns are specified, force use invsym
+///2. allow for old method (cholinv, if fails qrinv)
+///output
+///return: inverse
+///indicator for rank (1x2, rank and rows), which method used and variables used
+
+capture mata mata drop m_xtdcce_inverter()
+mata:
+	function m_xtdcce_inverter(	numeric matrix A,
+								| real scalar useold,
+								real matrix rank,
+								real matrix coln,
+								string scalar method)
+								
+	{
+		real matrix C
+		
+		if (args() == 1) {
+			useold = 0
+			coln = 0
+		}
+		if (args() == 2){
+			coln = 0
+		}
+		if (useold == 1) {			
+			C = cholqrinv(A)
+			qrinv(A,rank)
+			method = "cholqr"		
+		}
+		else {
+			if (coln[1,1] == 0) {
+				/// calculate rank seperate. if A is not full rank, cholinv still produces results
+				C = invsym(A)
+				rank = rows(C)-diag0cnt(C)
+				
+				if (rank < rows(A)) {	
+					/// not full rank, use invsym
+					method = "invsym"
+					coln = selectindex(colsum(A1:==0):==rows(A1):==0)			
+				}
+				else {
+					/// full rank use cholsolve
+					C = cholinv(A,B)
+					method = "chol"
+				}				
+			}
+			else {
+				C = invsym(A,coln)
+				rank = rows(C)-diag0cnt(C)
+				method = "invsym"
+			}			
+		}
+		rank = (rank, rows(C))
+		return(C)
+	}
+
+end
+/// same as inverter, rank is for matrix A (which is inverted) 
+capture mata mata drop m_xtdcce_solver()
+mata:
+	function m_xtdcce_solver(	numeric matrix A,
+								numeric matrix B,
+								| real scalar useold,
+								real matrix rank,
+								real matrix coln,
+								string scalar method)
+								
+	{
+		real matrix C
+		
+		if (args() == 2) {
+			useold = 0
+			coln = 0
+		}
+		if (args() < 5){
+			coln = 0
+		}		
+
+		if (useold == 1) {			
+			C = cholqrsolve(A,B)
+			qrinv(A,rank)
+			method = "cholqr"
+		}
+		else {
+			if (coln[1,1] == 0) {
+				
+				/// calculate rank seperate. if A is not full rank, cholsolve still produces results
+				A1 = invsym(A)
+				rank = rows(A1)-diag0cnt(A1)
+				
+				if (rank < rows(A)) {	
+					/// not full rank, solve by hand
+					C = A1 * B
+					method = "invsym"
+					coln = selectindex(colsum(A1:==0):==rows(A1):==0)			
+				}
+				else {
+					/// full rank use cholsolve
+					C = cholsolve(A,B)
+					method = "chol"
+					coln = 0
+				}
+			}
+			else {
+				/// coln is defined, use invsym on specified columns
+				A1 = invsym(A,coln)
+				C = A1 * B
+				method = "invsym"
+				rank = rows(A1)-diag0cnt(A1)
+			}			
+		}
+		rank = (rank, rows(A1))
+		return(C)		
+	}
+
 end
