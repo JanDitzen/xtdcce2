@@ -91,6 +91,7 @@ Option | Description
 
 xtdcce2 checks for collinearity in three different ways.  It checks if matrix of the cross-sectional averages is of full rank.  After partialling out the cross-sectional averages, it checks if the entire model across all cross-sectional units exhibits multicollinearity.  The final check is on a cross-sectional level.  The outcome of the checks influence which method is used to invert matrices.  If a check fails xtdcce2 posts a warning message.  The default is cholinv and invsym if a matrix is of rank-deficient.  For a further discussion see  collinearity issues. 
 The following options are available to alter the behaviour of xtdcce2 with respect to matrices of not full rank:
+
 Option | Description
 --- | ---
 **useqr** | calculates the generalized inverse via QR decomposition. This was the default for rank-deficient matrices for xtdcce2 pre version 1.35.
