@@ -81,8 +81,7 @@ Option | Description
 **jackknife** | applies the jackknife bias correction method. May not be combined with **recursive**.
 **recursive** | applies the recursive mean adjustment method. May not be combined with **jackknife**.
 **nocd** | suppresses calculation of CD test. For details about the CD test see LINK TO XTCD2.
-**exponent** | uses `xtcse2` to estimate the exponent of the cross-sectional dependence of the residuals. A value above 0.5 indicates
-        cross-sectional dependence, see `xtcse2`.
+**exponent** | uses `xtcse2` to estimate the exponent of the cross-sectional dependence of the residuals. A value above 0.5 indicates cross-sectional dependence, see `xtcse2`.
 **showindividual** | reports unit individual estimates in output.
 **fullsample** | uses entire sample available for calculation of cross sectional averages. Any observations which are lost due to lags will be included calculating the cross sectional averages (but are not included in the estimation itself).
 **fast** | omit calculation of unit specific standard errors.
