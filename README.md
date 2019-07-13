@@ -88,7 +88,8 @@ Option | Description
 **blockdiaguse** | uses **mata blockdiag** rather than an alternative algorithm. **mata blockdiag** is slower, but might produce more stable results.
 **nodimcheck** | Does not check for dimension. Before estimating a model, `xtdcce2` automatically checks if the time dimension within each panel is long enough to run a mean group regression. Panel units with an insufficient number are automatically dropped.
 
-xtdcce2 checks for collinearity in three different ways.  It checks if matrix of the cross-sectional averages is of full rank.  After partialling out the cross-sectional averages, it checks if the entire model across all cross-sectional units exhibits multicollinearity.  The final check is on a cross-sectional level.  The outcome of the checks influence which method is used to invert matrices.  If a check fails xtdcce2 posts a warning message.  The default is cholinv and invsym if a matrix is of rank-deficient.  For a further discussion see  collinearity issues. 
+xtdcce2 checks for collinearity in three different ways.  It checks if matrix of the cross-sectional averages is of full rank.  After partialling out the cross-sectional averages, it checks if the entire model across all cross-sectional units exhibits multicollinearity.  The final check is on a cross-sectional level.  The outcome of the checks influence which method is used to invert matrices.  If a check fails xtdcce2 posts a warning message.  The default is cholinv and invsym if a matrix is of rank-deficient.  For a further discussion see   [collinearity issues](#4.10-collinearity-issues)) . 
+
 The following options are available to alter the behaviour of xtdcce2 with respect to matrices of not full rank:
 
 Option | Description
@@ -296,7 +297,7 @@ The disadvantage of this approach is, that py and px need to be known. The varia
 
 See [Example](#78-cross-section-augmented-ardl-cs-ardl)
 
-## Coefficient of Determination (R2)
+## 4.9 Coefficient of Determination (R2)
 `xtdcce2` calculates up to three different coefficients of determination (R2).  It calculates the standard un-adjusted R2 and the adjusted R2 as common in the literature.  If all coefficients are either pooled or heterogeneous, xtdcce2 calculates an adjusted R2 following Holly et. al (2010); Eq. 3.14 and 3.15.  The R2 and adjusted R2 are calculated even if the pooled or mean group adjusted R2 is calculated.  However the pooled or mean group adjusted R2 is displayed instead of the adjusted R2 if calculated.
 
 In the case of a pure homogenous model, the adjusted R2 is calculated as:
@@ -321,7 +322,7 @@ R2(CCEMG) = 1 - s(mg)^2 / s^2
 s(mg)^2 = 1/N sum(i=1,N) e(i)'e(i) / [T - 2k - 2].
 ```
 
-## Collinearity Issues
+## 4.10 Collinearity Issues
 (Multi-)Collinearity in a regression models means that two or more explanatory variables are linearly dependent.  The individual effect of a collinear explanatory variable on the dependent variable cannot be differentiated from the effect of another collinear explanatory variable.  This implies it is impossible to estimate the individual coefficient of the collinear explanatory variables.  If the explanatory variables are stacked into matrix X, one or more variables (columns) in x are collinear, then X'X is rank deficient.  Therefore it cannot be inverted and the OLS estimate of beta = inverse(X'X)X'Y does not exist.
 
 In a model in which cross-sectional dependence in which dependence is approximated by cross-sectional averages, collinearity can easily occur.  The empirical model (2) can exhibit collinearity in four ways:
