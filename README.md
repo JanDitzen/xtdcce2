@@ -28,6 +28,8 @@ __Table of Contents__
 	8. [Cross-Section Augmented ARDL(CS-ARDL)](#77-cross-section-augmented-distributed-lag-cs-dl)
 8. [References](#8-references)
 9. [About](#9-about)
+10. [How to install](#10-installation)
+11. [Changelog](#11-change-log)
 
 # 1. Syntax
 
@@ -709,6 +711,7 @@ Please cite as follows:
 
 Ditzen, J. 2018. xtdcce2: Estimating dynamic common correlated effects in Stata. The Stata Journal, 18:3, 585 - 617.
 
+# 10. Installation
 The latest versions can be obtained via
 ```
 net install xtdcce2 , from("https://janditzen.github.io/xtdcce2/")
@@ -724,11 +727,23 @@ and a full history of xtdcce2, pre version 1.34 from
 net from http://www.ditzen.net/Stata/xtdcce2_beta
 ```
 
-### Changelog
-This version: 1.35 - 31. January 2019
- - Bug fix in calculation of minimal T dimension, added option nodimcheck.
- - Speed improvements (thanks to Achim Ahrens for the suggestions).
- - Bug fix when if statements used and jackknife (thanks to Collin Rabe for the pointer).
+`xtdcce2` is available on SSC as well:
+
+```
+ssc install xtdcce2
+```
+
+# 11. Changelog
+This version: 2.0 (was 1.35) - 13. July 2019
+- Bug fix in calculation of minimal T dimension, added option nodimcheck.
+- Speed improvements (thanks to Achim Ahrens for the suggestions).
+- Bug fixes for jackknife (thanks to Collin Rabe for the pointer).
+- Bug fix in predict and if (thanks for Deniey A. Purwanto and Tullio Gregoi for the pointers).
+- Bug fix if binary variable used and constant partialled out.
+- Bug fixed in calculation of R2, added adjusted R2 for pooled and MG regressions.
+- Newey West and Westerlund, Petrova, Norkute standard errors for pooled regressions.
+- invsym for rank deficient matrices.
+- Added xtcse2 support.
 
 Version 1.33 to Version 1.34
 - small bug fixes in code and help file.
