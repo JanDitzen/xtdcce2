@@ -32,7 +32,7 @@ __Table of Contents__
 # 1. Syntax
 
 ```
-xtdcce2 _depvar_ [_indepvars_] [_varlist2_ = _varlist_iv_] [ifin] , crosssectional(_varlist_) [pooled(_varlist_) cr_lags(_string_) NOCRosssectional ivreg2options(_string_) e_ivreg2_ ivslow noisily lr(_varlist_) lr_options(_string_) pooledconstant reportconstant noconstant trend pooledtrend jackknife recursive nocd showindividual fullsample fast blockdiaguse nodimcheck NOOMITted]
+xtdcce2 _depvar_ [_indepvars_] [_varlist2_ = _varlist_iv_] [ifin] , crosssectional(_varlist_) [pooled(_varlist_) cr_lags(_string_) NOCRosssectional ivreg2options(_string_) e_ivreg2_ ivslow noisily lr(_varlist_) lr_options(_string_) pooledconstant reportconstant noconstant trend pooledtrend jackknife recursive nocd exponent showindividual fullsample fast blockdiaguse nodimcheck useqr useinvsym NOOMITted]
 ```
 
 where _varlist2_ are endogenous variables and _varlist_iv_ the instruments. Data has to be `xtset` before using `xtdcce2`; see `tssst`.
@@ -61,9 +61,10 @@ from a dynamic equation, and
 c) The Cross-Sectional ARDL (CS-ARDL, Chudik et. al 2016) estimator using an ARDL model.
 For a further discussion see Ditzen (2018b).
 
-Additionally `xtdcce2` tests for cross sectional dependence (see `xtcd2`) and supports instrumental variable estimations (see [ivreg2](http://www.stata-journal.com/software/sj5-4/)).
-
-
+Additionally `xtdcce2` tests for cross sectional dependence (see `xtcd2`) and estimates the exponent of the
+    cross sectional dependence alpha (see `xtcse2`). It also supports instrumental variable estimations (see [ivreg2](http://www.stata-journal.com/software/sj5-4/)).
+    
+    
 # 3. Options
 
 Option | Description
@@ -80,12 +81,22 @@ Option | Description
 **jackknife** | applies the jackknife bias correction method. May not be combined with **recursive**.
 **recursive** | applies the recursive mean adjustment method. May not be combined with **jackknife**.
 **nocd** | suppresses calculation of CD test. For details about the CD test see LINK TO XTCD2.
+**exponent** | uses `xtcse2` to estimate the exponent of the cross-sectional dependence of the residuals. A value above 0.5 indicates
+        cross-sectional dependence, see `xtcse2`.
 **showindividual** | reports unit individual estimates in output.
 **fullsample** | uses entire sample available for calculation of cross sectional averages. Any observations which are lost due to lags will be included calculating the cross sectional averages (but are not included in the estimation itself).
 **fast** | omit calculation of unit specific standard errors.
 **blockdiaguse** | uses **mata blockdiag** rather than an alternative algorithm. **mata blockdiag** is slower, but might produce more stable results.
 **nodimcheck** | Does not check for dimension. Before estimating a model, `xtdcce2` automatically checks if the time dimension within each panel is long enough to run a mean group regression. Panel units with an insufficient number are automatically dropped.
-**noomitted** | no omitted variable checks.
+
+xtdcce2 checks for collinearity in three different ways.  It checks if matrix of the cross-sectional averages is of full rank.  After partialling out the cross-sectional averages, it checks if the entire model across all cross-sectional units exhibits multicollinearity.  The final check is on a cross-sectional level.  The outcome of the checks influence which method is used to invert matrices.  If a check fails xtdcce2 posts a warning message.  The default is cholinv and invsym if a matrix is of rank-deficient.  For a further discussion see  collinearity issues. 
+The following options are available to alter the behaviour of xtdcce2 with respect to matrices of not full rank:
+Option | Description
+--- | ---
+**useqr** | calculates the generalized inverse via QR decomposition. This was the default for rank-deficient matrices for xtdcce2 pre version 1.35.
+**useinvsym** |  calculates the generalized invers via mata invsym.
+**showomitted** |  displays a cross-sectional unit - variable breakdown of omitted coefficients.
+**noomitted** | no omitted variable checks on the entire model.
 
 `xtdcce2` supports IV regressions using `ivreg2`. The IV specific options are:
 
@@ -285,6 +296,57 @@ The disadvantage of this approach is, that py and px need to be known. The varia
 
 See [Example](#78-cross-section-augmented-ardl-cs-ardl)
 
+## Coefficient of Determination (R2)
+`xtdcce2` calculates up to three different coefficients of determination (R2).  It calculates the standard un-adjusted R2 and the adjusted R2 as common in the literature.  If all coefficients are either pooled or heterogeneous, xtdcce2 calculates an adjusted R2 following Holly et. al (2010); Eq. 3.14 and 3.15.  The R2 and adjusted R2 are calculated even if the pooled or mean group adjusted R2 is calculated.  However the pooled or mean group adjusted R2 is displayed instead of the adjusted R2 if calculated.
+
+In the case of a pure homogenous model, the adjusted R2 is calculated as:
+
+```
+R2(CCEP) = 1 - s(p)^2 / s^2
+```
+
+where s(p)^2 is the error variance estimator from the pooled regressions and s^2 the overall error variance estimator. They are defined as
+
+```
+s(p)^2 = sum(i=1,N) e(i)'e(i) / [N ( T - k - 2) - k],
+s^2 = 1/(N (T -1)) sum(i=1,N) sum(t=1,T) (y(i,t) - ybar(i) )^2.
+```
+
+k is the number of regressors, e(i) is a vector of residuals and ybar(i) is the cross sectional specific mean of the dependent variable.
+
+For mean group regressions the adjusted R2 is the mean of the cross-sectional individual R2 weighted by the overall error variance:
+
+```
+R2(CCEMG) = 1 - s(mg)^2 / s^2
+s(mg)^2 = 1/N sum(i=1,N) e(i)'e(i) / [T - 2k - 2].
+```
+
+## Collinearity Issues
+(Multi-)Collinearity in a regression models means that two or more explanatory variables are linearly dependent.  The individual effect of a collinear explanatory variable on the dependent variable cannot be differentiated from the effect of another collinear explanatory variable.  This implies it is impossible to estimate the individual coefficient of the collinear explanatory variables.  If the explanatory variables are stacked into matrix X, one or more variables (columns) in x are collinear, then X'X is rank deficient.  Therefore it cannot be inverted and the OLS estimate of beta = inverse(X'X)X'Y does not exist.
+
+In a model in which cross-sectional dependence in which dependence is approximated by cross-sectional averages, collinearity can easily occur.  The empirical model (2) can exhibit collinearity in four ways:
+         1. In the cross-sectional averages (z(i,s)) stacked in Z are collinear.
+         2. The cross-sectional averages and the explanatory variables are collinear.
+         3. In the global set of model of explanatory variables (the constant, y(i,t-1), x(i,t), x(i,t-1) stacked in X) are collinear for all i.
+         4. In a cross-sectional unit specific model of explanatory variables (the constant, y(i,t-1), x(i,t), x(i,t-1) stacked in X(i)) are collinear for some i.
+
+xtdcce2 checks all types of collinearity and according to the prevalent type decides how to continue and invert (X'X).  It uses as a default cholinv. If a matrix is rank deficient it uses invsym, where variables (columns) are removed from the right.  If X = (X1 X2 X3 X4) and X1 and X4 are collinear, then X4 will be removed.  This is done by invsym, specifying the order in which columns are dropped. Older versions of xtdcce2 used qrinv for rank deficient matrices.  However results can be unstable and no order of which columns to be dropped can be specified.  The use of qrinv for rank deficient matrices can be enforced with the option useqr.
+
+xtdcce2 takes the following steps if:
+1. Z'Z is not of full rank
+Before partialling out xtdcce2 checks of Z'Z is of full rank.  In case Z'Z is rank deficient, then xtdcce2 will return a warning.  Cross-section unit specific estimates are not consistent, however the mean group estimates are.  See Chudik, Pesaran (2015, Journal of Econometrics), Assumption 6 and page 398.
+
+2. The cross-sectional averages and the explanatory variables are collinear.
+In this case regressors from the right are dropped, this means the cross-sectional averages are dropped.  This case corresponds to the first because the cross-sectional averages are regressors for the partialling out.
+
+3. X'X is collinear for all i.
+xtdcce2 uses `_rmcoll` to remove any variables which are collinear on the global level.  A message with the list of omitted variables will be posted. A local of omitted variables is posted in e(omitted_var) and the number in e(K_omitted).
+
+4. X(i)'X(i) is collinear for some i.
+xtdcce2 automatically drops variables (columns) from the right for those cross-sectional units with collinear variables (columns).  An error message appears. More details can be obtained using the option showomitted by showing a matrix with a detailed break down on a cross-section - variable level.  The matrix is stored in e(omitted_var_i) as well.
+
+Results obtained with xtdcce2 can differ from those obtained with reg or xtmg.  The reasons are that xtdcce2, partialles out the cross-sectional averages and enforces the use of doubles, both is not done in xtmg.  In addition it use as a default a different alogorithm to invert matrices.
+
 # 5. Saved Values
 
 `xtdcce2` stores the following in **e()**:
@@ -334,6 +396,8 @@ Matrices | Description
 **e(V)** | variance-covariance matrix
 **e(bi)** | coefficient vector of individual and pooled coefficients
 **e(Vi)** | variance-covariance matrix of individual and pooled coefficients
+**e(alpha)** | estimates of the exponent of cross-sectional dependence
+**e(alpha)** | estimates of the standard error exponent of cross-sectional dependence
 
 Estimated long run coefficients of the ARDL model are marked with the prefix _lr_.
 
