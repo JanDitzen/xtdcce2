@@ -232,6 +232,7 @@ Jan - February
 10.06.2019 - added R2 for pooled and mg regressions. 
 		   - t-statistic in mg_reg was 1/t
 28.06.2019 - new program for matrix inversion and solver. 
+13.07.2019 - added xtcse2 for estimation of alpha with option exponent
 */
 
 program define xtdcce2135 , eclass sortpreserve
@@ -268,6 +269,7 @@ program define xtdcce2135 , eclass sortpreserve
 			*/ full /* keep for legacy, replaced by showindividual
 			*/ SHOWIndividual /*
 			*/ nocd /*
+			*/ EXPOnent /*
 			*/ NOIsily /*
 			*/ trace /* nondocumented, for checking purpose only
 			*/ trend /*
@@ -1349,7 +1351,7 @@ program define xtdcce2135 , eclass sortpreserve
 				if _rc == 199 {
 					noi display as error "xtcd2 not installed" 
 					local cd nocd
-					}
+				}
 				else if _rc != 0 {
 					noi display as error "xtcd2 caused error. Please do test by hand."
 					local cd nocd
@@ -1360,6 +1362,24 @@ program define xtdcce2135 , eclass sortpreserve
 					scalar `cdp' = r(p)
 				}
 			} 
+			if "`exponent'" != "" & "`fast'" == "0" {
+				capture xtcse2 `residuals' if `touse' , nocd inprog
+				if _rc == 199 {
+					noi display as error "xtcse2 not installed" 
+					local exponent noexponent
+				}
+				else if _rc != 0 {
+					noi display as error "xtcse2 caused error. Please do estimation by hand."
+					local exponent noexponent
+				}
+				else {
+					tempname alphaM alphaSEM
+					matrix `alphaM' = r(alpha)
+					matrix `alphaSEM' = r(alphaSE)
+					matrix colnames `alphaM' = "residuals"
+					matrix colnames `alphaSEM' = "residuals"
+				}
+			}
 			*noi mata `mata_varlist'
 			if `ardl_indic' == 1 {
 				tempname lr_pooled lr_bases lr_select lr1_check	
@@ -1489,7 +1509,7 @@ program define xtdcce2135 , eclass sortpreserve
 					local `liste' = subinstr("``liste''","`lr_1'","ec",.)
 				}
 				*change b_mg cov sd and t
-				foreach mat in `b_mg' `cov'  `sd' `t' {
+				foreach mat in `b_mg' `cov'  `sd' `t' `b_i' `cov_i' `sd_i' `t_i' {
 					local col_eq ""
 					local row_eq ""
 				
@@ -1547,9 +1567,7 @@ program define xtdcce2135 , eclass sortpreserve
 		mata `touse'_s = `touse'_s[xtdcce2_mm_which2(`touse'_s[.,2],`touse',1),1]
 		mata st_view(`touse',.,st_addvar("double","`touse'"))
 		mata `touse'[.] = `touse'_s
-		mata mata drop `touse' `touse'_s 
-		
-		
+		mata mata drop `touse' `touse'_s 		
 		
 		}
 		else {
@@ -1644,12 +1662,12 @@ program define xtdcce2135 , eclass sortpreserve
 			ereturn scalar K_partial = `num_partialled_out'			
 			ereturn scalar F = F
 			ereturn scalar r2 = r2
-			ereturn scalar r2_a = r2_a
-			
+			ereturn scalar r2_a = r2_a			
 			ereturn scalar rmse = rmse
 			ereturn scalar df_r = dfr
 			ereturn scalar rss = SSR
-			ereturn scalar mss = SSE			
+			ereturn scalar mss = SSE	
+			
 			ereturn local cr_lags = "`cr_lags'"
 			ereturn local indepvar "`pooled' `rhs'"
 			ereturn local idvar = "`d_idvar'"
@@ -1675,7 +1693,12 @@ program define xtdcce2135 , eclass sortpreserve
 			
 			ereturn matrix bi = `b_i' , copy
 			ereturn matrix Vi = `cov_i' , copy
-
+			
+			if "`exponent'" != "" {
+				ereturn matrix alpha = `alphaM', copy
+				ereturn matrix alphaSE = `alphaSEM', copy
+			}
+			
 			**Hidden returns for estat and predict
 			ereturn hidden local p_mg_vars "`rhs' `endogenous_vars'"
 			ereturn hidden local p_pooled_vars "`pooled' `endo_pooled'"
@@ -1962,8 +1985,11 @@ program define xtdcce2135 , eclass sortpreserve
 			}		
 		}
 	}	
-	
 	di as text "{hline `col_i'}{c BT}{hline `=`maxline'-`col_i''}"
+	
+
+	
+	
 	if wordcount("`pooled'") > 0 | wordcount("`lr_pooled'") > 0 {
 		di as text  "Pooled Variables: `endo_pooled' `pooled'"
 	}
@@ -2109,6 +2135,34 @@ program define xtdcce2135 , eclass sortpreserve
 			}
 		}
 	}
+	
+	
+	if "`exponent'" != "" & "`fast'" == "0" {
+		di ""
+		noi disp as text "Estimation of Cross-Sectional Exponent (alpha)"
+	
+		local level =  `c(level)'
+		local col_i = `abname' + 1
+		local maxline = `maxline' - 2
+		scalar cv = invnorm(1 - ((100-`level')/100)/2)
+	
+		di as text "{hline `col_i'}{c TT}{hline `=`maxline'-`col_i'-15'}"
+		di as text %`col_i's  abbrev("variable",`abname') "{c |}" _c
+		local col = `col_i' + 1 + 6
+		di as text _col(`col') "alpha" _c
+		local col = `col' + 5 + 3
+		di as text _col(`col') "Std. Err."  _c
+		local col = `col' + 9 + 4
+		di as text _col(`col') "[`level'% Conf. Interval]"    
+		di as text "{hline `col_i'}{c +}{hline `=`maxline'-`col_i'-15'}"
+		
+		xtdcce_output_table_alpha residuals `col_i' `alphaM' `alphaSEM' cv residuals
+		
+		di as text "{hline `col_i'}{c BT}{hline `=`maxline'-`col_i'-15'}"
+		di "0.5 <= alpha < 1 implies strong cross sectional dependence."
+		di ""
+	}
+	
 	capture mata mata drop `mata_drop' `cov_i1'
 
 	if "`residuals_old'" != "" {
@@ -3667,3 +3721,26 @@ mata:
 	}
 end
 
+capture program drop xtdcce_output_table_alpha
+program define xtdcce_output_table_alpha
+	syntax anything ,[noci]
+
+	tokenize `anything'
+	local var `1'
+	local col =  `2'
+	local b_p_mg `3'
+	local se_p_mg `4'
+	local cv  `5'
+	local i `6'
+
+	di as text %`col's abbrev("`var' ",`=`col'-1') "{c |}"  _continue
+	local col = `col' + 3
+	di as result _column(`col') %9.8g `b_p_mg'[1,colnumb(`b_p_mg',"`i'")] _continue
+	local col = `col' + 8 + 3
+	di as result _column(`col') %9.8g `se_p_mg'[1,colnumb(`se_p_mg',"`i'")] _continue
+	local col = `col' + 8 + 5
+	di as result _column(`col') %9.7g ( `b_p_mg'[1,colnumb(`b_p_mg',"`i'")] - `cv'*`se_p_mg'[1,colnumb(`se_p_mg',"`i'")]) _continue
+	local col = `col' + 12
+	di as result _column(`col') %9.7g ( `b_p_mg'[1,colnumb(`b_p_mg',"`i'")] + `cv'*`se_p_mg'[1,colnumb(`se_p_mg',"`i'")])
+
+end
