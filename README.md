@@ -733,7 +733,7 @@ net from http://www.ditzen.net/Stata/xtdcce2_beta
 ssc install xtdcce2
 ```
 
-# 11. Changelog
+# 11. Change log
 This version: 2.0 (was 1.35) - 13. July 2019
 - Bug fix in calculation of minimal T dimension, added option nodimcheck.
 - Speed improvements (thanks to Achim Ahrens for the suggestions).
