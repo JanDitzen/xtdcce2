@@ -141,4 +141,4 @@ Econometric Reviews 34(6-10): 1089-1117.{p_end}
 {p 4}Thanks to Achim Ahrens for providing many helpful comments to the code and an anonymous reviewer for many helpful comments.{p_end}
 
 {title:Also see}
-{p 4 4}See also: {help xtdcce2}
+{p 4 4}See also: {help xtdcce2} {help xtcse2}
