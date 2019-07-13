@@ -106,7 +106,7 @@ Option | Description
 **ivreg2options(_string_)** | passes further options to `ivreg2`, see `ivreg2, options`
 **e_ivreg2** | posts all available results from `ivreg2` in **e()** with prefix _ivreg2_, see ivreg2, macros.
 **noisily** | displays output of `ivreg2`.
-**ivslow** | For the calculation of standard errors for pooled coefficients an auxiliary regressions is performed. In case of an IV regression, xtdcce2 runs a simple IV regression for the auxiliary regressions. This is faster. If option is used **ivslow**, then xtdcce2 calls ivreg2 for the auxiliary regression.	This is advisable as soon as ivreg2 specific options are used.
+**ivslow** | For the calculation of standard errors for pooled coefficients an auxiliary regressions is performed. In case of an IV regression, xtdcce2 runs a simple IV regression for the auxiliary regressions. This is faster. If option is used **ivslow**, then xtdcce2 calls ivreg2 for the auxiliary regression. This is advisable as soon as ivreg2 specific options are used.
 
 `xtdcce2` is able to estimate long run coefficients.
 Three models are supported:
