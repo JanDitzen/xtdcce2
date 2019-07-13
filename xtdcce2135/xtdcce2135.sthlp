@@ -1,6 +1,6 @@
 {smcl}
 {hline}
-{hi:help xtdcce2}{right: v. 135 - xx. July 2019}
+{hi:help xtdcce2}{right: v. 1.35 - 13. July 2019}
 {right:SJ18-3: st0536}
 {hline}
 {title:Title}
@@ -29,6 +29,7 @@ with a large number of observations over groups and time periods.{p_end}
 {cmdab:pooledt:rend}
 {cmdab:jack:knife}
 {cmdab:rec:ursive}
+{cmdab:expo:nent}
 {cmd:nocd}
 {cmdab:showi:ndividual}
 {cmd:fullsample}
@@ -78,7 +79,9 @@ b) The Cross-Sectional Augmented Distributed Lag (CS-DL, Chudik et. al 2016) est
 from a dynamic equation, and {break}
 c) The Cross-Sectional ARDL (CS-ARDL, Chudik et. al 2016) estimator using an ARDL model.{p_end}
 {p 4 4}For a further discussion see Ditzen (2019).
-Additionally {cmd:xtdcce2} tests for cross sectional dependence (see {help xtcd2}) and supports instrumental variable estimations (see {help ivreg2}).{p_end}
+Additionally {cmd:xtdcce2} tests for cross sectional dependence (see {help xtcd2}) and 
+estimates the exponent of the cross sectional dependence alpha (see {help xtcse2}).
+It also supports instrumental variable estimations (see {help ivreg2}).{p_end}
 
 
 {marker options}{title:Options}
@@ -150,6 +153,10 @@ No options for the CS-DL model are necessary.{p_end}
 {p 4 8}Two methods for small sample time series bias correction are supported:{break}
 	{cmdab:jack:knife} applies the jackknife bias correction method. May not be combined with {cmd:recursive}.{break}
 	{cmdab:rec:ursive} applies the recursive mean adjustment method. May not be combined with {cmd:jackknife}.{p_end}
+
+{p 4 8 12}{cmdab:expo:nent}	uses {help xtcse2} to estimate the exponent of the cross-sectional
+dependence of the residuals. A value above 0.5 indicates cross-sectional dependence,
+see {help xtcse2}.{p_end}
 
 {p 4 8 12}{cmd: nocd} suppresses calculation of CD test. For details about the CD test see {help xtcd2}.{p_end}
 
@@ -653,6 +660,12 @@ Finally the number of lags can be specified as well using the {cmd:cr_lags} opti
 
 {p 4 4}All three command lines are equivalent and lead to the same estimation results.{p_end}
 
+{p 4 4}To check if residuals still exhibit cross-sectional dependence, the estimation
+of the exponent of cross-sectional dependence can be estimated as well.{p_end}
+
+{p 8}{stata xtdcce2 d.log_rgdpo log_hc log_ck log_ngd , reportc cr(d.log_rgdpo log_hc log_ck log_ngd) cr_lags(0) exponent}.{p_end}
+
+{p 4 4}Alterntively the exponent can be estimated afterwards using {help xtcse2}.{p_end}
 
 {marker example_dcce}{p 4}{ul:Dynamic Common Correlated Effect}{p_end}
 
@@ -871,6 +884,7 @@ xtdcce2 from {stata "net from http://www.ditzen.net/Stata/xtdcce2_beta"}.{p_end}
 {p 8 10} - Bug fixed in calculation of R2, added adjusted R2 for pooled and MG regressions.{p_end}
 {p 8 10} - Newey West and Westerlund, Petrova, Norkute standard errors for pooled regressions.{p_end}
 {p 8 10} - invsym for rank deficient matrices.{p_end}
+{p 8 10} - Added {cmd:xtcse2} support.{p_end}
 {p 4 8}Version 1.33 to Version 1.34{p_end}
 {p 8 10} - small bug fixes in code and help file.{p_end}
 {p 4 8}Version 1.32 to Version 1.33{p_end}
@@ -893,4 +907,4 @@ xtdcce2 from {stata "net from http://www.ditzen.net/Stata/xtdcce2_beta"}.{p_end}
 {p 8 10} - legacy control for endogenous_var(), exogenous_var() and residuals().{p_end}
 
 {title:Also see}
-{p 4 4}See also: {help xtcd2}, {help ivreg2}, {help xtmg}, {help xtpmg}, {help moremata}{p_end} 
+{p 4 4}See also: {help xtcd2}, {help xtcse2}, {help ivreg2}, {help xtmg}, {help xtpmg}, {help moremata}{p_end} 
