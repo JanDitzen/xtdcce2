@@ -326,10 +326,10 @@ s(mg)^2 = 1/N sum(i=1,N) e(i)'e(i) / [T - 2k - 2].
 (Multi-)Collinearity in a regression models means that two or more explanatory variables are linearly dependent.  The individual effect of a collinear explanatory variable on the dependent variable cannot be differentiated from the effect of another collinear explanatory variable.  This implies it is impossible to estimate the individual coefficient of the collinear explanatory variables.  If the explanatory variables are stacked into matrix X, one or more variables (columns) in x are collinear, then X'X is rank deficient.  Therefore it cannot be inverted and the OLS estimate of beta = inverse(X'X)X'Y does not exist.
 
 In a model in which cross-sectional dependence in which dependence is approximated by cross-sectional averages, collinearity can easily occur.  The empirical model (2) can exhibit collinearity in four ways:
-         1. In the cross-sectional averages (z(i,s)) stacked in Z are collinear.
-         2. The cross-sectional averages and the explanatory variables are collinear.
-         3. In the global set of model of explanatory variables (the constant, y(i,t-1), x(i,t), x(i,t-1) stacked in X) are collinear for all i.
-         4. In a cross-sectional unit specific model of explanatory variables (the constant, y(i,t-1), x(i,t), x(i,t-1) stacked in X(i)) are collinear for some i.
+1. In the cross-sectional averages (z(i,s)) stacked in Z are collinear.
+2. The cross-sectional averages and the explanatory variables are collinear.
+3. In the global set of model of explanatory variables (the constant, y(i,t-1), x(i,t), x(i,t-1) stacked in X) are collinear for all i.
+4. In a cross-sectional unit specific model of explanatory variables (the constant, y(i,t-1), x(i,t), x(i,t-1) stacked in X(i)) are collinear for some i.
 
 xtdcce2 checks all types of collinearity and according to the prevalent type decides how to continue and invert (X'X).  It uses as a default cholinv. If a matrix is rank deficient it uses invsym, where variables (columns) are removed from the right.  If X = (X1 X2 X3 X4) and X1 and X4 are collinear, then X4 will be removed.  This is done by invsym, specifying the order in which columns are dropped. Older versions of xtdcce2 used qrinv for rank deficient matrices.  However results can be unstable and no order of which columns to be dropped can be specified.  The use of qrinv for rank deficient matrices can be enforced with the option useqr.
 
