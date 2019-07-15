@@ -1,10 +1,13 @@
-*! xtcse2, version 1.0, July 2019
+*! xtcse2, version 1.01, July 2019
 *! author Jan Ditzen
 *! www.jan.ditzen.net - j.ditzen@hw.ac.uk
-*! see
-
+/*
+Changelog
+**********1.01*****************************
+- support for unbalanced panels
+*/
 program define xtcse2, rclass
-	syntax [varlist(default=none)] [if], [pca(integer 4) STANDardize nocd inprog]
+	syntax [varlist(default=none)] [if], [pca(integer 4) STANDardize nocd inprog ]
 	version 14
 	preserve
 	
@@ -33,10 +36,12 @@ program define xtcse2, rclass
 		
 		keep if `touseAll'
 		*** Get info
-		noi xtset
-		if "`r(balanced)'" != "strongly balanced" {
-			noi disp as error "xtcse2 requires a balanced panel."
-			exit
+		local unbal = 0
+		qui xtset
+		if "`r(balanced)'" != "strongly balanced"  {
+				noi disp "Observations will be restricted to union of time periods across cross sectional units."
+				noi disp "Number of observations can become very small."
+				noi disp ""
 		}
 		local idvar "`r(panelvar)'"
 		local tvar "`r(timevar)'"
@@ -53,6 +58,44 @@ program define xtcse2, rclass
 			egen `tmpid' = group(`idvar') if `touse'
 			egen `tmpt' = group(`tvar') if `touse'
 			
+			** correct minimum
+			qui sum `tmpt' if `touse'
+			replace `tmpt' = `tmpt' - `r(min)' + 1 if `touse'
+			
+			qui sum `tmpid' if `touse'
+			replace `tmpid' = `tmpid' - `r(min)' + 1 if `touse'	
+			
+			** restrict to same sample
+			tempname NumCross NumCrossIndic
+			by `tmpt', sort: egen `NumCross' = total(1) if `touse'
+			qui sum `tmpid' if `touse'
+			gen `NumCrossIndic' = (`r(max)'==`NumCross') 
+			
+			qui sum `NumCrossIndic' if `touse'
+			local NCI = r(sum)
+			qui sum `touse' if `touse'
+			local TI = r(sum)
+			
+			replace `touse' = `NumCrossIndic' 
+			
+			if `TI' != `NCI'{
+				local vartmp = word("`varn'",`run')
+				noi disp "Number of observations for variable `vartmp' adjusted from `TI' to `NCI' due to unbalanced panel or variable."
+				drop `tmpid' `tmpt'
+				egen `tmpid' = group(`idvar') if `touse'
+				egen `tmpt' = group(`tvar') if `touse' 
+				
+				** correct minimum
+				qui sum `tmpt' if `touse'
+				replace `tmpt' = `tmpt' - `r(min)' + 1 if `touse'
+			
+				qui sum `tmpid' if `touse'
+				replace `tmpid' = `tmpid' - `r(min)' + 1 if `touse'	
+				
+			}			
+			
+			drop `NumCrossIndic'  `NumCross'		
+			
 			*** standardize						
 			if "`standardize'" != "" {
 				tempvar meantmp sdtmp
@@ -62,14 +105,11 @@ program define xtcse2, rclass
 				drop `meantmp' `sdtmp'
 			}
 			
-			tempname xx PC
+			tempname xx PC 
 			tempname eigenval eigenvec
 			sum `tmpt' if `touse'
 			local T = `r(max)'
-			
-			mata `xx' = .
-			sort `tmpid' `tmpt'
-			
+
 			mata `xx' = st_data(.,"`res'","`touse'")
 			mata `xx' = colshape(`xx',`T')'
 
