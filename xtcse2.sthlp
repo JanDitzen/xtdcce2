@@ -1,6 +1,6 @@
 {smcl}
 {hline}
-{hi:help xtcse2}{right: v. 1.0 - 13. July 2019}
+{hi:help xtcse2}{right: v. 1.01 - 15. July 2019}
 {hline}
 {title:Title}
 
@@ -18,7 +18,8 @@
 If {it:varlist} if left empty, {cmd:xtcse2} predicts residuals from the
 last estimation command,
 see {help predict}.
-{cmd:xtcse2} requires a balanced panel.{p_end}
+{cmd:xtcse2} restricts the panel to the same number of time series per cross-sectional 
+unit if the panel is unbalanced.{p_end}
 
 {title:Contents}
 
@@ -51,6 +52,11 @@ Therefore a confidence interval is more informative when estimating alpha.{p_end
 As a default it uses {help xtcd2} to test for weak cross-sectional dependence.
 For a discussion of {cmd:xtdcce2} and {cmd:xtcd2} see Ditzen (2018,2019).{p_end}
 
+{p 4 4}If the panel is unbalanced or observations are missing for a specific cross-section 
+unit-time combination, then the sample is restricted to the union of all time periods across
+cross-sectional units. 
+For unbalanced panels with many missings or a variable with many missings, many
+observations might be lost.{p_end}
 
 {marker options}{title:Options}
 
