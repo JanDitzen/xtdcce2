@@ -8,4 +8,5 @@ p xtdcce2 xtdcce2 version 2.0
 p xtcse2 xtcse2 version 1.01
 p xtcd2 xtcd2 version 2.1
 
+p xtdcce221 xtdcce2 version 2.21 (beta) - new!
 p xtdcce2135 xtdcce2 version 1.35 (beta) - old
