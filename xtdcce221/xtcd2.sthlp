@@ -7,7 +7,9 @@ help {hi:xtcd2}
 
 {title:Syntax}
 
-{p 4 13}{cmd:xtcd2} [{varname}(max=1)] [if] [{cmd:,}{cmdab:noest:imation} {cmd:rho} {cmdab:kden:sity} {cmd:name({it:string})} ]{p_end}
+{p 4 13}{cmd:xtcd2} [{varname}(max=1)] [if] [{cmd:,}{cmdab:noest:imation} {cmd:rho} {cmdab:kden:sity} {cmd:name({it:string})} 
+{cmd:heatplot[(}{cmdab:abs:olute} {it:options_heatplot}{cmd:)] contour[(}{cmdab:abs:olute} {it:options_contour}{cmd:)]}
+]{p_end}
 
 {p 4 4}{varname} is the name of residuals or variable to be tested for weak cross sectional dependence. 
 {varname} is optional if the command is performed after an estimation (postestimation).{p_end}
@@ -67,6 +69,11 @@ Furthermore by specifying the {cmd:kdensity} option, a kernel density plot with 
 That is the residuals including the fixed- or random-error componen, see {help xtreg postestimation##predict: xtreg postestimation}.
 In all other cases {cmd: predict, residuals} is used to calculate the residuals.{p_end}
 
+{p 4 4}{cmd:xtcd2} can draw {help heatplot:heatplots} and {help twoway contour:contour} plots 
+of the cross-correlations. 
+To draw heatplots Ben Jann's {help heatplot} is required.
+Contour plots are drawn using Stata's {help twoway contour}.{p_end}
+
 {marker options}{title:Options}
 
 {p 4 4}{cmdab:noest:imation} if specified, then{cmd:xtcd2} is not run as a postestimation command and does not require {cmd:e(sample)} to be set.
@@ -81,6 +88,14 @@ The number of observations, the mean, percentiles, minimum and maximum of the cr
 If {cmd:name({it:string})} is set, then the histogram is saved and not drawn.{p_end}
 
 {p 4 4}{cmd:name({it:string})} saves the kdensity.{p_end}
+
+{p 4 4}{cmd:heatplot[(}{cmdab:abs:olute} {it:options_heatplot}{cmd:)]} draws a {help heatplot} of the cross-correlations.
+{it: options_heatplot} are options to be passed to {help heatplot.}
+{cmdab:abs:olute} uses the absolute values of the cross-correlations.{p_end}
+
+{p 4 4}{cmd:contour[(}{cmdab:abs:olute} {it:options_contour}{cmd:)]} draws a {help contour} plot of the cross-correlations.
+{it: options_contour} are options to be passed to {help twoway contour.}
+{cmdab:abs:olute} uses the absolute values of the cross-correlations.{p_end}
 
 
 {marker saved_vales}{title:Saved Values}
