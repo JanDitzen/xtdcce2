@@ -122,6 +122,12 @@ Jan - February
 30.07.2019 - changed mm_which2 to xtdcce2_mm_which2
 01.08.2019 - support for factor variables enabled again
 22.08.2019 - auxiliary programs moved out, use findfile to find auxiliary.ado
+11.10.2019 - error in calculation for cross-section unit specific standard errors 
+fixed. was before assuming same s2 for all csu
+----------------------------------------xtdcce2 2.1
+02.12.2019 - error if mixed models used fixed
+03.12.2019 - pooled and ardl works. 
+20.12.2019 - added nominus options for ARDL in lr_options. this is essentially an ECM, but with features of the ARDL (SE and sum of LR)
 */
 
 program define xtdcce221 , eclass sortpreserve
@@ -177,9 +183,7 @@ program define xtdcce221 , eclass sortpreserve
 			For Legacy:
 			*/ EXOgenous_vars(varlist ts fv) ENDOgenous_vars(varlist ts fv) RESiduals(string) /*
 			Working options: */ oldrestore demean demeant demeanid  Weight(string)  xtdcceold ]
-		
-		
-		
+				
 		local xtdcce2v xtdcce221
 		local cmd_line `xtdcce2v' `0'
 		
@@ -262,9 +266,26 @@ program define xtdcce221 , eclass sortpreserve
 			xtdcce_err 199 `d_idvar' `d_tvar' , msg("xtset2 not installed.") msg2("To update, from within Stata type ")	msg_smcl(`"{net "describe xtset2 , from(http://www.ditzen.net/Stata/) "}"')
 		}
 		
-		** check if lr_options are ok. if ardl used, no other can be used
-		if strmatch("`lr_options'","*ardl*") == 1 & wordcount("`lr_options'") > 1 {
+		** add auto check: if in lr variables have joint base, but ECM used, change to ARDL
+		if "`lr'" != "" & strmatch("`lr_options'","*forceecm*") == 0 {
+			qui tsrevar `lr', list
+			tsunab lrunab : `lr'
+			if wordcount("`r(varlist)'") != wordcount("`lrunab'") {
+				disp ""
+				disp "Multiple variables per base in long run vector detected. Changed to ARDL with option nominus to allow for single long run coefficient for variables with same base. Use option forceecm to prevent behaviour."
+				disp ""
+				local lr_options "ardl nominus"
+			}
+		}
+		
+		** check if lr_options are ok. if ardl used, no nodivide and xtpmgnames cannot be used
+		if strmatch("`lr_options'","*ardl*") == 1 & (strmatch("`lr_options'","*nodivide*") == 1 | strmatch("`lr_options'","*xtpmgnames*") == 1)  {
 			xtdcce_err 184 `d_idvar' `d_tvar' , msg("options ardl and xtpmgnames or nodivide may not be combined.")			
+		}
+		
+		** check if lr_options are ok. if ardl used, no nodivide and xtpmgnames cannot be used
+		if strmatch("`lr_options'","*ardl*") == 0 & (strmatch("`lr_options'","*nominus*") == 1 )  {
+			xtdcce_err 184 `d_idvar' `d_tvar' , msg("options ecm (default) and nominus may not be combined.")			
 		}
 		
 		** Which inverter to use 
@@ -439,6 +460,15 @@ program define xtdcce221 , eclass sortpreserve
 				xtset2 if `touse'
 				local N_g = `r(N_g)'
 				local N = `r(N)'
+				
+				*** show message for "large" panels
+				if `N_g' > 500 | `N' > 50000 {
+					noi disp ""
+					noi disp "Large number of observations, xtdcce2 might be very slow and problems occur if maximum of matrix size is reached."
+					noi disp as smcl "Consider the use of {help xtdcce2fast} instead of {help xtdcce2}."
+					noi disp ""
+				}
+				
 				*** make sure all var lists contain unique elements
 				gettoken lr_1 lr_rest : lr , match(paren)
 				foreach varl in rhs exogenous_vars endogenous_vars crosssectional pooled lr_1 lr_rest {
@@ -1220,7 +1250,7 @@ program define xtdcce221 , eclass sortpreserve
 							mata `m_covlr' = st_matrix("`cov_i'")
 							mata `m_blr_names' = st_matrixcolstripe("``mat''")[.,2]
 
-							qui mata `m_blr' = xtdcce_m_lrcalc(`m_blr',`m_covlr',`m_blr_names',"`lr'","`lr_options'",`ff',`mata_varlist')	
+							qui mata `m_blr' = xtdcce_m_lrcalc(`m_blr',`m_covlr',`m_blr_names',"`lr'","`lr_options'",`ff',`mata_varlist',`idvar',`touse')	
 							
 							mata st_matrix("``mat''",`m_blr'[.,1]')
 							mata st_matrixcolstripe("``mat''", (J(cols(`m_blr_names'),1,""),`m_blr_names'') )
@@ -1415,8 +1445,7 @@ program define xtdcce221 , eclass sortpreserve
 				matrix rownames `mat' = `tmp_row'
 				
 			}
-			
-			
+
 			**seperate for unit specific matrices			
 			foreach mat in `b_i' `cov_i' `sd_i' `t_i' {
 				local tmp_row : rownames `mat'
@@ -1506,6 +1535,7 @@ program define xtdcce221 , eclass sortpreserve
 				local maxT = `r(max)'
 				local meanT = `r(mean)'
 			}
+			/*
 			if "`oldrestore'" != "" {
 			**put touse into mata to preserve it after restore
 			mata st_view(`touse'=.,.,"`touse' `id_t'")	
@@ -1519,7 +1549,7 @@ program define xtdcce221 , eclass sortpreserve
 		mata mata drop `touse' `touse'_s 		
 		
 		}
-		else {
+		else {*/
 			mata st_view(`touse'=.,.,"`touse' `id_t'")
 			mata `touse'_p = select(`touse'[.,2],`touse'[.,1])
 		restore
@@ -1547,13 +1577,27 @@ program define xtdcce221 , eclass sortpreserve
 		** correct r2_pmg
 		tempname yybar yybarv yybarm
 		
-		gen `yybarv' = `lhs'
-		by `d_idvar' (`d_tvar') , sort : egen `yybarm' = mean(`yybarv') if `touse'
-		replace `yybarv' = (`yybarv' - `yybarm')^2
-		sum `yybarv'  if `touse', meanonly
+		qui gen `yybarv' = `lhs'
+		qui by `d_idvar' (`d_tvar') , sort : egen `yybarm' = mean(`yybarv') if `touse'
+		qui replace `yybarv' = (`yybarv' - `yybarm')^2
+		qui sum `yybarv'  if `touse', meanonly
 		scalar `yybar' = r(sum)
 		return clear
 		ereturn clear
+		cap 
+		mata st_local("hasmissb",strofreal(hasmissing(st_matrix("b"))))
+		mata st_local("hasmissv",strofreal(hasmissing(st_matrix("V"))))
+		if `hasmissb' > 0 | `hasmissv' > 0 {
+			noi disp "Missing values in estimated coefficients found. Coefficients set to zero. Check results for omitted variables."
+			local tmp_row : colnames b
+			mata st_matrix("b",editmissing(st_matrix("b"),0))
+			mata st_matrix("V",editmissing(st_matrix("V"),0))
+						
+			matrix colnames b = `tmp_row'
+			matrix colnames V = `tmp_row'
+			matrix rownames V = `tmp_row'			
+		}
+		
 		ereturn post b V , obs(`N') esample(`touse') depname(`lhs') 
 		
 		if `IV' == 1 {
@@ -2132,7 +2176,7 @@ program define xtdcce221 , eclass sortpreserve
 		display  as text "Option 'residuals()' not supported anymore. Residuals calculated using:" 
 		display  as text in smcl "{stata predict `residuals_old' if e(sample) , residuals: predict `residuals_old' if e(sample) , residuals}"
 	}
-	}
+	
 end
 
 ** auxiliary file with auxiliary programs
@@ -2328,6 +2372,8 @@ mata:
 			b_output = J(0,1,.)
 			XX_cov = J(0,0,.)
 			uniqueid = uniqrows(id)
+			"uniqueid names"
+			uniqueid
 			N = rows(uniqueid)
 			if (exo == 0) {
 				"exo = 0"				
@@ -2360,7 +2406,8 @@ mata:
 						tmp_xx = quadcross(tmp_x,tmp_x)
 						tmp_xy = quadcross(tmp_x,tmp_y)
 						"start calculating b"
-						b_output = (b_output \ m_xtdcce_solver(tmp_xx,tmp_xy,useqr,ranki=.,colni=0,method=""))
+						bii = m_xtdcce_solver(tmp_xx,tmp_xy,useqr,ranki=.,colni=0,method="")
+						b_output = (b_output \ bii)
 						"inverter used:"
 						method
 						rank[i,.] = ranki
@@ -2374,14 +2421,20 @@ mata:
 						UsedCols
 						//for covariance
 						if (fast == 0) {
+							"start cov"
+							rows(bii)
+							eii = tmp_y - tmp_x * bii
+							Ti = rows(tmp_x)
+							s2ii = eii'eii / (Ti-cols(tmp_x) - input_no_partial/rows(uniqueid))							
+						
 							if (blockdiaguse==0) {
-								Ti = rows(tmp_x)
+								
 								posColCEnd = posColC + num_Kmg-1
-								XX_cov[(posColC..posColCEnd),(posColC..posColCEnd)] = m_xtdcce_inverter(tmp_xx,useqr)
+								XX_cov[(posColC..posColCEnd),(posColC..posColCEnd)] = m_xtdcce_inverter(tmp_xx,useqr)*s2ii
 								posColC = posColCEnd + 1
 							}
 							else {
-								XX_cov = blockdiag(XX_cov,m_xtdcce_inverter(tmp_xx,useqr))
+								XX_cov = blockdiag(XX_cov,m_xtdcce_inverter(tmp_xx,useqr)*s2ii)
 							}
 						}
 						
@@ -2401,7 +2454,6 @@ mata:
 					else {
 						X = blockdiag(X,tmp_x)
 					}
-								
 					outputnames = (outputnames , (rhs:+"_":+strofreal(uniqueid[i])))
 					i++
 				}
@@ -2423,19 +2475,29 @@ mata:
 					}
 					/// build matrix in case MG coefficients exist
 					if (num_Kmg > 0) {
-						"adjust UsedCols for mixed model"
-						UsedMG = UsedCols[1..num_Kmg*N]
-						UsedMG
-						UsedPooled = UsedCols[num_Kmg*N+1..cols(UsedCols)]
-						UsedMG
-						rowshape(UsedMG,N)
-						UsedCols = (rowshape(UsedMG,N),J(N,1,UsedPooled))
+						"col check of omitted vars, if 0 problem"
+						num_Kmg*N <= cols(UsedCols)
+						if (num_Kmg*N <= cols(UsedCols)) {
+							"adjust UsedCols for mixed model"
+							UsedMG = UsedCols[1..num_Kmg*N]
+							UsedMG
+							UsedPooled = UsedCols[num_Kmg*N+1..cols(UsedCols)]
+							UsedMG
+							rowshape(UsedMG,N)
+							UsedCols = (rowshape(UsedMG,N),J(N,1,UsedPooled))
+						}
 					}
 					
-					outputnames = (outputnames , pooled)				
+					outputnames = (outputnames , pooled)	
+					"outputnames"
+					outputnames
 					//for covariance
 					if (fast == 0) {
-						XX_cov = m_xtdcce_inverter(XX,useqr)				
+						eii = Y - X * b_output
+						Ti = rows(tmp_x)
+						
+						s2ii = eii'eii / (Ti-cols(tmp_x) - input_no_partial/rows(uniqueid))			
+						XX_cov = m_xtdcce_inverter(XX,useqr)*s2ii				
 					}
 					"done"
 				}
@@ -2550,15 +2612,15 @@ mata:
 				e_output[.,1] = Y - Y_hat	
 				"error written and done"
 				///(Y, Y_hat, e_output)
-				/// variance/covariance matrix and stats	
+				/// variance/covariance matrix and stats for entire sample	
 				SSE = e_output' * e_output
 				dfr = N - K
 				s2 = SSE / dfr
 				SST = sum((Y :- mean(Y)):^2)
 				SSR = SST - SSE
 				rmse = sqrt(s2)
-				/// variance covariance matrix
-				output_cov = XX_cov * s2
+				/// variance covariance matrix				
+				output_cov = XX_cov 
 				// check if constant	
 				has_c = 0
 				
@@ -2581,7 +2643,7 @@ mata:
 			"outputnames before lr"
 			outputnames
 			"stats done"
-			tmp = xtdcce_m_lrcalc(b_output,output_cov,outputnames,lr_vars,lr_options,fast,mata_var_names)
+			tmp = xtdcce_m_lrcalc(b_output,output_cov,outputnames,lr_vars,lr_options,fast,mata_var_names,id_var,touse)
 			"outputnames after lr"
 			outputnames
 			b_output = tmp[.,1]
@@ -2865,12 +2927,23 @@ mata:
 						PSI = PSI :+ w_i :* tmptmp
 						/// eq. 26 from Pesaran, Tosetti (2011); no difference as long as weights 1/N then w_tilde = 1
 						/// eq. 67 Pesaran 2006
-						R = R :+ w_tilde:^2 :* tmptmp*b_i1*b_i1'*tmptmp
+						///tmp_R = w_tilde:^2 :* tmptmp*b_i1*b_i1'*tmptmp
+						if (sum(b_i1:==0) == 0 & hasmissing(tmptmp*b_i1*b_i1'*tmptmp) == 0) {
+							R = R :+ w_tilde:^2 :* tmptmp*b_i1*b_i1'*tmptmp
+						}
+						else {
+							"no se for" 
+							i
+						}
 						i++
 				}
 				///divide by N-1
 				R = R / (N - 1)
 				PSI1 = m_xtdcce_inverter(PSI,useqr)
+				"psi"
+				PSI1
+				"R"
+				R
 				//// eq. 69 Pesaran 2006
 				cov_p =  w_s :* PSI1 * R * PSI1 
 			}
@@ -3047,10 +3120,15 @@ mata:
 								string matrix lr_vars, /// lr variables
 								string matrix lr_options, /// options
 								real matrix fast, /// fast option
-								string matrix mata_varlist) /// name of mata matrix with varnames
+								string matrix mata_varlist, /// name of mata matrix with varnames
+								string matrix idvar, /// name of idvar
+								string scalar touse /// name of touse
+								)
 	{
 		lr_vars = tokens(lr_vars)
 		/// make sure b_output is Kx1 and outputnames is 1xK - required for later programs
+		"start"
+		outputnames
 		if (cols(b_output)>1) {
 			b_output = b_output'
 		}
@@ -3144,17 +3222,30 @@ mata:
 					
 					i++
 				}
-				/// correct b_lr1 such that  - (1 - sum phi_i) [ minus corrected before output]
-				b_lr1 = (1 :- b_lr1)
-				"b_lr1"
-				b_lr1
-				/// add to outputnames and b_output (here minus to stick with notation from xtpmg! 
+				if (strmatch(lr_options,"*nominus*") == 0) {
+					/// correct b_lr1 such that  - (1 - sum phi_i) [ minus corrected before output]
+					b_lr1 = (1 :- b_lr1)
+					"b_lr1"
+					b_lr1						
+				}
+				else {
+					b_lr1 = - b_lr1
+				}
+				
+				/// add to outputnames and b_output (here minus to stick with notation from xtpmg! 			
 				b_output = (b_output \ - b_lr1)
 				if (rows(b_lr1) == 1) {
 					outputnames = (outputnames , ("lr_":+lr_1_base))
 				}
 				else {
-					outputnames = (outputnames , ("lr_":+lr_1_base:+"_":+strofreal((1..rows(b_lr1)))))
+					"touse idvaf"
+					touse
+					idvar
+					"before sss"				
+					uniqids = uniqrows(st_data(.,idvar,touse))
+					uniqids
+					lr_1_base
+					outputnames = (outputnames , ("lr_":+lr_1_base:+"_":+strofreal((uniqids'))))
 				}
 				"b_lr1 done"			
 				
@@ -3251,7 +3342,18 @@ mata:
 						outputnames = (outputnames , ("lr_":+lr_base_i))
 					}
 					else {
-						outputnames = (outputnames , ("lr_":+lr_base_i:+"_":+strofreal((1..rows(b_lr_rest)))))
+						uniqids = uniqrows(st_data(.,idvar,touse))
+						uid = 1
+						"names before"
+						outputnames
+						while (uid <= rows(lr_base_i)) {
+							outputnames = (outputnames , ("lr_":+lr_base_i[uid]:+"_":+strofreal(uniqids')))
+							uid++
+						}
+						
+						"names after"
+						outputnames
+						
 					}					
 					
 					/// next base
