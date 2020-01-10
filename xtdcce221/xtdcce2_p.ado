@@ -11,6 +11,9 @@ Oct   2018 - changed xtdcce2133 to xtdcce2 in line 37
 13.02.2019 - fixed bug if option xtpmgnames used and partilling out
 22.07.2019 - added e(sample) again
 20.08.2019 - fix that fullnames for calculation of csa recognized
+20.11.2019 - fix in varlist lhsrhs when xtdcce2fast is used; added tsrevar to make sure variables in lhsrhs are varlist which is understood by st_tsrevar [tsrevar cannot cope with * or - in varlist]
+10.01.2020 - when partial used, restricted to e(esample). Thanks to Gergio Tullio for the pointer.
+		   - if ("`cr_vars'" != "" & ("`xb'" == "" | "`xb2'" == "") )  was missing xb2. Thanks to Gergio Tullio for the pointer.
 */
 *capture program drop xtdcce2_p
 program define xtdcce2_p
@@ -32,7 +35,7 @@ include "`r(fn)'"
 
 capture program drop xtdcce2_p_int
 program define xtdcce2_p_int 
-	syntax newvarname(max=1 generate) [in] [if] , [Residuals xb COEFFicient stdp se partial CFResiduals xb2 ]
+	syntax newvarname(max=1 generate) [in] [if] , [Residuals xb COEFFicient stdp se partial CFResiduals xb2 wildbootstrap ]
 	
 	* marksample for in if of predict command; does not take e(sample) into account,
 	* add additional variable smpl. will be used for calculation of cross-sectional averages and partialling out
@@ -86,6 +89,9 @@ program define xtdcce2_p_int
 				}
 			}
 			
+			tsrevar `lhsrhs'
+			local lhsrhs "`r(varlist)'"
+			
 			qui xtset
 			local idvar "`r(panelvar)'"
 			local tvar "`r(timevar)'"
@@ -95,11 +101,13 @@ program define xtdcce2_p_int
 				xtdcce2_csa `crosssectional' , idvar(`idvar') tvar(`tvar') cr_lags(`cr_lags') touse(`smplcr') csa(`csa')
 				local clistfull `r(varlist)'
 			}
-			
+			if "`cfresiduals'" != "" {
+				local clistfull ""
+			}
 			markout `touse' `lhsrhs' `lr' `clistfull'
 			replace `touse' = `touse' * e(sample) * `smpl'
-			*noi disp "`lhsrhs' `lr' `constant'"
-			noi mata xtdcce2_error_calc("`lhsrhs' `lr' `constant'","`clistfull'","`touse'","`idvar'","`newvar'",xtdcce2fast_bi)
+			
+			noi mata xtdcce2_error_calc("`lhsrhs' `lr' ","`clistfull' `constant'","`touse'","`idvar'","`newvar'",xtdcce2fast_bi,"`wildbootstrap'")
 		}
 	}
 	else {
@@ -118,12 +126,10 @@ program define xtdcce2_p_int
 			display in gr "(option xb assumed; fitted values; common factors partialled out)"
 			local xb "xb"
 		}
-
 		
 		if "`xb2'" == "xb2" {
 			display in gr "(option xb2 assumed; fitted values; common factors included)"
 		}
-		
 		
 		**For residuals including common factors, first predict xb, then subtract them from Y
 		if "`cfresiduals'" != "" {
@@ -315,6 +321,14 @@ program define xtdcce2_p_int
 			**Constant types. If 0, 2, do nothing
 			** if lists change, make sure to change o_ varlists to make sure order is correct.
 			*if 1, then add to cr_list, but at a later stage. now only creation of constant
+			/*
+					0 no constant
+					1 heterogenous & partialled out
+					2 homogenous (pooled) & removed (set to zero) as it is zero (only in case of balanced panel)
+					3 heterogenous & displayed
+					4 homogenous & not displayed (calculated but supressed)
+					5 homogenous & displayed
+			*/
 			if `constant_type' == 1 {
 				tempvar constant
 				gen double `constant' = 1
@@ -328,7 +342,7 @@ program define xtdcce2_p_int
 				local o_mg_vars = subinword("`o_mg_vars'","_cons","",.)
 				local o_mg_vars "`o_mg_vars' _cons"
 			}		
-			** homogenous, 5 and 5
+			** homogenous, 4 and 5
 			else if `constant_type' == 5 | `constant_type' == 4 {
 				tempvar constant
 				gen double `constant' = 1
@@ -355,7 +369,7 @@ program define xtdcce2_p_int
 			
 			
 			*create CR Lags
-			if ("`cr_vars'" != "" & "`xb'" == "") | `constant_type' == 1 | "`e(insts)'" != ""  {
+			if ("`cr_vars'" != "" & ("`xb'" == "" | "`xb2'" == "") ) | `constant_type' == 1 | "`e(insts)'" != ""  {
 				tempvar cr_mean
 				
 				**check if cr_options include "(", if so, then ok, if not, build new with var#1 (#cr lags), var#2 (#cr lags)....
@@ -488,6 +502,9 @@ program define xtdcce2_p_int
 			if "`xb'" == "xb" | "`xb2'" == "xb2" {
 				replace `newvar' = `xbc'   if `touse'
 				label var `newvar' "xb"
+				if `constant_type' == 1 | `constant_type'  == 4 {
+					noi disp "Constant partialled out and not part of `newvar'."
+				}
 			}
 			if "`stdp'" == "stdp" {
 				replace `newvar' = `xbc'   if `touse'
@@ -496,6 +513,11 @@ program define xtdcce2_p_int
 			if "`residuals'" == "residuals" {
 				replace `newvar' = `lhs' - `xbc' if `touse'
 				label var `newvar' "Residuals"
+				
+				if "`wildbootstrap'" != "" {
+					sort `idvar' `tvar'
+					mata xtdcce2_wbsadj("`newvar'"," `mg_vars' `pooled_vars'","`idvar' `tvar'","`touse'")
+				}
 			}
 			if "`coefficient'" == "coefficient" | "`se'" == "se" {
 				drop `newvar'
@@ -573,7 +595,6 @@ program define xtdcce2_p_int
 				
 			}
 			if "`partial'" == "partial" {
-				noi disp as text "Partial out on all observations if e(sample) not used."
 				drop `newvar'
 				local o_list  `o_lhs' `o_pooled_vars' `o_mg_vars' 
 				local i = 1
@@ -581,7 +602,7 @@ program define xtdcce2_p_int
 					*Get current temp varname
 					local tmp = word("`o_list'",`i')
 					local tmp = subinstr("`tmp'",".","_",.)
-					gen double `newvar'_`tmp' = `var'
+					gen double `newvar'_`tmp' = `var' if `touse'
 					label var `newvar'_`tmp' "`tmp' partialled out"
 					local i = `i' + 1
 				}
