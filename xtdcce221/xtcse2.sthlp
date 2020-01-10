@@ -69,7 +69,7 @@ observations might be lost.{p_end}
 {p 4 8}{cmd:pca(integer)} sets the number of principle components for the 
 calculation of {it:cn}. Default is to use the first 4 components.{p_end}
 
-{p 4 8}{cmdab:stand:ardize} standardizes variables.{p_end}
+{p 4 8}{cmdab:stand:ardize} do not standardizes variables.{p_end}
 
 {p 4 8}{cmd:nocd} suppresses test for cross-sectional dependence using {help xtcd2}.{p_end}
 
