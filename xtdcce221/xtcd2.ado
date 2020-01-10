@@ -1,4 +1,4 @@
-*! xtcd2 2.1 10Jun2019
+*! xtcd2 2.2 Nov2019
 *! author Jan Ditzen
 *! see viewsource xtcd2.ado for more info.
 
@@ -35,17 +35,25 @@ Changelog:
 	31.10.2017 Cross sectional into cross-sectional renamed
 	05.06.2019 Added check which command used before
 	10.06.2019 Uses xtset2 to detect type of panel rather than xtset.
+	25.11.2019 Added heatplot and contour plots for rho
 */
 cap program drop xtcd2
 program define xtcd2, rclass
-	syntax [varlist(default=none max=1)] [if] [, KDENsity name(string) rho NOESTimation VERsion]
+	syntax [varlist(default=none max=1)] [if] [, KDENsity name(string) rho NOESTimation VERsion contour(string) CONTOURmap order(varlist max=1) heatplot(string) HEATPLOTmap ]
 	
 	version 10
 	
+	if "`contour'`contourmap'" != "" & "`heatplot'`heatplotmap'" != "" {
+		noi disp "Options heatplot and contour cannot combined"
+		exit
+	}
+	
+	
+	
 	if "`version'" != "" {
-			di in gr "Version 1.21"
+			di in gr "Version 1.22"
 			*ereturn clear
-			ereturn local version 1.21
+			ereturn local version 1.22
 			exit	
 	}
 	
@@ -74,6 +82,7 @@ program define xtcd2, rclass
 			}
 		}
 		
+				
 		**Check if estimation
 		if "`noestimation'" == "" {
 			** Drop observations not in estimation
@@ -129,10 +138,24 @@ program define xtcd2, rclass
 			local T = r(Tmax)
 			local N = r(N_g)
 		}
+		
+		tempname RhoID
+		qui putmata `RhoID' = `id' , replace
+		mata `RhoID' = uniqrows(`RhoID')
+		
+		
+		timer clear 99
+		
+		
 		qui putmata r= `varlist'  , replace
 		mata: r = colshape(r,`T')'
+		timer on 99
 		mata: RHO = xtcd2_make_rho(r,`N',`T',`balanced')
+		timer off 99
 		mata: CD = sqrt(2/(`N'*(`N'-1)))*sum(RHO) // equation 62 and 69 in Chudik, Pesaran (2013) - note: the sqrt(T) from 62 is missing and moved to calculations above
+		
+		
+		
 		mata: st_numscalar("CD", CD)
 		scalar p_value = 2*(1-normal(abs(CD)))
 		disp ""
@@ -142,6 +165,22 @@ program define xtcd2, rclass
 		
 		display _col(9) "CD = " _col(14) in gr %-9.3f CD
 		display _col(4) "p-value = " _col(14) in gr %-9.3f p_value
+		
+		
+		*** correct rho for later use
+		mata: RHO_output = RHO / sqrt(2*`T')	
+				
+		*** here order program
+		if "`order'" != "" {
+			*noi tab `order'
+			*codebook `order'
+			mata RHO_output= xtcd2_rho_order(RHO_output,"`order'","`id'")
+			
+			mata `RhoID' = RHO_output[.,cols(RHO_output)]
+			mata RHO_output = RHO_output[.,(1..cols(RHO_output)-1)]
+			
+		}		
+		
 		
 		if "`kdensity'" == "kdensity" {
 			mata: rho_all = colshape(RHO,1) / sqrt(2*`T')
@@ -163,16 +202,88 @@ program define xtcd2, rclass
 			}
 			qui kdensity rho_all, xtitle({&rho}{sub:ij}) title(Cross-Sectional Correlations) `graphname' ///
 				note("{bf:Statistics:} CD = `cd', p-value: `pval'" "Obs: `sN', Mean: `smean'" "Min: `smin', Max: `smax'" "Percentiles:" "25%: `sp25' , 50%: `sp50', 75:% `sp75'")  
-		}		
-		if "`rho'" == "rho" {
-			mata: RHO_output = RHO / sqrt(2*`T')
+		}	
+		
+		if "`rho'" == "rho" {	
 			mata: st_matrix("rho",RHO_output)
 			return matrix rho = rho
 		}
-		foreach s in r i j sumij sqsumi_2 sqsumj_2 RHO nonmissing T_nonmissing RHO_output CD {
+		
+	restore
+	
+
+	
+	if "`contour'`contourmap'`heatplot'`heatplotmap'" != "" {
+		qui {
+			preserve
+				clear
+				local 0 ", `contour' `heatplot'"
+
+				syntax [anything] , [ABSolute interp(string) levels(real 0) yscale(string) * ]
+
+				if "`absolute'" != "" {
+					mata RHO_output = abs(RHO_output)
+				}
+				
+				if `levels' == 0 {
+					if `N' < 30 {
+						local levels = `N'
+					}
+					else {
+						local levels = 30
+					}				
+				}
+				
+				if "`interp'" == "" {
+					local interp "none"
+				}
+				
+				if "`yscale'" == "" {
+					local yscale  "reverse"
+				}
+				
+				///mata _makesymmetric(RHO_output) 
+				mata RHO_output = xtcd2_rho_sym(RHO_output)	
+				mata RHO_output = xtcd2_lowersym(RHO_output)
+				
+				tempname ordermat
+				mata `ordermat' = (1::rows(RHO_output))
+				
+				mata st_local("namelist",(invtokens("rho_" :+ strofreal(`ordermat')')))
+				
+				
+				
+				getmata ( `namelist' ) = RHO_output id1=`ordermat'
+				
+				reshape long rho_ , i(id1) j(id2)
+				rename rho_ rho
+				label var id1 "`id'"
+				label var id2 "`id'"
+				sort id1 id2
+				
+				if "`name'" != "" {
+					local graphname name(`name') 
+				}	
+				
+				noi dis ""
+				
+
+				if "`contour'`contourmap'" != "" {
+					twoway contour rho id1 id2 , interp(`interp') `options' level(`levels') yscale(`yscale') `graphname'
+				}
+				else {
+
+					heatplot rho id1 id2 ,  `options' level(`levels') yscale(`yscale') `graphname'
+				}
+			restore
+		}
+	}
+	
+	
+	foreach s in r i j sumij sqsumi_2 sqsumj_2 RHO nonmissing T_nonmissing RHO_output CD `RhoID' {
 			capture mata mata drop `s'
 		}
-	restore
+	
 end
 
 
@@ -192,16 +303,11 @@ mata:
 					if (balanced == 1) {
 						ri = r[,i]
 						rj = r[,j]
-						//ri = r[i,]'
-						//rj = r[j,]'
 						sumij = ri'rj
 						sqsumi_2 = sqrt(ri'ri)
 						sqsumj_2 = sqrt(rj'rj)
 						//from p. 34 of Chudik, Pesaran (2013), sqrt added to use same CD equation at the end for balanced and unbalanced data
-						RHO[i,j] =sumij /(sqsumi_2*sqsumj_2)*sqrt(T) 
-						///ss = quadcorrelation((ri,rj))[2,1]*sqrt(T)
-						///RHO[i,j] = ss
-					
+						RHO[i,j] =sumij /(sqsumi_2*sqsumj_2)*sqrt(T) 					
 					}
 					if (balanced == 0) {
 						// Create dummy vector which contains nonmissings
@@ -221,5 +327,101 @@ mata:
 			}
 		}
 		return(RHO)	
+	}
+end
+
+cap mata mata drop xtcd2_rho_order()
+mata:
+	function xtcd2_rho_order( real matrix rho,		
+							 string scalar ordervars,
+							 string scalar rhoIDs )
+	{
+		ordervar = st_data(.,ordervars)
+		rhoid = st_data(.,rhoIDs)
+		if (sum(ordervar:==.) :== rows(ordervar)) {
+			_editmissing(ordervar,0)
+		}
+		
+		rhoiuniq = uniqrows(rhoid)
+		matched = J(0,2,.)
+		i = 1
+		while (i<=rows(rhoiuniq)) {
+			idi = rhoiuniq[i]
+			index = selectindex(rhoid:==idi)[1]
+
+			matched = matched \ (idi , ordervar[index])
+			
+			i++
+		}
+				
+		orderuniq = uniqrows(ordervar)
+		orderN = rows(orderuniq)
+		
+		i = 1
+		neworder = J(0,1,.)
+		while (i <= orderN) {
+			orderi = orderuniq[i]
+			newi = selectindex(orderi:==matched[.,2])	
+			if (sum(newi) > 0 ) {
+				neworder = neworder \ newi
+			}
+			i++
+		}
+		
+		rho = xtcd2_rho_sym(rho)	
+		
+		rhorder = rho[neworder,neworder]
+		
+		/// remove lower symmetric part
+		rhorder= xtcd2_lowersym(rhorder)	
+		rhoID = rhoiuniq[neworder,1]
+		///_makesymmetric(rhorder)
+		rhorder = rhorder,rhoID
+		return(rhorder)
+		
+		}
+end
+
+capture mata mata drop xtcd2_rho_sym()
+mata:
+	function xtcd2_rho_sym(real matrix rhorder)
+	{
+		N = rows(rhorder)
+		i = 1
+		while(i<=N) {
+			j=i
+			while (j<=N) {
+				ij = rhorder[i,j]
+				ji = rhorder[j,i]
+				
+				if (ij:==. & ji:!= .) {
+					rhorder[i,j] = ji
+				}
+				else if (ij:!= . & ji:== .) {
+					rhorder[j,i] = ij
+				}
+				j++
+			}
+			i++
+		}
+		return(rhorder)
+	}
+end
+
+capture mata mata drop xtcd2_lowersym()
+mata:
+	function xtcd2_lowersym(real matrix rhorder)
+	{
+		N = rows(rhorder)
+		i = 1
+		while(i<=N) {
+			j=1
+			while (j<i) {
+				rhorder[i,j] = .
+				j++
+			}
+			i++
+		}
+		return(rhorder)
 	}
 end
