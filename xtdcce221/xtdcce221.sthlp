@@ -1,6 +1,6 @@
 {smcl}
 {hline}
-{hi:help xtdcce2}{right: v. 2.0 - 13. July 2019}
+{hi:help xtdcce2}{right: v. 2.1 - xx. October 2019}
 {right:SJ18-3: st0536}
 {hline}
 {title:Title}
@@ -23,6 +23,7 @@ with a large number of observations over groups and time periods.{p_end}
 {cmd:lr}({varlist})
 {cmd:lr_options}({it:string}) 
 {cmdab:pooledc:onstant}
+{cmd:pooledvce}({it:string}) 
 {cmdab:reportc:onstant}
 {cmdab:noconst:ant}
 {cmd:trend}
@@ -59,6 +60,7 @@ and note on {help xtdcce2##collinearity:collinearity issues}.{break}
 {p 8}{help xtdcce2##EmpiricalModel:Empirical Model}{p_end}
 {p 8}{help xtdcce2##R2:Coefficient of Determination (R2)}{p_end}
 {p 8}{help xtdcce2##collinearity:Issues with Collinearity}{p_end}
+{p 4}{help xtdcce2##SpeedLargePanels:Large panels and speed}{p_end}
 {p 4}{help xtdcce2##saved_vales:Saved Values}{p_end}
 {p 4}{help xtdcce2##postestimation: Postestimation commands}{p_end}
 {p 4}{help xtdcce2##examples:Examples}{p_end}
@@ -502,6 +504,39 @@ each year. These variables will be collinear with the cross-sectional averages.
 variables. In general care is required when combining factor variables and
 cross-sectional averages. {p_end}
 
+{marker SpeedLargePanels}{title:Large Panels and Speed issues}
+
+{p 4 4}The common correlated effects estimators are designed for large panels. 
+This means the number of cross-sectional units and the time periods {cmd:xtdcce2} 
+is converging to infinty, resulting in a large number of observations.
+{cmd:xtdcce2} has some limitations in its functionality with such large panels, 
+partly from its design, partly limitations arising from Stata.
+While the former slows down the estimation, the latter makes an estimation impossible.
+{p_end} 
+
+{p 4 4}Before an estimation {cmd:xtdcce2} performs many checks such as collinearity checks,
+panel sizes or missing values. 
+Often those checks rely on loops over either cross-sectional units, time periods or involve
+inverting matrices. 
+With a large number of observations those checks become very time consuming and {cmd:xtdcce2}
+becomes slow. 
+This especially becomes a problem when running simulations or bootstraps.{p_end}
+
+{p 4 4}Stata has limitations on the size of Stata matrices. 
+{cmd:xtdcce2} uses Stata matrices to post estimation results, such as a (N_g x N_g)
+matrix of covariances for the cross-sectional unit specific coefficients, or the
+(N_g x 1) matrix itself.
+If the number of cross-sectional units is very large, {cmd:xtdcce2} cannot post
+this matrix and aborts with an error. 
+Other problems arise when {cmd:xtdcce2} uses Stata commands such as {help rmcoll}
+to check for collinearities.{p_end}
+
+{p 4 4}To circument the speed and the size issue, 
+{cmd:xtdcce2} contains a program called {help xtdcce2fast}. 
+{cmd:xtdcc2fast} can only estimate a mean group model, does no collinearity checks. 
+Only the {p_end}
+
+
 
 {marker saved_vales}{title:Saved Values}
 
@@ -889,12 +924,18 @@ Ditzen, J. 2018. xtdcce2: Estimating dynamic common correlated effects in Stata.
 and beta versions including a full history of 
 xtdcce2 from {stata "net from http://www.ditzen.net/Stata/xtdcce2_beta"}.{p_end}
 
-{marker ChangLog}{title:Changelog}
-{p 4 8}This version: 2.0 - 13. July 2019{p_end}
+{marker ChangLog}{title:Version History}
+{p 4 8}This version: 2.1 - xx. January 2020{p_end}
+{p 8 10} - improved support for factor variables.{p_end}
+{p 8 10} - fix for mm_which2.{p_end}
+{p 8 10} - message for large panels.{p_end}
+{p 8 10} - error in calculation for variances of cross-sectional unit specific coefficients{p_end}
+{p 8 10} - fix predict program: partial now only in-sample and bug fixed when xb2 and reportc was used (thanks to Tullio Gregori for the pointers).{p_end}
+{p 4 8}Version 1.34 to 2.0{p_end}
 {p 8 10} - Bug fix in calculation of minimal T dimension, added option nodimcheck.{p_end}
 {p 8 10} - Speed improvements (thanks to Achim Ahrens for the suggestions).{p_end}
 {p 8 10} - Bug fixes for jackknife (thanks to Collin Rabe for the pointer).{p_end}
-{p 8 10} - Bug fix in predict and if (thanks for Deniey A. Purwanto and Tullio Gregoi for the pointers).{p_end}
+{p 8 10} - Bug fix in predict and if (thanks for Deniey A. Purwanto and Tullio Gregori for the pointers).{p_end}
 {p 8 10} - Bug fix if binary variable used and constant partialled out.{p_end}
 {p 8 10} - Bug fixed in calculation of R2, added adjusted R2 for pooled and MG regressions.{p_end}
 {p 8 10} - Newey West and Westerlund, Petrova, Norkute standard errors for pooled regressions.{p_end}
