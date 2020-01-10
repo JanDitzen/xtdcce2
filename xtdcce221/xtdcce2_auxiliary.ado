@@ -12,7 +12,8 @@ xtdcce2 auxiliary programs
 8. xtdcce2_mm_which2 (mata)
 9. xtdcce2_m_PutCoeff (mata)
 10. xtdcce2_csa 
-11. xtdcce2fast_errorcalc
+11. xtdcce2_errorcalc
+12. xtdcce2_wbsadj
 */
 
 
@@ -118,7 +119,7 @@ mata:
 				if (rank < rows(A)) {	
 					/// not full rank, use invsym
 					method = "invsym"
-					coln = selectindex(colsum(A1:==0):==rows(A1):==0)			
+					coln = selectindex(colsum(A:==0):==rows(A):==0)			
 				}
 				else {
 					/// full rank use cholsolve
@@ -149,6 +150,7 @@ mata:
 								
 	{
 		real matrix C
+		real scalar A1
 		
 		if (args() == 2) {
 			useold = 0
@@ -286,7 +288,7 @@ mata:
 		running = 1
 		"start loop"
 		while (running<=rows(ids)) {
-		running
+		
 			tousei = selectindex(id:==ids[running])
 			
 			X1_i = X1[tousei,.]
@@ -491,7 +493,8 @@ mata:
 									string scalar touse,		///
 									string scalar idvar,		///
 									string scalar residname,	///
-									real matrix xtdcce2_ebi)	///
+									real matrix xtdcce2_ebi,	///
+									string scalar wbadj)
 	
 	{
 		real matrix id
@@ -500,7 +503,7 @@ mata:
 		real matrix residuals
 		
 		vars = st_data(.,st_tsrevar(tokens(varnames)),touse)
-		
+
 		nocsa = 1
 		
 		if (csanames[1,1] != "" ) {
@@ -530,9 +533,45 @@ mata:
 			}
 			residuals[(index[i,1]..index[i,2]),.] = varsi[.,1] - varsi[.,(2..K+1)] * xtdcce2_ebi[i,(1..K)]'
 			
+			if (wbadj[1,1] == "wildbootstrap") {
+				varsii = varsi[.,(2..K+1)] 
+				h = diagonal(varsii* m_xtdcce_inverter(quadcross(varsii,varsii)) * varsii')
+
+				residuals[(index[i,1]..index[i,2]),.] = residuals[(index[i,1]..index[i,2]),.] :/ ( 1 :- h)
+			}
+			
 			i++
 		
-		}
+		}		
+	}
+end
+
+*** Program to adjust for wildbootstrap
+capture mata mata drop xtdcce2_wbsadj()
+mata:
+	function xtdcce2_wbsadj(	string scalar residnames, 	///
+									string scalar Xnames,			///
+									string scalar idtvarname,		///
+									string scalar touse)
+	
+	{
+		real matrix resid
+		st_view(resid,.,residnames,touse)
 		
+		X = st_data(.,Xnames,touse)
+		idt = st_data(.,idtvarname,touse)
+
+		index = panelsetup(idt[.,1],1)
+		
+		i = 1
+		"start loop"
+		while (i<=rows(index)) {
+			Xi = X[(index[i,1]..index[i,2]),.]
+			h = diagonal(Xi * m_xtdcce_inverter(quadcross(Xi,Xi)) * Xi')
+			resid[(index[i,1]..index[i,2]),.] = resid[(index[i,1]..index[i,2]),.] :/ (1 :- h)
+			
+			i++
+		}
+		"done"
 	}
 end
