@@ -348,16 +348,40 @@ program define xtcse2, rclass
 	
 	
 	*** Return
-	
-	return matrix alpha = `alpha_circ'
+
+	if rowsof(`alpha_circ') == 1 {
+		scalar `alpha_circ' = `alpha_circ'[1,1]
+		return scalar alpha = `alpha_circ'
+		scalar `alpha_circSE' = `alpha_circSE'[1,1]
+		return scalar alphaSE = `alpha_circSE'
+	}
+	else {
+		return matrix alpha = `alpha_circ'
+		return matrix alphaSE = `alpha_circSE'
+	}
 	cap return matrix alphas = `alpham'
-	return matrix alphaSE = `alpha_circSE'
-	return matrix N_g = `Nm'
-	return matrix T = `Tm'	
 	
+	if rowsof(`Nm')  == 1 {
+		scalar `Nm' = `Nm'[1,1]
+		return scalar N_g = `Nm'
+		scalar `Tm' = `Tm'[1,1]
+		return scalar T = `Tm'	
+	}
+	else {
+		return matrix N_g = `Nm'
+		return matrix T = `Tm'	
+	}
 	if "`cd'" == "" & "`inprog'" == "" {
-		return matrix CD = `CDm'
-		return matrix CDp = `CDpm'
+		if rowsof(`CDm') == 1 {
+			scalar `CDm' = `CDm'[1,1]
+			return scalar CD = `CDm'
+			scalar `CDpm' = `CDpm'[1,1]
+			return scalar CDp = `CDpm'
+		}
+		else {
+			return matrix CD = `CDm'
+			return matrix CDp = `CDpm'
+		}
 	}
 	
 	
@@ -635,6 +659,8 @@ program define xtdcce_output_tableCD
 
 end
 
+
+/// estimator for residual
 capture mata mata drop xtdcce_m_alpha_res()
 mata:
 	function xtdcce_m_alpha_res (
@@ -666,7 +692,7 @@ mata:
 			/// case of non dynamic panel (strong exogenous regressors)
 			/// standardize residuals
 			
-			"no lags"
+			///"no lags"
 			while (i<=N) {
 				indic = selectindex(idt[.,1]:==i)
 				tindic = idt[indic,2]
@@ -721,13 +747,13 @@ mata:
 				alphab[b] = xtdcce_m_alphares_calc(rb,id,tvec,a_size,delta,H) 
 				b++
 			}
-			alphabq
+			
 			if (hasmissing(alphab)==1) {
 				alphab = alphab[selectindex(alphab:!=.)]
 			}			
 			alphabq = mm_quantile(alphab,1,(1-c("level")/100, c("level")/100))
 			///alphabq = mm_quantile(alphab,1,((100-c("level"))/2,(1-(100-c("level"))/2,(100-c("level"))/2))
-			alphabq
+			
 			alpha = (alpha \ sqrt(quadvariance(alphab)) \alphabq')
 			
 		}
@@ -819,7 +845,6 @@ mata:
 		deltaij = rho
 		_diag(deltaij,1)
 		tau = J(N,1,1)
-		tau' * deltaij * tau
 		alphatilde = ln(tau' * deltaij * tau) :/ (2*ln(N))
 		return(alphatilde)
 	}
