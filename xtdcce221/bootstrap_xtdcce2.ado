@@ -1,7 +1,7 @@
 
 cap program drop bootstrap_xtdcce2
 program define bootstrap_xtdcce2, eclass
-	syntax , [reps(integer 100) seed(string) CFResiduals Percentile SHOWIndividual ]
+	syntax , [reps(integer 100) seed(string) CFResiduals Percentile SHOWIndividual cross ]
 	disp as text "(running on xtdcce2 sample)"
 	disp ""
 	qui{
@@ -49,15 +49,20 @@ program define bootstrap_xtdcce2, eclass
 
 			gen double `y_original' = `yOriginalName'	
 			
-			predict double `res_original' , `cf' 
-			
+			if "`cross'" == "" {
+				predict double `res_original' , `cf' wildbootstrap
+			}
+			else {
+				predict double `res_original' , `cf' 
+			}
 			** work around, if lags used, residuals will be zero, but these obs do not matter
 			** because they will be removed by xtdcce2 anyway
 			replace `res_original' = 0 if `res_original' == .
 			
-			** Remove residuals from y
-			replace `yOriginalName' = `yOriginalName' - `res_original'
-			
+			if "`cross'" == "" {
+				** Remove residuals from y
+				replace `yOriginalName' = `yOriginalName' - `res_original'
+			}
 			
 
 			tempvar vitb
@@ -79,60 +84,133 @@ program define bootstrap_xtdcce2, eclass
 				mata tiBoot = J(`reps',Ki,.)
 				mata seiBoot = J(`reps',Ki,.)
 			}
-			
-			noi disp as text "Wild-Bootstrap replications (", _c
-			noi disp as result "`reps'", _c
-			noi disp as text ") using `cfname'"
-			
-			noi _dots 0
+			if "`cross'" == "" {
+				noi disp as text "Wild-Bootstrap replications (", _c			
+				noi disp as result "`reps'", _c
+				noi disp as text ") using `cfname'"
+				
+				_xt
+				local idvar "`r(ivar)'"
+				local tvar "`r(tvar)'"
+				noi _dots 0
+						
+				forvalues r=1(1)`reps' {
 					
-			forvalues r=1(1)`reps' {
-				
-				** Generate weighting
-				replace `vitb' = 2*runiformint(0,1)-1
-				
-				replace `yOriginalName' = `yOriginalName' + `res_original' * `vitb'
-				
-				** run xtdcce2
-				cap  `e(cmdline)' 
-				local dots = (_rc != 0)
-				
-				** save results
-				mata bBoot[`r',.] = st_matrix("e(b)")
-				mata seBoot[`r',.] = sqrt(diagonal(st_matrix("e(V)")))'
-				mata tBoot[`r',.] = ((bBoot[`r',.]:-b) :/ seBoot[`r',.])
-				
-				if "`showindividual'" != "" {
+					** Generate weighting, one for each cluster (cross-sectional unit)
+					by `idvar' (`tvar'), sort: replace `vitb' = 2*runiformint(0,1)-1 if _n == 1
+					by `idvar' (`tvar'), sort: replace `vitb' = `vitb'[1]
 					
-					mata index = xtdcce2_mm_which2(namesi,st_matrixcolstripe("e(bi)")[.,2])
+					replace `yOriginalName' = `yOriginalName' + `res_original' * `vitb'
 					
-					mata biBoot[`r',index] = st_matrix("e(bi)")
-					mata seiBoot[`r',index] = sqrt(diagonal(st_matrix("e(Vi)")))'
-					mata tiBoot[`r',.] = ((biBoot[`r',.]:-bi) :/ seiBoot[`r',.])
+					** run xtdcce2
+					cap  `e(cmdline)' 
+					local dots = (_rc != 0)
 					
-					mata st_local("check",strofreal(rows(index):==Ki))
+					** save results
+					mata bBoot[`r',.] = st_matrix("e(b)")
+					mata seBoot[`r',.] = sqrt(diagonal(st_matrix("e(V)")))'
+					mata tBoot[`r',.] = ((bBoot[`r',.]:-b) :/ seBoot[`r',.])
+					
+					if "`showindividual'" != "" {
+						
+						mata index = xtdcce2_mm_which2(namesi,st_matrixcolstripe("e(bi)")[.,2])
+						
+						mata biBoot[`r',index] = st_matrix("e(bi)")
+						mata seiBoot[`r',index] = sqrt(diagonal(st_matrix("e(Vi)")))'
+						mata tiBoot[`r',.] = ((biBoot[`r',.]:-bi) :/ seiBoot[`r',.])
+						
+						mata st_local("check",strofreal(rows(index):==Ki))
 
-					if `check' == 0 {
-						local dots 2
-						local checked 1
+						if `check' == 0 {
+							local dots 2
+							local checked 1
+						}
+					
 					}
+					
+					*** Output for each run (dots)
+					if round(`=`r'/50')==`=`r'/50' {
+						noi _dots 1 `dots'
+						noi disp "     `r'"
+					}
+					else if `r' == `reps' {
+						noi _dots 1 `dots'
+						noi disp _col(55) "`r'"
+					}
+					else{
+						noi _dots 1 `dots'
+					}
+				}	
+			}
+			
+			else {
+				noi disp as text "Bootstrap replications (", _c			
+				noi disp as result "`reps'", _c
+				noi disp as text ") using `cfname'"
 				
-				}
+				noi _dots 0
 				
-				*** Output for each run (dots)
-				if round(`=`r'/50')==`=`r'/50' {
-					noi _dots 1 `dots'
-					noi disp "     `r'"
+				tempfile initial
+				save `initial', replace
+				
+				xtset
+				local idvar "`r(panelvar)'"
+				local tvar "`r(timevar)'"
+				
+				mata Nuniq = uniqrows(st_data(.,"`idvar'"))
+				mata st_local("N",strofreal(rows(Nuniq)))
+				
+				tempfile tobuild
+				
+				
+				forvalues r=1(1)`reps' {
+					clear
+					save `tobuild', emptyok replace
+								
+					mata index = runiformint(`N',1,1,`N')
+					forvalues i = 1(1)`N' {
+						use `initial'
+						*noi disp "`i'"
+						mata st_local("tokeep",strofreal(Nuniq[index[`i']]))
+						keep if `idvar' == `tokeep'
+						drop `idvar'
+						gen `idvar' = `i'
+						append using `tobuild'
+						save `tobuild', replace
+					}
+					use `tobuild' , replace
+					
+					xtset `idvar' `tvar'
+					
+					
+					** run xtdcce2
+					cap  `e(cmdline)' 
+					local dots = (_rc != 0)
+					
+					** save results
+					mata bBoot[`r',.] = st_matrix("e(b)")
+					mata seBoot[`r',.] = sqrt(diagonal(st_matrix("e(V)")))'
+					mata tBoot[`r',.] = ((bBoot[`r',.]:-b) :/ seBoot[`r',.])
+					
+					*** Output for each run (dots)
+					if round(`=`r'/50')==`=`r'/50' {
+						noi _dots 1 `dots'
+						noi disp "     `r'"
+					}
+					else if `r' == `reps' {
+						noi _dots 1 `dots'
+						noi disp _col(55) "`r'"
+					}
+					else{
+						noi _dots 1 `dots'
+					}
+					
+					*frame change BootstrapOriginal
+					
 				}
-				else if `r' == `reps' {
-					noi _dots 1 `dots'
-					noi disp _col(55) "`r'"
-				}
-				else{
-					noi _dots 1 `dots'
-				}
-			}	
-		
+				*frame change `initframe'
+			}
+			
 		
 		restore
 		
