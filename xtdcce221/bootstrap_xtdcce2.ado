@@ -1,4 +1,12 @@
+*! bootstrap_xtdcce2 0.1 - 23.02.2020
+*! author Jan Ditzen
+*! www.jan.ditzen.net - j.ditzen@hw.ac.uk
+/*
+Version History
+	- 23.01.2020: - variances posted in V rather than only standard errors in bSE; old results are put into V_modelbased
 
+
+*/
 cap program drop bootstrap_xtdcce2
 program define bootstrap_xtdcce2, eclass
 	syntax , [reps(integer 100) seed(string) CFResiduals Percentile SHOWIndividual cross ]
@@ -6,8 +14,9 @@ program define bootstrap_xtdcce2, eclass
 	disp ""
 	qui{
 		*** save est results
-		tempname EResults EResultsToUse
+		tempname EResults EResultsToUse V_modelbased
 		local coln : colnames e(b)
+		matrix `V_modelbased' = e(V)
 		cap _estimates hold `EResults' ,  restore copy  varname(`EResultsToUse')
 		
 		mata b = st_matrix("e(b)")
@@ -215,11 +224,16 @@ program define bootstrap_xtdcce2, eclass
 		restore
 		
 		*** calculate bootstrap SE
-		tempname BootstrappedSE BootstrappedSEi
+		tempname BootstrappedSE BootstrappedSEi BootstrappedV
 		if "`percentile'" == "" {
-			mata bSE = sqrt(diagonal(quadvariance(bBoot)))'			
+			mata bV = quadvariance(bBoot)
+			mata bSE = sqrt(diagonal(bV))'			
 			mata st_matrix("`BootstrappedSE'",bSE)
 			matrix colnames `BootstrappedSE' = `coln'
+			
+			mata st_matrix("`BootstrappedV'",bV)
+			matrix colnames `BootstrappedV' = `coln'
+			matrix rownames `BootstrappedV' = `coln'			
 			
 			if "`showindividual'" != "" {
 				mata biSE = sqrt(diagonal(quadvariance(biBoot)))'			
@@ -258,6 +272,9 @@ program define bootstrap_xtdcce2, eclass
 		mata bSE = sqrt(diagonal(st_matrix("e(V)")))'
 		mata st_matrix("`BootstrappedSE'",bSE)
 		matrix colnames `BootstrappedSE' = `coln'
+		
+		*** add just for posting purpose
+		matrix `BootstrappedV'  = e(V)
 		
 		if "`showindividual'" != "" {
 			mata biSE = sqrt(diagonal(st_matrix("e(Vi)")))'
@@ -465,9 +482,13 @@ program define bootstrap_xtdcce2, eclass
 	di as text " implies missing values in individual coefficient matrix due to dropped cross-sectional units."
 	}
 	
-	ereturn matrix bSE = `BootstrappedSE'
-	ereturn matrix bt = `t'
+	if "`percentile'" == "" {
+		ereturn repost V = `BootstrappedV'
+		ereturn matrix V_modelbased = `V_modelbased' 
+	}
 	
+	ereturn matrix bt = `t'
+		
 	if "`showindividual'" != "" {
 		ereturn matrix biSE = `BootstrappedSEi'
 		ereturn matrix bti = `ti'
