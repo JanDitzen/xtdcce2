@@ -128,6 +128,7 @@ fixed. was before assuming same s2 for all csu
 02.12.2019 - error if mixed models used fixed
 03.12.2019 - pooled and ardl works. 
 20.12.2019 - added nominus options for ARDL in lr_options. this is essentially an ECM, but with features of the ARDL (SE and sum of LR)
+19.02.2020 - bug in predict program fixed if option nodivide was used
 */
 
 program define xtdcce221 , eclass sortpreserve
@@ -145,6 +146,9 @@ program define xtdcce221 , eclass sortpreserve
 			*ereturn clear
 			ereturn local version `xtdcce2_version'
 			exit
+		}
+		if "`replay'" != "" {
+		
 		}
 	}	
 	else {
@@ -267,7 +271,7 @@ program define xtdcce221 , eclass sortpreserve
 		}
 		
 		** add auto check: if in lr variables have joint base, but ECM used, change to ARDL
-		if "`lr'" != "" & strmatch("`lr_options'","*forceecm*") == 0 {
+		if "`lr'" != "" & strmatch("`lr_options'","*forceecm*") == 0 & strmatch("`lr_options'","*ardl*") == 0 {
 			qui tsrevar `lr', list
 			tsunab lrunab : `lr'
 			if wordcount("`r(varlist)'") != wordcount("`lrunab'") {
@@ -283,7 +287,7 @@ program define xtdcce221 , eclass sortpreserve
 			xtdcce_err 184 `d_idvar' `d_tvar' , msg("options ardl and xtpmgnames or nodivide may not be combined.")			
 		}
 		
-		** check if lr_options are ok. if ardl used, no nodivide and xtpmgnames cannot be used
+		** check if lr_options are ok. if ecm used, nominus cannoot be used
 		if strmatch("`lr_options'","*ardl*") == 0 & (strmatch("`lr_options'","*nominus*") == 1 )  {
 			xtdcce_err 184 `d_idvar' `d_tvar' , msg("options ecm (default) and nominus may not be combined.")			
 		}
