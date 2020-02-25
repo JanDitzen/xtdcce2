@@ -12,6 +12,7 @@ help {hi:xtcd2}
 ]{p_end}
 
 {p 4 4}{varname} is the name of residuals or variable to be tested for weak cross sectional dependence. 
+{it:varname} may contain time-series operators, see {help tsvarlist}. 
 {varname} is optional if the command is performed after an estimation (postestimation).{p_end}
 
 
