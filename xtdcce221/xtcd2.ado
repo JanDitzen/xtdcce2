@@ -1,4 +1,4 @@
-*! xtcd2 2.2 Nov2019
+*! xtcd2 2.3 Feb2020
 *! author Jan Ditzen
 *! see viewsource xtcd2.ado for more info.
 
@@ -36,10 +36,11 @@ Changelog:
 	05.06.2019 Added check which command used before
 	10.06.2019 Uses xtset2 to detect type of panel rather than xtset.
 	25.11.2019 Added heatplot and contour plots for rho
-*/
+	25.02.2020 Added ts support
+	*/
 cap program drop xtcd2
 program define xtcd2, rclass
-	syntax [varlist(default=none max=1)] [if] [, KDENsity name(string) rho NOESTimation VERsion contour(string) CONTOURmap order(varlist max=1) heatplot(string) HEATPLOTmap ]
+	syntax [varlist(default=none ts max=1)] [if] [, KDENsity name(string) rho NOESTimation VERsion contour(string) CONTOURmap order(varlist max=1) heatplot(string) HEATPLOTmap ]
 	
 	version 10
 	
@@ -82,6 +83,8 @@ program define xtcd2, rclass
 			}
 		}
 		
+		tsrevar `varlist'
+		local varlist `r(varlist)'
 				
 		**Check if estimation
 		if "`noestimation'" == "" {
