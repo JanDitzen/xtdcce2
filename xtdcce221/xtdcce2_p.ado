@@ -14,6 +14,7 @@ Oct   2018 - changed xtdcce2133 to xtdcce2 in line 37
 20.11.2019 - fix in varlist lhsrhs when xtdcce2fast is used; added tsrevar to make sure variables in lhsrhs are varlist which is understood by st_tsrevar [tsrevar cannot cope with * or - in varlist]
 10.01.2020 - when partial used, restricted to e(esample). Thanks to Gergio Tullio for the pointer.
 		   - if ("`cr_vars'" != "" & ("`xb'" == "" | "`xb2'" == "") )  was missing xb2. Thanks to Gergio Tullio for the pointer.
+02.03.2020 - when xtpmg names used, error occured with PutCoeff mata program
 */
 *capture program drop xtdcce2_p
 program define xtdcce2_p
