@@ -107,7 +107,7 @@ program define xtdcce2_p_int
 			markout `touse' `lhsrhs' `lr' `clistfull'
 			replace `touse' = `touse' * e(sample) * `smpl'
 			
-			noi mata xtdcce2_error_calc("`lhsrhs' `lr' ","`clistfull' `constant'","`touse'","`idvar'","`newvar'",xtdcce2fast_bi,"`wildbootstrap'")
+			mata xtdcce2_error_calc("`lhsrhs' `lr' ","`clistfull' `constant'","`touse'","`idvar'","`newvar'",xtdcce2fast_bi,"`wildbootstrap'")
 		}
 	}
 	else {
@@ -192,7 +192,7 @@ program define xtdcce2_p_int
 			matrix `evi' = e(Vi)
 			local xtpmgnames = 0
 			local lr_options "`e(lr_options)'"
-			
+		
 			if strmatch("`lr_options'","*xtpmgnames*") == 1 {
 				local xtpmgnames = 1
 				local lr1 "`e(p_lr_1)'"
@@ -241,6 +241,7 @@ program define xtdcce2_p_int
 				*local first "`e(p_lr_1)'"
 				local mg_lr1_vars "`lr_vars'"
 				local mg_lr1_vars : list mg_lr1_vars - pooled_vars	
+
 				*gettoken first rest: mg_lr1_vars
 				local o_mg_vars "`o_mg_vars' `mg_lr1_vars'"
 				local mg_vars "`mg_vars' `mg_lr1_vars'"
@@ -435,6 +436,12 @@ program define xtdcce2_p_int
 			**calculate coefficients
 			tempname coeff xbc
 			matrix `coeff' = `ebi'
+			*** correct if ec is used
+			if strmatch("`lr_options'","*xtpmgnames*") == 1 {
+				local coln : colnames `coeff'
+				local coln = subinstr("`coln'","ec","`lr1'",.)
+				matrix colnames `coeff' = `coln'
+			}
 			if "`se'" == "se" {
 				matrix `coeff' = `evi'
 				mata st_matrix("`coeff'",sqrt(diagonal(st_matrix("`coeff'")))')
@@ -462,15 +469,17 @@ program define xtdcce2_p_int
 				local lr_vars_adj = subinword("`lr_vars_adj'","`o_var'","`var'",.)
 				local cc_vars `cc_vars' `c_`var''
 				*local cc_o_vars `cc_o_vars' 
-				
+				*noi disp "mg vars `var' ``var'': `mg_vars'"
 				*foreach ctry in `ctry_list' {
 				*	** CORECT THIS!
 				*	replace `c_`var'' = `coeff'[1,colnumb(`coeff',"`o_var'_`ctry'")] if `idvar' == `ctry' & `touse'
 				*}
 				local i = `i' + 1
 			}
-			if "`cc_vars'" != "" {
-				noi mata xtdcce2_m_PutCoeff("`cc_vars'","`coeff'","`idvar'","`touse'","`o_mg_vars' `ardl_mg'")
+			
+			if "`cc_vars'" != "" {	
+				*noi matrix list `coeff'
+				mata xtdcce2_m_PutCoeff("`cc_vars'","`coeff'","`idvar'","`touse'","`o_mg_vars' `ardl_mg'")
 			}
 			*** LR part
 			*** for ECM: correct coefficients back to original one, only if option xb or residuals. Do nothing for ARDL
