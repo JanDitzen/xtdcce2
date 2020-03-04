@@ -635,7 +635,8 @@ program define xtdcce221 , eclass sortpreserve
 					gen double `s_mean' = .
 					local r_varlist `lhs' `rhs' `pooled' `crosssectional' `endogenous_vars' `exogenous_vars' `endo_pooled' `exo_pooled'
 					local r_varlist: list uniq r_varlist
-					local r_varlist: list r_varlist - constant
+					*noi disp "cons `constant'"
+					*local r_varlist: list r_varlist - constant
 					
 					foreach var in `r_varlist' {
 						by `idvar' (`tvar'), sort: replace `s_mean' = sum(L.`var') / (_n-1) if `touse' & L.`var' != .
@@ -643,6 +644,7 @@ program define xtdcce221 , eclass sortpreserve
 						replace `s_mean' = .						
 					}					
 					sort `idvar' `tvar'
+					
 					markout `touse' `lhs' `rhs' `pooled' `crosssectional' `endogenous_vars' `exogenous_vars' `endo_pooled' `exo_pooled'
 				}				
 				
@@ -964,7 +966,8 @@ program define xtdcce221 , eclass sortpreserve
 				}
 								
 			}
-			
+		*noi disp "jack vars `jackvars' - `clist1'"
+		*noi disp "`lhs' `pooled' `rhs' `exogenous_vars' `endogenous_vars' `endo_pooled' `exo_pooled'"
 	**********************************************************************************************************
 	*******************************************  Partialling Out *********************************************
 	**********************************************************************************************************
@@ -2169,7 +2172,10 @@ program define xtdcce221 , eclass sortpreserve
 		}		
 		di ""
 	}
-	
+	if "`tracenoi'" != "" {
+		mata `mata_varlist'
+		
+	}
 	foreach tmp in `mata_drop' `cov_i1'{
 		capture mata mata drop `tmp'
 	}
@@ -2414,15 +2420,13 @@ mata:
 						b_output = (b_output \ bii)
 						"inverter used:"
 						method
-						rank[i,.] = ranki
-						colni
 						if (colni == 0) {
 							UsedCols[i,.] = J(1,cols(X_o),1)
 						}
 						else {
 							UsedCols[i,colni] = J(1,cols(colni),1)
 						}
-						UsedCols
+						
 						//for covariance
 						if (fast == 0) {
 							"start cov"
@@ -2472,7 +2476,7 @@ mata:
 					b_output = m_xtdcce_solver(XX,XY,useqr,rank,UsedCols=0,method="")
 					"inverter used"
 					method
-					UsedCols
+					
 					/// Used Cols are zero, create a 1xK vector with ones
 					if (cols(UsedCols)==1) {
 						UsedCols = J(1,cols(X),1)
@@ -2484,17 +2488,13 @@ mata:
 						if (num_Kmg*N <= cols(UsedCols)) {
 							"adjust UsedCols for mixed model"
 							UsedMG = UsedCols[1..num_Kmg*N]
-							UsedMG
+							
 							UsedPooled = UsedCols[num_Kmg*N+1..cols(UsedCols)]
-							UsedMG
-							rowshape(UsedMG,N)
 							UsedCols = (rowshape(UsedMG,N),J(N,1,UsedPooled))
 						}
 					}
 					
 					outputnames = (outputnames , pooled)	
-					"outputnames"
-					outputnames
 					//for covariance
 					if (fast == 0) {
 						eii = Y - X * b_output
@@ -2552,6 +2552,7 @@ mata:
 		"coeff done"
 		/// Jackknife
 		if (cols(tokens(jackknife_names)) == 2) {
+			"jack main instance"
 			jack_indic_a = tokens(jackknife_names)[1]
 			jack_indic_b = tokens(jackknife_names)[2]
 			variabaljack = invtokens((mata_var_names[xtdcce2_mm_which2(mata_var_names[.,2],tokens(variablenames)'),13])')
@@ -2568,9 +2569,14 @@ mata:
 				input_exo_j = ""
 			}
 			"start regs"
+			"vars for jack"
+			variabaljack
 			b_a = xtdcce_m_reg(variabaljack,jack_indic_a,id_var,ccep_jack,"","",0,"e","eb","cov","sd","t","st","jack1",mata_var_names,1,input_exo_j,blockdiaguse,useqr)
 			"in jack"
 			b_b = xtdcce_m_reg(variabaljack,jack_indic_b,id_var,ccep_jack,"","",0,"e","eb","cov","sd","t","st","jack2",mata_var_names,1,input_exo_j,blockdiaguse,useqr)
+			"outputs"
+			b_a[(1..2*(cols(tokens(variabaljack))-1))],b_b[(1..2*(cols(tokens(variabaljack))-1))],b_output[(1..2*(cols(tokens(variabaljack))-1))]	
+			///,b_b,b_output
 			b_output = 2:*b_output :- 0.5:*(b_a :+ b_b)
 			"jack done"
 		}
@@ -2648,14 +2654,11 @@ mata:
 			outputnames
 			"stats done"
 			tmp = xtdcce_m_lrcalc(b_output,output_cov,outputnames,lr_vars,lr_options,fast,mata_var_names,id_var,touse)
-			"outputnames after lr"
-			outputnames
 			b_output = tmp[.,1]
 			output_cov = tmp[.,2..cols(tmp)] 			
 			outputnames = (J(1,cols(outputnames),"") \ outputnames)'
 			"lr done"
 			///Output Coefficient (as 1 x K)	
-			output_eb
 			st_matrix(output_eb,b_output')			
 			st_matrixcolstripe(output_eb,outputnames)
 			"eb done"
@@ -3131,8 +3134,7 @@ mata:
 	{
 		lr_vars = tokens(lr_vars)
 		/// make sure b_output is Kx1 and outputnames is 1xK - required for later programs
-		"start"
-		outputnames
+		"start lr calc"
 		if (cols(b_output)>1) {
 			b_output = b_output'
 		}
@@ -3385,8 +3387,6 @@ mata:
 			"fast cov created"
 			output_cov = J(rows(b_output),rows(b_output),.)
 		}
-		"outputnames:"
-		outputnames
 		"b output dimensions"
 		(rows(b_output), cols(b_output))
 		"cov output dimensions"
