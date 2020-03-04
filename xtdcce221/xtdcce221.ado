@@ -2575,6 +2575,7 @@ mata:
 			"in jack"
 			b_b = xtdcce_m_reg(variabaljack,jack_indic_b,id_var,ccep_jack,"","",0,"e","eb","cov","sd","t","st","jack2",mata_var_names,1,input_exo_j,blockdiaguse,useqr)
 			"outputs"
+			"first two units"
 			b_a[(1..2*(cols(tokens(variabaljack))-1))],b_b[(1..2*(cols(tokens(variabaljack))-1))],b_output[(1..2*(cols(tokens(variabaljack))-1))]	
 			///,b_b,b_output
 			b_output = 2:*b_output :- 0.5:*(b_a :+ b_b)
