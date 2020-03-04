@@ -15,6 +15,7 @@ Oct   2018 - changed xtdcce2133 to xtdcce2 in line 37
 10.01.2020 - when partial used, restricted to e(esample). Thanks to Gergio Tullio for the pointer.
 		   - if ("`cr_vars'" != "" & ("`xb'" == "" | "`xb2'" == "") )  was missing xb2. Thanks to Gergio Tullio for the pointer.
 02.03.2020 - when xtpmg names used, error occured with PutCoeff mata program
+04.03.2020 - fixed error when rec used.  Thanks to Gergio Tullio for the pointer.
 */
 *capture program drop xtdcce2_p
 program define xtdcce2_p
@@ -267,8 +268,9 @@ program define xtdcce2_p_int
 				}
 			}		
 			*** Markout here will all variables
-			markout `smpl' `lhs' `mg_vars' `pooled_vars'
-					
+			gen `smpl'2 = `smpl'
+			markout `smpl' `lhs' `mg_vars' `pooled_vars' 
+			replace `smpl' = `smpl'* `smpl'2
 			**here add lr_vars
 			local unique_vars `pooled_vars' `mg_vars' `cr_vars' `lhs' `lr_vars'
 			local unique_vars : list uniq unique_vars
@@ -300,18 +302,22 @@ program define xtdcce2_p_int
 
 			if "`e(bias_correction)'" == "recursive mean correction" {
 				tempvar s_mean
-				gen `s_mean' = 0
+				gen double `s_mean' = 0
 				local r_varlist `lhs' `mg_vars' `cr_vars' `pooled_vars' 
 				local r_varlist: list uniq r_varlist
-				local r_varlist: list r_varlist - `constant'
 
 				foreach var in `r_varlist' {
-					by `idvar' (`tvar'), sort: replace `s_mean' = sum(`var'[_n-1]) / (`tvar'-1) if `smpl' /*was touse*/
-					replace `s_mean' = 0 if `s_mean' == . 
-					replace `var' = `var' - `s_mean'  
+					*by `idvar' (`tvar'), sort: replace `s_mean' = sum(L.`var'[_n-1]) / (`tvar'-1) if `smpl' & L.`var' != . /*was touse*/					
+					*replace `s_mean' = 0 if `s_mean' == . 
+					*replace `var' = `var' - `s_mean'  
+					by `idvar' (`tvar'), sort: replace `s_mean' = sum(L.`var') / (_n-1) if `smpl' & L.`var' != .
+					replace `var' = `var' - `s_mean'
+					replace `s_mean' = .						
 				}
 				replace `s_mean' = 0
 				sort `idvar' `tvar'
+				** adjust sample
+				markout `smpl' `lhs' `mg_vars' `cr_vars' `pooled_vars' 
 			}
 			sum `idvar' if `smpl' /* `touse'*/ , meanonly
 			local N_g = r(max)
