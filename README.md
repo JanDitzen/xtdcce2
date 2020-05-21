@@ -583,7 +583,7 @@ Variables of the long run cointegration vector are defined in **lr(_varlist_)**,
 (the dataset is available at [here](www.econ.cam.ac.uk/people-files/emeritus/mhp1/jasa.exe) from [Pesaran's webpage](www.econ.cam.ac.uk/people/emeritus/mhp1/published-articles#1999):
 
 ```
-xtdcce2 d.c d.pi d.y if year >= 1962 , lr(L.c pi y) p(L.c pi y) cr(_all) cr_lags(2)}
+xtdcce2 d.c d.pi d.y if year >= 1962 , lr(L.c pi y) p(L.c pi y) nocross
 ```
 
 `xtdcce2` internally estimates equation (7) and then recalculates the long run coefficients, such that estimation results for equation (8) are obtained. Equation (7) can be estimated adding **nodivide** to **lr_options()**.
@@ -591,8 +591,8 @@ xtdcce2 d.c d.pi d.y if year >= 1962 , lr(L.c pi y) p(L.c pi y) cr(_all) cr_lags
 A second option is **xtpmgnames** in order to match the naming convention from `xtpmg`.
 
 ```
-xtdcce2 d.c d.pi d.y if year >= 1962 , lr(L.c pi y) p(L.c pi y) cr(_all) cr_lags(2) lr_options(nodivide)
-xtdcce2 d.c d.pi d.y if year >= 1962 , lr(L.c pi y) p(L.c pi y) cr(_all) cr_lags(2) lr_options(xtpmgnames)
+xtdcce2 d.c d.pi d.y if year >= 1962 , lr(L.c pi y) p(L.c pi y) nocross lr_options(nodivide)
+xtdcce2 d.c d.pi d.y if year >= 1962 , lr(L.c pi y) p(L.c pi y) nocross lr_options(xtpmgnames)
 ```
 
 ## 7.7 Cross-Section Augmented Distributed Lag (CS-DL)
