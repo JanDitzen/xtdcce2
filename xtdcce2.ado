@@ -233,6 +233,11 @@ Jan - February
 		   - t-statistic in mg_reg was 1/t
 28.06.2019 - new program for matrix inversion and solver. 
 13.07.2019 - added xtcse2 for estimation of alpha with option exponent
+----------------------------------------xtdcce2 2.01
+19.07.2019 - added options residuals for xtcse2, passthrough options for xtcse2
+30.07.2019 - changed mm_which2 to xtdcce2_mm_which2
+01.08.2019 - support for factor variables enabled again
+
 */
 
 program define xtdcce2 , eclass sortpreserve
@@ -242,7 +247,7 @@ program define xtdcce2 , eclass sortpreserve
 		exit
 	}
 	version 11.1
-	local xtdcce2_version = 2.0
+	local xtdcce2_version = 2.01
 	if replay() {
 		syntax [, VERsion replay * ] 
 		if "`version'" != "" {
@@ -270,6 +275,7 @@ program define xtdcce2 , eclass sortpreserve
 			*/ SHOWIndividual /*
 			*/ nocd /*
 			*/ EXPOnent /*
+			*/ XTCSE2options(string asis) /* options for xtcse2
 			*/ NOIsily /*
 			*/ trace /* nondocumented, for checking purpose only
 			*/ trend /*
@@ -326,17 +332,19 @@ program define xtdcce2 , eclass sortpreserve
 		}
 		
 		* alternative vce estimator for pooled covariance
-		*if "`pooledvce'" != "" {
-			if strlower("`pooledvce'") == "wpn" {
-				local pooledvce = 1
-			}
-			else if strlower("`pooledvce'") == "nw" {
-				local pooledvce = 2
-			}
-			else {
-				local pooledvce = 0
-			}
-		*}
+		if strlower("`pooledvce'") == "wpn" {
+			local pooledvce = 1
+		}
+		else if strlower("`pooledvce'") == "nw" {
+			local pooledvce = 2
+		}
+		else {
+			local pooledvce = 0
+		}
+		
+		if "`xtcse2options'" != "" {
+			local exponent "exponent"
+		}
 		
 		* fast option
 		if "`fast'" == "fast" {
@@ -458,10 +466,26 @@ program define xtdcce2 , eclass sortpreserve
 						local crosssectional ""
 					}
 					else if strmatch("`crosssectional'","*_all*") == 1 {
-						tsrevar `lhs' `rhs' `pooled' `exogenous_vars' `endogenous_vars' `lr' , list
-						local uniq `r(varlist)'
-						*local uniq = strlower("`uniq'")
-						local crosssectional : list uniq uniq 
+						*** only use base of ts variables, omit fv variables
+						fvexpand `lhs' `rhs' `pooled' `exogenous_vars' `endogenous_vars' `lr'
+						if "`r(fvops)'" == "true" {
+							** build list 
+							foreach var in `lhs' `rhs' `pooled' `exogenous_vars' `endogenous_vars' `lr' {
+								fvexpand `var'
+								if "`r(fvops)'" != "true" {
+									local tmplist `tmplist' `var'
+								}
+							}
+							tsrevar `tmplist', list
+							local uniq `r(varlist)'
+							local crosssectional : list uniq uniq 
+						}
+						else {
+							*** check for factor variables
+							tsrevar `lhs' `rhs' `pooled' `exogenous_vars' `endogenous_vars' `lr' , list
+							local uniq `r(varlist)'
+							local crosssectional : list uniq uniq 
+						}
 					}
 					
 					if "`crosssectional'" != "" {
@@ -551,10 +575,9 @@ program define xtdcce2 , eclass sortpreserve
 				
 				tempname mata_varlist
 				local mata_drop `mata_drop' `mata_varlist'
-				mata `mata_varlist' = (J(1,1,tokens("`all_vars'")') , J(`n_vars',11,"0"))			
-				**change var lists such that all vars only included once (with exception for crosssectional
+				mata `mata_varlist' = (J(1,1,tokens("`all_vars'")') , J(`n_vars',11,"0"))	
 				
-				
+				**change var lists such that all vars only included once (with exception for crosssectional)		
 				**add indics
 				local i = 3
 				*				3   4    5      6				7    			8				9  10
@@ -570,19 +593,52 @@ program define xtdcce2 , eclass sortpreserve
 				}
 				mata st_local("full_list",invtokens(`mata_varlist'[.,1]'))
 				
-				**ts check
-				fvrevar `full_list'
-				local new_names1 `r(varlist)'
-				local new_names : list new_names1 - full_list
-				local change: list  full_list - new_names1
-				
-			
-				**insert list in col 2:
-				if "`change'" != "" {
-					mata `mata_varlist'[ xtdcce2_mm_which2(`mata_varlist'[.,1] , tokens("`change'")),2] = tokens("`new_names'")'
+				**ts and fv check
+				foreach var in `full_list' {
+					fvexpand `var' 
+					if "`r(tsops)'" == "true" {
+						tsrevar `var'
+						local new_names `r(varlist)'
+												
+						tsunab change : `var'
+						
+						**insert list in col 2:
+						mata `mata_varlist'[ xtdcce2_mm_which2(`mata_varlist'[.,1] , tokens("`change'")),2] = tokens("`new_names'")'
+						
+					}
+					else if "`r(fvops)'" == "true" {
+						
+						**factor variables
+						fvexpand `var'
+							local fvname "`r(varlist)'"
+							*** get base variable from mata_varlist, then create factor var and copy over
+							tempname factorbase factorbasei factorbase_i
+							mata `factorbasei' = selectindex(`mata_varlist'[.,1]:=="`var'")
+							mata `factorbase_i' = selectindex(`mata_varlist'[.,1]:!="`var'")
+							mata `factorbase' = `mata_varlist'[`factorbasei',.]
+							** remove variable base name
+							mata `mata_varlist'=`mata_varlist'[`factorbase_i',.]
+							
+							fvrevar `var'
+							local fvrevar_tmpnames "`r(varlist)'"
+							
+							*** remove first var from both as it is base variable
+							local num_fv = wordcount("`fvrevar_tmpnames'")-1						
+							gettoken first fvname: fvname
+							gettoken first fvrevar_tmpnames: fvrevar_tmpnames
+							drop `first'
+														
+							mata `factorbase' = J(`num_fv',1,`factorbase')
+							mata `factorbase'[.,1] = tokens("`fvname'")'
+							mata `factorbase'[.,2] = tokens("`fvrevar_tmpnames'")'
+							mata `mata_varlist' = `mata_varlist' \ `factorbase'
+							
+							mata mata drop `factorbasei' `factorbase' `factorbase_i'
+							
+							local nodimcheck nodimcheck
+						
+					}
 				}
-				
-
 				
 				**get those with more than 24 string char
 				mata st_local("list_long",invtokens(`mata_varlist'[xtdcce_m_selectindex(strlen(`mata_varlist'[.,2]):>23),2]'))
@@ -1054,7 +1110,7 @@ program define xtdcce2 , eclass sortpreserve
 			`tracenoi' tabstat `lhs' `pooled' `rhs' `exogenous_vars' `endogenous_vars' `endo_pooled' `exo_pooled' if `touse', s(N mean sd min max) save
 			tempname PartialOutStat
 			matrix `PartialOutStat' = r(StatTotal)
-			cap mata st_local("RowNameP",invtokens(`mata_varlist'[mm_which2(`mata_varlist'[.,2],tokens("`lhs' `pooled' `rhs' `exogenous_vars' `endogenous_vars' `endo_pooled' `exo_pooled'")),1]'))
+			cap mata st_local("RowNameP",invtokens(`mata_varlist'[xtdcce2_mm_which2(`mata_varlist'[.,2],tokens("`lhs' `pooled' `rhs' `exogenous_vars' `endogenous_vars' `endo_pooled' `exo_pooled'")),1]'))
 			cap matrix colnames `PartialOutStat' = `RowNameP'
 
 	*************************************************************************************************************
@@ -1366,7 +1422,20 @@ program define xtdcce2 , eclass sortpreserve
 				}
 			} 
 			if "`exponent'" != "" & "`fast'" == "0" {
-				capture xtcse2 `residuals' if `touse' , nocd inprog
+				local xtcse2reps = 0
+				
+				if strmatch("`xtcse2options'","*reps(*") == 0 {
+					local xtcse2optionsp "`xtcse2options' reps(100)"
+					local xtcse2reps = 100
+				}
+				else {
+					tokenize `xtcse2options'
+					if strmatch("`1'","*reps(*") {
+						local xtcse2reps= subinstr(subinstr("`1'","reps(","",.),")","",.)
+					}
+					local xtcse2optionsp `xtcse2options'
+				}
+				capture xtcse2 `residuals' if `touse' , nocd inprog residual `xtcse2optionsp'
 				if _rc == 199 {
 					noi display as error "xtcse2 not installed" 
 					local exponent noexponent
@@ -1959,8 +2028,9 @@ program define xtdcce2 , eclass sortpreserve
 		
 		ereturn hidden local lr_pooled "`lr_pooled'"
 		ereturn hidden local lr_mg "`lr_rest'"
-		
-		di as text "{hline `col_i'}{c +}{hline `=`maxline'-`col_i''}"
+		if "`rhs_vars'" != "" {
+			di as text "{hline `col_i'}{c +}{hline `=`maxline'-`col_i''}"
+		}
 		di as text _col(2) "Long Run Est." _col(`col_i')  " {c |}"
 		di as text "{hline `col_i'}{c +}{hline `=`maxline'-`col_i''}"
 		if "`lr_pooled'" != "" { 
@@ -2039,7 +2109,7 @@ program define xtdcce2 , eclass sortpreserve
 	
 	if strtrim("`omitted_var'") != "" {
 		display  as text "Omitted Variables:"
-		mata st_local("omitted_var",`mata_varlist'[mm_which2(`mata_varlist'[.,2],tokens("`omitted_var'")'),1])
+		mata st_local("omitted_var",`mata_varlist'[xtdcce2_mm_which2(`mata_varlist'[.,2],tokens("`omitted_var'")'),1])
 		display  as text _col(2) "`omitted_var'"
 	}
 	if "`constant_type'" == "1" {
@@ -2164,6 +2234,12 @@ program define xtdcce2 , eclass sortpreserve
 		
 		di as text "{hline `col_i'}{c BT}{hline `=`maxline'-`col_i'-15'}"
 		di "0.5 <= alpha < 1 implies strong cross sectional dependence."
+		if `xtcse2reps' > 0 {
+			di as text "SE and CI bootstrapped with `xtcse2reps' repetitions."
+		}
+		else {
+			di as text "SE and CI not available. Use option reps() to bootstrap SE and CI."
+		}		
 		di ""
 	}
 	
