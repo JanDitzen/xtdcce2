@@ -1,4 +1,4 @@
-*! xtcd2 2.3 Feb2020
+*! xtcd2 2.2 Nov2019
 *! author Jan Ditzen
 *! see viewsource xtcd2.ado for more info.
 
@@ -350,7 +350,7 @@ mata:
 		i = 1
 		while (i<=rows(rhoiuniq)) {
 			idi = rhoiuniq[i]
-			index = selectindex(rhoid:==idi)[1]
+			index = xtdcce_selectindex(rhoid:==idi)[1]
 
 			matched = matched \ (idi , ordervar[index])
 			
@@ -364,7 +364,7 @@ mata:
 		neworder = J(0,1,.)
 		while (i <= orderN) {
 			orderi = orderuniq[i]
-			newi = selectindex(orderi:==matched[.,2])	
+			newi = xtdcce_selectindex(orderi:==matched[.,2])	
 			if (sum(newi) > 0 ) {
 				neworder = neworder \ newi
 			}

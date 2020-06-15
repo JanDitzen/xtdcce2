@@ -16,21 +16,34 @@ program define xtdcce2fast, eclass sortpreserve
 	}	
 	else {
 	
-		syntax varlist(min=1 ts) [if/] , [cr_lags(numlist) CRosssectional(varlist ts) noconstant lr(string) fullsample NOTable lr_options(string) NOCROSSsectional cd trace ]
+		syntax varlist(min=1 ts) [if/] , [cr_lags(numlist) CRosssectional(string) GLOBALCRosssectional(string) CLUSTERCRosssectional(string) noconstant lr(string) fullsample NOTable lr_options(string) NOCROSSsectional cd trace pred(string) postframe NOPOST ] 
 		qui{
 			version 15
 						
 			local cmdline xtdcce2fast `0'
 			
+			local ifstart `if'
+			
+			tempvar touse
+			marksample touse			
+			local lhsrhs `varlist'
+			
 			if "`trace'" == "trace" {
 				local trace noi
 			}
 			
-			tempvar touse
-			marksample touse
-			if "`fullsample'" == "" {
-				markout `touse' `varlist' `lr'
+			local posttype "none"
+			if c(stata_version) > 16 & "`postframe'" != "" & "`nopost'" == ""  {
+				local posttype "frame"
 			}
+			else if  "`postframe'" == "" & "`nopost'" == "" {
+				local posttype "mata"				
+			}
+			else if "`cd'" != "" {
+				local posttype "temp"			
+			}
+			
+			
 			** get idvar and tvar
 			qui xtset
 			local idvar "`r(panelvar)'"
@@ -39,18 +52,75 @@ program define xtdcce2fast, eclass sortpreserve
 			** create cross sectional lags	
 			if "`nocrosssectional'" != "" {
 				local crosssectional ""
+				local clustercrosssectional ""
+				local globalcrosssectional ""
 			}
 			
 			if "`crosssectional'" != "" {
-				tempname csa
+			    if "`cr_lags'" == "" {
+					local 0 `crosssectional'
+					syntax varlist(ts) , [cr_lags(numlist)]
+					local crosssectional `varlist'
+					local checkscsa "`varlist'"
+				}				
+				
 				if "`cr_lags'" == "" {
-					local cr_lags = 0
+					local scr_lags = 0
 				}
-				*noi disp "lags `cr_lags'"
-				`trace' xtdcce2_csa `crosssectional' , idvar(`idvar') tvar(`tvar') cr_lags(`cr_lags') touse(`touse') csa(`csa')
-				local clistfull `r(varlist)'
-				local cross_structure `r(cross_structure)'
+				else {
+				    local scr_lags `cr_lags'					
+				}
+				
 			}
+			
+			*** Global Crosssectional averages
+			if "`globalcrosssectional'" != "" {
+				local 0 `globalcrosssectional'
+				syntax varlist(ts) , [cr_lags(numlist)]
+				local globalcrosssectional `varlist'
+				local checkgcsa "`varlist'"				
+				local checkcsa: list checkgcsa & checkscsa
+				
+				if "`checkcsa'" != "" {
+					noi disp as error "Variables (`checkcsa') occur in globalcrosssectional() and crosssectional()."
+					exit
+				}
+				
+				if "`cr_lags'" == "" {
+					local gcr_lags = 0
+				}
+				else {
+				    local gcr_lags `cr_lags'
+				}			
+			}		
+			*** Clustered Crosssectional averages
+			if "`clustercrosssectional'" != "" {
+				local 0 `clustercrosssectional'
+				syntax varlist(ts) , [cr_lags(numlist) CLuster(varlist) ]
+				local clustercrosssectional `varlist'
+				local csa_cluster "`cluster'"
+				local checkccsa "`varlist'"
+				local checkcsa1: list checkgcsa & checkccsa
+				local checkcsa2: list checkscsa & checkccsa
+				
+				if "`checkcsa1'`checkcsa2'" != "" {
+					noi disp as error "Variables (`checkcsa1' `checkcsa2') occur in clustercrosssectional() and globalcrosssectional() or crosssectional()."
+					exit
+				}				
+				if "`cluster'" == "" {
+				    noi disp "No cluster set."
+					exit
+				}	
+							
+				if "`cr_lags'" == "" {
+					local ccr_lags = 0
+				}
+				else {
+				    local ccr_lags `cr_lags'
+				}				
+			}			
+			
+			
 			
 			if "`lr_options'" == "" & "`lr'" != "" {
 				local lr_options "ecm"
@@ -58,7 +128,7 @@ program define xtdcce2fast, eclass sortpreserve
 			
 			** markout
 			*sort `idvar' `tvar'
-			markout `touse' `varlist' `lr' `clistfull'
+			*markout `touse' `lhsrhs' `lr' `clistfull'
 			
 			** get numbers of lr bases in varlistnames
 			if "`lr'" != "" {
@@ -79,7 +149,7 @@ program define xtdcce2fast, eclass sortpreserve
 					}
 				}
 				local BaseUniq: list uniq BaseListe
-				local rest `varlist' `lr' 
+				local rest `lhsrhs' `lr' 
 				//// BaseIndex gives the index (i.e) position of each base. For example if
 				//// ... y x1 x2 , lr(L.x1 L2.x1 x3) Baseindex is 0 0 0 1 1 2
 				while "`rest'" != "" {
@@ -103,9 +173,9 @@ program define xtdcce2fast, eclass sortpreserve
 			`trace' disp "vars `CleanLR'"
 			** parse varlist and create tempvars
 			*sort `idvar' `tvar'
-			tsrevar `varlist' `lr'
+			tsrevar `lhsrhs' `lr'
 			local varlistnew "`r(varlist)'"
-			tsunab varlistnames: `varlist' `CleanLR'
+			tsunab varlistnames: `lhsrhs' `CleanLR'
 
 			** add constant
 			if "`constant'" == "" {
@@ -114,12 +184,97 @@ program define xtdcce2fast, eclass sortpreserve
 				local varlistnew `varlistnew' `constant'
 				local varlistnames `varlistnames' _cons
 			}
+			
+			markout `touse' `varlistnew' `clustercrosssectional' `crosssectional' `globalcrosssectional'
 
-			** run regressions
-			sort `idvar' `tvar'
+			tempvar tousecr			
+			if "`fullsample'" != "" {
+				if "`ifstart'" != ""  {
+					gen `tousecr' = (`ifstart') 
+				}
+				else {
+					gen `tousecr' = 1						
+				}
+			}
+			else {
+				gen `tousecr' = `touse'
+			}			
+						
+			if "`crosssectional'" != "" {
+				tempname scsa
+				xtdcce2_csa `crosssectional' , idvar(`idvar') tvar(`tvar') cr_lags(`scr_lags') touse(`tousecr') csa(`scsa') tousets(`touse')
+				local scsa `r(varlist)'
+				local scross_structure `r(cross_structure)'
+			}
+			
+			if "`globalcrosssectional'" != "" {
+				tempvar gtouse
+				tempvar gcsa
+				gen `gtouse' = 1
+				xtdcce2_csa `globalcrosssectional' , idvar(`idvar') tvar(`tvar') cr_lags(`gcr_lags') touse(`gtouse') csa(`gcsa') tousets(`touse')		
+				local gcsa `r(varlist)'	
+				local gcross_structure "`r(cross_structure)'"
+				drop `gtouse'
+			}			
+			
+			if "`clustercrosssectional'" != "" {
+				tempname ccsa	
+				xtdcce2_csa `clustercrosssectional' , idvar(`idvar') tvar(`tvar') cr_lags(`ccr_lags') touse(`tousecr') csa(`ccsa') cluster(`cluster') tousets(`touse')		
+				local ccsa `r(varlist)'	
+				local ccross_structure "`r(cross_structure)'"
+			
+			}
+			
+			
+			local clistfull `scsa' `gcsa' `ccsa'
+			
+			*** update 
+			markout `touse' `varlistnew' `clistfull'
+			
+			*** Save touse to frame or mata. necessary for predict
+			if "`posttype'" == "frame" {
+				cap frame drop xtdcce2fast
+				*frame create xtdcce2fast
+				timer clear 97
+				timer on 97
+				frame put `idvar' `tvar' `tousecr' `touse'  , into(xtdcce2fast)
+				frame xtdcce2fast: rename `tousecr' tousecr
+				frame xtdcce2fast: rename `touse' touse
+				tempvar residual
+				gen `residual' = .				
+				timer off 97
+			}
+			else if "`posttype'" == "mata" {
+				putmata xtdcce2fast_p = (`idvar' `tvar' `tousecr' `touse'), replace		
+				tempvar residual
+				gen `residual' = .
+			}
+			else if "`posttype'" == "temp" {
+				tempvar residual
+				gen `residual' = .
+			}
+			
+			drop `tousecr'
+			
+			** run regressions; make sure data is sorted
+			issorted `idvar' `tvar'
 			tempname b_output V_output stats b_i stats_i v_i
 			
-			`trace' mata m_xtdcce2fast("`varlistnew'","`clistfull'","`BaseIndex'","`touse'","`idvar' `tvar'","`b_output' `V_output' `stats'",`b_i'=.,`v_i'=.,`stats_i'=.,"`lr_options'")
+			`trace' mata m_xtdcce2fast("`varlistnew'","`clistfull'","`BaseIndex'","`touse'","`idvar' `tvar'","`b_output' `V_output' `stats'",`b_i'=.,`v_i'=.,`stats_i'=.,"`lr_options'","`residual'")
+			
+			** link resdiduals
+			if "`posttype'" == "frame" {
+				tempname linkvar
+				timer clear 98
+				timer on 98
+				frame xtdcce2fast: frlink 1:1 `idvar' `tvar' , frame(default) gen(`linkvar')
+				frame xtdcce2fast: frget residuals = `residual', from(`linkvar')
+				timer off 98
+			}
+			else if "`posttype'" == "mata" {
+				putmata `residual', replace
+				mata xtdcce2fast_p = xtdcce2fast_p , `residual'			
+			}
 			
 			** matrix 
 			if "`lr'" != "" {
@@ -153,16 +308,32 @@ program define xtdcce2fast, eclass sortpreserve
 		ereturn local cmd "xtdcce2fast"
 		ereturn local cmdline "`cmdline'"
 		ereturn local idvar "`idvar'"
-		ereturn local tvar "`tvar'"
+		ereturn local tvar "`tvar'"		
+
+		ereturn hidden local postresults  = "`posttype'"
+		
 		
 		ereturn hidden local p_if "`if'"
 		ereturn hidden local p_in "`in'"
 		
-		ereturn local crosssectional "`crosssectional'"
-		ereturn local cr_lags "`cr_lags'"
+		
+		if "`crosssectional'" != "" {
+			ereturn local cr_lags  "`scr_lags'"
+			ereturn local csa "`crosssectional'"
+		}
+		if "`globalcrosssectional'" != "" {
+			ereturn local gcr_lags "`gcr_lags'"
+			ereturn local gcsa "`globalcrosssectional'"
+		}
+		if "`clustercrosssectional'" != "" {
+			ereturn local ccr_lags	 "`ccr_lags'"
+			ereturn local ccsa "`clustercrosssectional'"
+			ereturn local ccsa_cluster "`csa_cluster'"
+		}
+		
 		ereturn hidden local p_mg_vars "`rhsi'"
 		
-		ereturn local predict "xtdcce2_p"
+		ereturn local predict "xtdcce2`pred'_p"
 		
 		if "`lr'" != "" {
 			ereturn local lr "`CleanLR'"
@@ -188,8 +359,8 @@ program define xtdcce2fast, eclass sortpreserve
 		mata xtdcce2fast_Vi = `v_i'
 		mata mata drop `b_i' `v_i'
 		
-		if "`cd'" == "cd" {
-			qui xtcd2 if e(sample)
+		if "`cd'" == "cd" {			
+			qui xtcd2 `residual' if e(sample)
 			ereturn scalar cd = r(CD)
 			ereturn scalar cdp = r(p)
 			return clear
@@ -200,8 +371,9 @@ program define xtdcce2fast, eclass sortpreserve
 				
 			tempname b_mg sd
 			matrix `b_mg' = e(b)
+			*** SD is variance here!
 			matrix `sd' = e(V)
-					
+				
 			**Assume standard of 80 and extend only if variable names larger than 80 and linesize sufficient.
 			local maxline = c(linesize)	
 			**allow max linesize of 100
@@ -289,13 +461,13 @@ program define xtdcce2fast, eclass sortpreserve
 						_col(37) "=" _col(39) e(Tmax) - e(Kmg) - `K_csa' ;
 				#delimit cr
 			}
-			if wordcount("`cr_lags'") > 1 {
-				mata st_local("cr_lags_min",strofreal(min(strtoreal(tokens("`cr_lags'")))))
-				mata st_local("cr_lags_max",strofreal(max(strtoreal(tokens("`cr_lags'")))))
+			if wordcount("`scr_lags' `ccr_lags' `gcr_lags'") > 1 {
+				mata st_local("cr_lags_min",strofreal(min(strtoreal(tokens("`scr_lags' `ccr_lags' `gcr_lags'")))))
+				mata st_local("cr_lags_max",strofreal(max(strtoreal(tokens("`scr_lags' `ccr_lags' `gcr_lags'")))))
 				local cr_lags_disp "`cr_lags_min' to `cr_lags_max'"
 			}
-			else if wordcount("`cr_lags'") == 1 {
-				local cr_lags_disp "= `cr_lags'"
+			else if wordcount("`scr_lags' `ccr_lags' `gcr_lags'") == 1 {
+				local cr_lags_disp "= `scr_lags' `ccr_lags' `gcr_lags'"
 			}
 			else {
 				local cr_lags_disp "none"
@@ -374,14 +546,37 @@ program define xtdcce2fast, eclass sortpreserve
 				di as text  "Mean Group Variables: `rhsi'"
 			}
 			if strtrim("`crosssectional'") != "" {
-				if wordcount("`cr_lags'") > 1 {
-					local crosssectional_output "`cross_structure'"
+				if wordcount("`scr_lags'") > 1 {
+					local crosssectional_output "`scross_structure'"
 				}
 				else {
 					local crosssectional_output "`crosssectional'"
 				}
 				display  as text "Cross Sectional Averaged Variables: `crosssectional_output'"
 			}
+			
+			if strtrim("`globalcrosssectional'") != "" {
+				if wordcount("`gcr_lags'") > 1 {
+					local crosssectional_output "`gcross_structure'"
+				}
+				else {
+					local crosssectional_output "`globalcrosssectional'"
+				}
+				display  as text "Global Cross Sectional Averaged Variables: `crosssectional_output'"
+			}
+			
+			if strtrim("`clustercrosssectional'") != "" {
+				if wordcount("`ccr_lags'") > 1 {
+					local crosssectional_output "`ccross_structure'"
+				}
+				else {
+					local crosssectional_output "`clustercrosssectional'"
+				}
+				display  as text "Clustered Cross Sectional Averaged Variables: `crosssectional_output'"
+			}
+			
+			
+			
 			if strtrim("`lr'") != "" { 
 				display  as text "Long Run Variables: `CleanLR'"
 				local lr_1 = word("`BaseListe'",1)
@@ -409,26 +604,27 @@ program define xtdcce_output_table
 	local cv  `5'
 	local i `6'
 	
-	scalar se = sqrt(`se_p_mg'[colnumb(`se_p_mg',"`i'"),colnumb(`se_p_mg',"`i'")])
-	scalar b = `b_p_mg'[1,colnumb(`b_p_mg',"`i'")]
-	scalar tt = b / se
-	
-	scalar pval= 2*(1 - normal(abs(tt)))
+	tempname b se tt pval
+	scalar `se' = sqrt(`se_p_mg'[colnumb(`se_p_mg',"`i'"),colnumb(`se_p_mg',"`i'")])
+	scalar `b' = `b_p_mg'[1,colnumb(`b_p_mg',"`i'")]
+	scalar `tt' = `b' / `se'
+
+	scalar `pval'= 2*(1 - normal(abs(`tt')))
 	
 	
 	di as text %`col's abbrev("`var' ",`=`col'-1') "{c |}"  _continue
 	local col = `col' + 3
-	di as result _column(`col') %9.8g b _continue
+	di as result _column(`col') %9.8g `b' _continue
 	local col = `col' + 8 + 3
-	di as result _column(`col') %9.8g se _continue
+	di as result _column(`col') %9.8g `se' _continue
 	local col = `col' + 8 + 3
-	di as result _column(`col') %6.2f tt _continue	
+	di as result _column(`col') %6.2f `tt' _continue	
 	local col = `col' + 10
-	di as result _column(`col') %5.3f pval _continue
+	di as result _column(`col') %5.3f `pval' _continue
 	local col = `col' + 10
-	di as result _column(`col') %9.7g ( `b_p_mg'[1,colnumb(`b_p_mg',"`i'")] - `cv'*`se_p_mg'[1,colnumb(`se_p_mg',"`i'")]) _continue
+	di as result _column(`col') %9.7g ( `b_p_mg'[1,colnumb(`b_p_mg',"`i'")] - `cv'*sqrt(`se_p_mg'[rownumb(`se_p_mg',"`i'"),colnumb(`se_p_mg',"`i'")])) _continue
 	local col = `col' + 11
-	di as result _column(`col') %9.7g ( `b_p_mg'[1,colnumb(`b_p_mg',"`i'")] + `cv'*`se_p_mg'[1,colnumb(`se_p_mg',"`i'")])
+	di as result _column(`col') %9.7g ( `b_p_mg'[1,colnumb(`b_p_mg',"`i'")] + `cv'*sqrt(`se_p_mg'[rownumb(`se_p_mg',"`i'"),colnumb(`se_p_mg',"`i'")]))
 end
 
 
@@ -444,7 +640,8 @@ mata:
 							real matrix b_iOutput,			///
 							real matrix V_iOutput,			///
 							real matrix stats_i_name,		///
-							string scalar lr_options	)		///
+							string scalar lr_options,		///
+							string scalar resname)
 							
 	{
 		real matrix X
@@ -456,7 +653,12 @@ mata:
 		Y = X[.,1]
 		X = X[.,(2..cols(X))]
 		
-		residual = J(rows(X),1,.)
+		if (resname[1,1] != "") {
+			st_view(residual,.,resname,touse)
+		}
+		else {
+			residual = J(rows(X),1,.)
+		}
 		
 		nocsa = 0
 		K_csa = 0
@@ -487,12 +689,14 @@ mata:
 		covend = K
 		covstart = 1
 		while (i<=N_g) {
-			Xi = X[(index[i,1]..index[i,2]),.]
-			Yi = Y[(index[i,1]..index[i,2]),.]
+			///Xi = X[(index[i,1]..index[i,2]),.]
+			///Yi = Y[(index[i,1]..index[i,2]),.]
+			Xi = X[|index[i,1],. \ index[i,2],.|]
+			Yi = Y[|index[i,1],. \ index[i,2],.|]
 			lower_i[i] =  quadcolsum(((Yi :- mean(Yi)):^2))
 			/// partial out
 			if (nocsa == 1) {
-				csai = csa[(index[i,1]..index[i,2]),.]
+				csai = csa[|index[i,1],. \ index[i,2],.|]
 				x_p = (Yi,Xi)
 				tmp_xp = quadcross(csai,x_p)
 				tmp_csa = quadcross(csai,csai)
@@ -509,7 +713,7 @@ mata:
 			
 			residi = Yi - Xi * b_i[i,.]'
 			
-			residual[(index[i,1]..index[i,2]),.] = residi 
+			residual[|index[i,1],. \ index[i,2],.|] = residi 
 			
 			s2_i[i] = residi'residi 
 			
@@ -517,7 +721,7 @@ mata:
 			
 			dfr = rows(Xi) - K- K_csa
 
-			cov_i[(covstart..covend),.] = (J(K,1,idt[i,1]) , tmp_xx1 :* s2_i[i]  / dfr)
+			cov_i[(covstart..covend),.] = (J(K,1,Nuniq[i,1]) , tmp_xx1 :* s2_i[i]  / dfr)
 			
 			covstart = covend + 1
 			covend = covend + K
@@ -550,7 +754,7 @@ mata:
 			LongRunBases = LongRunBases[2..cols(LongRunBases)]
 			uniqBase = uniqrows(LongRunBases')
 			/// remove 0s
-			uniqBase = uniqBase[selectindex(uniqBase:!=0)]
+			uniqBase = uniqBase[xtdcce_selectindex(uniqBase:!=0)]
 			"lr base"
 			LongRunBases
 			uniqBase
@@ -567,7 +771,7 @@ mata:
 			}
 			
 			while (i<=rows(uniqBase)) {
-				index = selectindex(uniqBase[i]:==LongRunBases)
+				index = xtdcce_selectindex(uniqBase[i]:==LongRunBases)
 				"Indexes"
 				index
 				if (s==1) {
@@ -587,7 +791,8 @@ mata:
 		b_mg = quadmeanvariance(b_i)
 		V = b_mg[(2..rows(b_mg)),.]:/N_g
 		b_mg = b_mg[1,.]
-		
+		"b_mg"
+		b_mg
 		outputb = tokens(outputnames)[1]
 		outputV = tokens(outputnames)[2]
 		statsName = tokens(outputnames)[3]

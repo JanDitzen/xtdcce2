@@ -8,7 +8,7 @@ xtdcce2 auxiliary programs
 5. xtdcce_PointByPoint (mata)
 6.1 xtdcce_m_partialout (mata)
 6.2 xtdcce_m_partialout2 (mata)
-7. xtdcce_m_selectindex (mata)
+7. xtdcce_selectindex (mata)
 8. xtdcce2_mm_which2 (mata)
 9. xtdcce2_m_PutCoeff (mata)
 10. xtdcce2_csa 
@@ -119,7 +119,7 @@ mata:
 				if (rank < rows(A)) {	
 					/// not full rank, use invsym
 					method = "invsym"
-					coln = selectindex(colsum(A:==0):==rows(A):==0)			
+					coln = xtdcce_selectindex(colsum(A:==0):==rows(A):==0)			
 				}
 				else {
 					/// full rank use cholsolve
@@ -182,7 +182,7 @@ mata:
 					/// not full rank, solve by hand
 					C = A1 * B
 					method = "invsym"
-					coln = selectindex(colsum(A1:==0):==rows(A1):==0)			
+					coln = xtdcce_selectindex(colsum(A1:==0):==rows(A1):==0)			
 				}
 				else {
 					/// full rank use cholsolve
@@ -217,9 +217,6 @@ mata:
 		p_nrows = nrows
 		p_expres = expres
 		"Point by Point"
-		(p_ncols )
-		(p_nrows)
-		(p_expres)
 		if (cols(p_ncols) == 1 & cols(p_nrows) > 1) p_ncols = J(1,cols(p_nrows),p_ncols)
 		if (cols(p_ncols) > 1 & cols(p_nrows) == 1) p_nrows = J(1,cols(p_ncols),p_nrows)
 		if (cols(expres) == 1 & rows(expres) == 1& cols(p_nrows) > 1 & cols(p_ncols) > 1) p_expres = J(1,cols(p_nrows),p_expres)
@@ -289,14 +286,14 @@ mata:
 		"start loop"
 		while (running<=rows(ids)) {
 		
-			tousei = selectindex(id:==ids[running])
+			tousei = xtdcce_selectindex(id:==ids[running])
 			
 			X1_i = X1[tousei,.]
 			X2_i = X2[tousei,.]
 			
 			X1X1 = quadcross(X1_i,X1_i)
 			X1X2 = quadcross(X1_i,X2_i)
-			"x1x1 and x1x2 calculated"
+			
 			//Get rank
 			X2[tousei,.] = (X2_i - X1_i*m_xtdcce_solver(X1X1,X1X2,useold,rks=.))
 			
@@ -310,38 +307,40 @@ end
 
 
 **Wrapper for selectindex, checks if version is smaller than 13, then runs code, otherwise uses mata function
-capture mata mata drop xtdcce_m_selectindex()
-mata: 
-	function xtdcce_m_selectindex(a)
-	{
-		
-			row = rows(a)
-			col = cols(a)
-			if (row==1) {
-				output = J(1,0,.)
-				j = 1
-				while (j<=col) {
-					if (a[1,j] != 0) {
-						output = (output , j)
-					}
-					j++
-				}		
-			}
-			if (col==1) {
-				output = J(0,1,.)
-				j = 1
-				while (j<=row) {
-					if (a[j,1] != 0) {
-						output = (output \ j)
-					}
-					j++
-				}		
-			}
 
-		return(output)
-	}
-end
+	*if `c(version)' < 13 {
+		capture mata mata drop xtdcce_selectindex()
+		mata: 
+			function xtdcce_selectindex(a)
+			{
+				
+					row = rows(a)
+					col = cols(a)
+					if (row==1) {
+						output = J(1,0,.)
+						j = 1
+						while (j<=col) {
+							if (a[1,j] != 0) {
+								output = (output , j)
+							}
+							j++
+						}		
+					}
+					if (col==1) {
+						output = J(0,1,.)
+						j = 1
+						while (j<=row) {
+							if (a[j,1] != 0) {
+								output = (output \ j)
+							}
+							j++
+						}		
+					}
 
+				return(output)
+			}
+		end
+	
 ** xtdcce2_mm_which2 program
 capture mata mata drop xtdcce2_mm_which2()
 mata:
@@ -398,7 +397,30 @@ mata:
 	}
 end
 
-** xtdcce2_m_replace program
+capture mata mata drop xtdcce2_mm_which2f()
+mata:
+	function xtdcce2_mm_which2f(source,search )
+	{		
+		real matrix output
+		search_N = rows(search)
+		output = J(search_N,1,0)
+		source_N = rows(source)
+	
+		i = 1
+		
+		while (i<=search_N) {
+			new_elvec = source:==search[i]	
+			if (anyof(new_elvec,1)) {
+				output[i]= xtdcce_selectindex(new_elvec)
+			}
+			i++
+		}
+		return(output)
+	}
+end
+
+
+** program copies coefficients from e(b) matrix into variables
 capture mata mata drop xtdcce2_m_PutCoeff()
 mata:
 	function xtdcce2_m_PutCoeff (string scalar VarName, string scalar MatrixName ,  string scalar idname , string scalar touse , string scalar ColNames)
@@ -410,7 +432,7 @@ mata:
 		ids = uniqrows(id)
 		CoeffNames = st_matrixcolstripe(MatrixName)[.,2]
 		CoeffOriginal = st_matrix(MatrixName)
-		
+		///CoeffNames
 		output = J(rows(id),cols(tokens(VarName)),.)
 		/// bring Coeff Matrix into NxK order
 		K = cols(tokens(VarName))
@@ -427,7 +449,7 @@ mata:
 		if ((rows(ids) ==rows(coeff)) & (cols(coeff)==cols(tokens(VarName)))) {
 			r = 1
 			while (r<=rows(ids)) {
-				index = selectindex(id:==ids[r])
+				index = xtdcce_selectindex(id:==ids[r])
 				output[index,.] = J(rows(index),1,coeff[r,.]) 
 				r++
 			}
@@ -443,46 +465,97 @@ mata:
 end	
 
 ** 10. xtdcce2_csa creates cross-sectional averages
+** option numberonly gives only lag number in cross_structure
 capture program drop xtdcce2_csa
 program define xtdcce2_csa, rclass
-	syntax varlist(ts) , idvar(varlist) tvar(varlist) cr_lags(numlist) touse(varlist) csa(string) 
+	syntax varlist(ts) , idvar(varlist) tvar(varlist) cr_lags(numlist) touse(varlist) csa(string) [cluster(varlist) numberonly tousets(varlist)]
 		tsrevar `varlist'
+		
+		if "`tousets'" == "" {
+			local tousets "`touse'"
+		}
+		
 		local varlist `r(varlist)'
+		
+		local c_i = 1
 		foreach var in `varlist' {
-				local ii `=strtoname("`var'")'
-				tempvar `ii'
-				by `tvar' (`idvar'), sort: egen ``ii'' = mean(`var') if `touse'				
-				local clist `clist' ``ii''
-			}
-			if "`cr_lags'" == "" {
-				local cr_lags = 0
-			}
-			local i = 1
-			local lagidef = 0
-			foreach var in `clist' {
-				local lagi = word("`cr_lags'",`i')
-				if "`lagi'" == "" {
-					local lagi = `lagidef'
+			if "`cluster'" != "" {
+				local clusteri = word("`cluster'",`c_i')
+				if "`clusteri'" == "" {
+					local clusteri `cluster_def'					
 				}
 				else {
-					local lagidef = `lagi'					
+					local cluster_def `clusteri'					
 				}
-				sort `idvar' `tvar'
-				tsrevar L(0/`lagi').`var'
-				
-				local cross_structure "`cross_structure' `=word("`varlist'",`i')'(`lagi')"
-				local clistfull `clistfull' `r(varlist)'
-				local i = `i' + 1
 			}
-			local i = 1
-			foreach var in `clistfull' {
-				rename `var' `csa'_`i'
-				local clistn `clistn' `csa'_`i'
-				local i = `i' + 1
+			local ii `=strtoname("`var'")'
+			tempvar `ii'
+			*by `tvar' `clusteri' (`idvar'), sort: egen ``ii'' = mean(`var') if `touse'		
+			by `tvar' `clusteri' (`idvar'), sort: gen ``ii'' = sum(`var') if `touse'
+			by `tvar' `clusteri' (`idvar'), sort: replace ``ii'' = ``ii''[_N] / _N if `touse'
+			local clist `clist' ``ii''
+			local c_i = `c_i' + 1
+		}
+		if "`cr_lags'" == "" {
+			local cr_lags = 0
+		}
+		local i = 1
+		local lagidef = 0
+		foreach var in `clist' {
+			local lagi = word("`cr_lags'",`i')
+			if "`lagi'" == "" {
+				local lagi = `lagidef'
+			}
+			else {
+				local lagidef = `lagi'					
+			}
+			sort `idvar' `tvar'
+			noi disp "lags `lagi'"
+			tsrevar L(0/`lagi').`var'		
+			local clistfull `clistfull' `r(varlist)'
+			
+			tempname touse2
+			gen `touse2' = 1 if `tousets'
+			foreach var in `r(varlist)' {
+				replace `var' = `var' * `touse2'							
+			}
+			drop `touse2'	
+			
+			if "`cluster'" != "" {
+				local clusteri = word("`cluster'",`c_i')
+				if "`clusteri'" == "" {
+					local clusteri `cluster_def'					
+				}
+				else {
+					local cluster_def `clusteri'					
+				}
+				if "`numberonly'" == "" {
+					local cross_structure "`cross_structure' `=word("`varlist'",`i')'(`lagi'; `clusteri')"
+				}
+				else {
+				    local cross_structure "`cross_structure' `lagi'"			
+				}
+			}
+			else {
+			    if "`numberonly'" == "" {
+					local cross_structure "`cross_structure' `=word("`varlist'",`i')'(`lagi')"	
+				}
+				else {
+					local cross_structure "`cross_structure' `lagi'"	
+				}
 			}
 			
-		return local varlist "`clistn'"
-		return local cross_structure "`cross_structure'"
+			local i = `i' + 1
+		}
+		local i = 1
+		foreach var in `clistfull' {
+			rename `var' `csa'_`i'
+			local clistn `clistn' `csa'_`i'
+			local i = `i' + 1
+		}
+		
+	return local varlist "`clistn'"
+	return local cross_structure "`cross_structure'"
 end
 
 ** 11. xtdcce2_csa creates cross-sectional averages
@@ -573,5 +646,98 @@ mata:
 			i++
 		}
 		"done"
+	}
+end
+
+
+*** checks if data is sorted, if not then sorts it
+capture program drop issorted
+
+program define issorted
+	syntax	varlist 
+	
+	local sorted : dis "`:sortedby'"
+	if "`sorted'" != "`varlist'" {
+	    noi disp "sort data"
+	    sort `varlist'
+	}
+
+end
+
+
+
+*** program to copy mata content into variables given id and t variables
+capture mata mata drop xtdcce2_mata2stata()
+mata:
+	function xtdcce2_mata2stata (string scalar varnames, real matrix source, string scalar idtstata, real matrix idtmata, string scalar touse , real scalar single)
+	{
+		/// check that varnames and source have same number of columns
+		if (cols(tokens(varnames))!=cols(source)) {
+			varnames = varnames[1,1]:+(strofreal(1..cols(source)))	
+		}
+		else {
+			varnames = tokens(varnames)
+		}
+		st_addvar("double", varnames)
+		
+		real matrix vars
+		st_view(vars,.,varnames,touse)
+		 
+		idt = st_data(.,idtstata,touse)
+		 
+		index = panelsetup(idt[.,1],1)
+		indexm = panelsetup(idtmata[.,1],1)
+		
+		Ni = uniqrows(idt[.,1])
+		N = rows(Ni)
+		
+		Nim = uniqrows(idtmata[.,1])
+		Nm = rows(Nm)
+		
+		i = 1 
+		j = 1
+		real matrix varsi
+		///real mateix varsim
+		if (single == 0) {
+			while (i<=N) {
+				
+				idi = Ni[i]
+				check = Nim:==idi
+				if (sum(check) > 0) {
+					idim_pos = xtdcce_selectindex(Nim:==idi)				
+					
+					indexi = index[i,.]
+					indexim = indexm[idim_pos,.]				
+					
+					/// get t indicator
+					ti = idt[|indexi[1,1],2 \ indexi[1,2],2|]
+					tim = idtmata[|indexim[1,1],2 \ indexim[1,2],2|]
+					t_unionm = xtdcce2_mm_which2f(tim,ti)
+					t_unionm = t_unionm[xtdcce_selectindex(t_unionm)]
+					t_union = xtdcce2_mm_which2f(ti,tim)
+					panelsubview(varsi,vars,i,index)
+					varsim = panelsubmatrix(source,j,indexm)
+					varsi[t_union,.] = varsim[t_unionm,.]
+					
+					j++
+				}
+				i++
+			}
+		}
+		else {
+			while (i <= N) {
+				idi = Ni[i]
+				check = Nim:==idi
+				if (sum(check) > 0) {
+					idim_pos = xtdcce_selectindex(Nim:==idi)				
+					
+					indexi = index[i,.]
+					indexim = indexm[idim_pos,.]	
+					
+				}
+				
+			}			
+			
+		}
 	}
 end

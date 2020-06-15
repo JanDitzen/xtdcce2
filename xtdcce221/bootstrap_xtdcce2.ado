@@ -257,7 +257,7 @@ program define bootstrap_xtdcce2, eclass
 				mata st_local("Ki",strofreal(Ki))
 				mata tistar = J(cols(tiBoot),2,.)
 				forvalues c=1(1)`Ki' {
-					mata tistar[`c',.] = mm_quantile(tiBoot[xtdcce_m_selectindex(tiBoot[.,`c']:!=.),`c'],1,(1-(100-c("level"))/200,(100-c("level"))/200))
+					mata tistar[`c',.] = mm_quantile(tiBoot[xtdcce_selectindex(tiBoot[.,`c']:!=.),`c'],1,(1-(100-c("level"))/200,(100-c("level"))/200))
 				}				
 				mata tistar = (bi':-sei':*tistar[.,1] , bi':-sei':*tistar[.,2])'
 			

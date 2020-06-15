@@ -129,6 +129,7 @@ fixed. was before assuming same s2 for all csu
 03.12.2019 - pooled and ardl works. 
 20.12.2019 - added nominus options for ARDL in lr_options. this is essentially an ECM, but with features of the ARDL (SE and sum of LR)
 19.02.2020 - bug in predict program fixed if option nodivide was used
+15.06.2020 - replaced selectindex with xtdcce_selectindex
 */
 
 program define xtdcce221 , eclass sortpreserve
@@ -157,6 +158,8 @@ program define xtdcce221 , eclass sortpreserve
 			 lr(varlist ts fv) 
 			*/ lr(string)/*
 			*/ CRosssectional(string) /*
+			*/ GLOBALCRosssectional(string) /*
+			*/ CLUSTERCRosssectional(string) /*
 			*/ NOCROSSsectional /*
 			*/ cr_lags(string) /*
 			*/ lr_options(string) /*
@@ -339,6 +342,8 @@ program define xtdcce221 , eclass sortpreserve
 
 			preserve
 				marksample touse	
+				tempvar touse_start
+				gen `touse_start' = `touse'
 				tsset `idvar' `tvar'
 				* save lr for later use
 				local lr_save "`lr'"
@@ -363,8 +368,11 @@ program define xtdcce221 , eclass sortpreserve
 				}
 				
 				*process crosssectional options
-				if "`crosssectional'`nocrosssectional'" == "" {
-					xtdcce_err 198  , msg("option crosssectional() or nocrosssectional required")
+				
+			*	clustercrosssectional globalcrosssectional
+				
+				if "`crosssectional'`nocrosssectional'`clustercrosssectional'`globalcrosssectional'" == "" {
+					xtdcce_err 198  , msg("option (cluster-|global-|)crosssectional() or nocrosssectional required")
 				}
 				else {
 					if "`crosssectional'" == "" | strmatch("`crosssectional'","*_none*") == 1 {
@@ -374,7 +382,7 @@ program define xtdcce221 , eclass sortpreserve
 					else if "`nocrosssectional'" == "nocrosssectional" {
 						local crosssectional ""
 					}
-					else if strmatch("`crosssectional'","*_all*") == 1 {
+					else if strmatch("`crosssectional'`globalcrosssectional'`clustercrosssectional'","*_all*") == 1 {
 						*** only use base of ts variables, omit fv variables
 						fvexpand `lhs' `rhs' `pooled' `exogenous_vars' `endogenous_vars' `lr'
 						if "`r(fvops)'" == "true" {
@@ -387,36 +395,120 @@ program define xtdcce221 , eclass sortpreserve
 							}
 							tsrevar `tmplist', list
 							local uniq `r(varlist)'
-							local crosssectional : list uniq uniq 
+							local uniq : list uniq uniq 
+							local crosssectional = subinstr("`crosssectional'","_all","`uniq'",.)
+							local globalcrosssectional = subinstr("`globalcrosssectional'","_all","`uniq'",.)
+							local clustercrosssectional = subinstr("`clustercrosssectional'","_all","`uniq'",.)
 						}
 						else {
 							*** check for factor variables
 							tsrevar `lhs' `rhs' `pooled' `exogenous_vars' `endogenous_vars' `lr' , list
 							local uniq `r(varlist)'
-							local crosssectional : list uniq uniq 
+							local uniq : list uniq uniq 
+							local crosssectional = subinstr("`crosssectional'","_all","`uniq'",.)
+							local globalcrosssectional = subinstr("`globalcrosssectional'","_all","`uniq'",.)
+							local clustercrosssectional = subinstr("`clustercrosssectional'","_all","`uniq'",.)
 						}
 					}
 					
-					if "`crosssectional'" != "" {
-						if "`cr_lags'" == "" {
-							local cr_lags = 0
+					
+					if "`crosssectional'`globalcrosssectional'`clustercrosssectional'" != "" {
+						
+						if "`crosssectional'" != "" {
+							local scrosssectional "`crosssectional'"
+							local scr_lags "`cr_lags'"
+							
+							if "`cr_lags'" == "" {
+								local 0 `crosssectional'
+								syntax varlist(ts) , [cr_lags(numlist)]
+								local scrosssectional `varlist'
+							}
+							if "`cr_lags'" == "" {
+								local scr_lags = 0
+							}
+							else {
+								local scr_lags `cr_lags'					
+							}
 						}
+						
+						if "`globalcrosssectional'" != "" {
+							local 0 `globalcrosssectional'
+							syntax varlist(ts) , [cr_lags(numlist)]
+							local globalcrosssectional `varlist'
+							if "`cr_lags'" == "" {
+								local gcr_lags = 0
+							}
+							else {
+								local gcr_lags `cr_lags'
+							}
+						}
+						
+						if "`clustercrosssectional'" != "" {
+							local 0 `clustercrosssectional'
+							syntax varlist(ts) , [cr_lags(numlist) CLuster(varlist) ]
+							local clustercrosssectional `varlist'
+							local csa_cluster "`cluster'"
+							if "`cr_lags'" == "" {
+								local ccr_lags = 0
+							}
+							else {
+								local ccr_lags `cr_lags'
+							}
+						}
+						
+						local crosssectional "`scrosssectional' `globalcrosssectional' `clustercrosssectional'"
+						
+						
 						tempname cross_mat
 						local mata_drop `mata_drop' `cross_mat'
 						mata `cross_mat' = J(0,2,"")
-
-						local n_cr = wordcount("`crosssectional'")
-						local n_crl = wordcount("`cr_lags'")
+						
+						local n_cr = wordcount("`scrosssectional'")
+						local n_crl = wordcount("`scr_lags'")
 
 						forvalues i = 1(1)`n_cr' {
-							local tmpcr = word("`crosssectional'",`i')
+							local tmpcr = word("`scrosssectional'",`i')
 							if `i' <= `n_crl' {
-								local tmpcrl = word("`cr_lags'",`i')
+								local tmpcrl = word("`scr_lags'",`i')
 							}
 							fvunab tmpcr : `tmpcr'
 							
 							mata `cross_mat' = (`cross_mat' \ (tokens("`tmpcr'")' , J(cols(tokens("`tmpcr'")),1,"`tmpcrl'")))
 						}
+						
+						local n_cr = wordcount("`globalcrosssectional'")
+						local n_crl = wordcount("`gcr_lags'")
+
+						forvalues i = 1(1)`n_cr' {
+							local tmpcr = word("`globalcrosssectional'",`i')
+							if `i' <= `n_crl' {
+								local tmpcrl = word("`gcr_lags'",`i')
+							}
+							fvunab tmpcr : `tmpcr'
+							
+							mata `cross_mat' = (`cross_mat' \ (tokens("`tmpcr'")' , J(cols(tokens("`tmpcr'")),1,"`tmpcrl'")))
+						}
+						
+						local n_cr = wordcount("`clustercrosssectional'")
+						local n_crl = wordcount("`ccr_lags'")
+
+						forvalues i = 1(1)`n_cr' {
+							local tmpcr = word("`clustercrosssectional'",`i')
+							if `i' <= `n_crl' {
+								local tmpcrl = word("`ccr_lags'",`i')
+							}
+							fvunab tmpcr : `tmpcr'
+							
+							mata `cross_mat' = (`cross_mat' \ (tokens("`tmpcr'")' , J(cols(tokens("`tmpcr'")),1,"`tmpcrl'")))
+						}
+						
+						
+						** check for duplicates
+						mata st_local("dupcheck",strofreal(rows(uniqrows(`cross_mat'[.,1])):==rows(`cross_mat')))
+						if `dupcheck' == 0 {
+							xtdcce_err 198  , msg("Variables cannot appear in more than cross-sectional average list.")							
+						}
+						
 						mata st_local("cr_lags_min",strofreal(min(strtoreal(`cross_mat'[.,2]))))
 						mata st_local("cr_lags_max",strofreal(max(strtoreal(`cross_mat'[.,2]))))
 					}					
@@ -446,9 +538,9 @@ program define xtdcce221 , eclass sortpreserve
 				}
 				
 				*Check for clustered SE
-				if "`cluster'" != "" {
-					local cluster "cluster(`cluster')"
-				}
+				*if "`cluster'" != "" {
+				*	local cluster "cluster(`cluster')"
+				*}
 						
 				*Check for long run coefficients
 				if "`lr'" == "" {
@@ -531,8 +623,8 @@ program define xtdcce221 , eclass sortpreserve
 							local fvname "`r(varlist)'"
 							*** get base variable from mata_varlist, then create factor var and copy over
 							tempname factorbase factorbasei factorbase_i
-							mata `factorbasei' = selectindex(`mata_varlist'[.,1]:=="`var'")
-							mata `factorbase_i' = selectindex(`mata_varlist'[.,1]:!="`var'")
+							mata `factorbasei' = xtdcce_selectindex(`mata_varlist'[.,1]:=="`var'")
+							mata `factorbase_i' = xtdcce_selectindex(`mata_varlist'[.,1]:!="`var'")
 							mata `factorbase' = `mata_varlist'[`factorbasei',.]
 							** remove variable base name
 							mata `mata_varlist'=`mata_varlist'[`factorbase_i',.]
@@ -559,12 +651,12 @@ program define xtdcce221 , eclass sortpreserve
 				}
 				
 				**get those with more than 24 string char
-				mata st_local("list_long",invtokens(`mata_varlist'[xtdcce_m_selectindex(strlen(`mata_varlist'[.,2]):>23),2]'))
+				mata st_local("list_long",invtokens(`mata_varlist'[xtdcce_selectindex(strlen(`mata_varlist'[.,2]):>23),2]'))
 				local i = 1
 				foreach var in `list_long' {
 					tempname short_`i'
 					rename `var' `short_`i''
-					mata `mata_varlist'[xtdcce_m_selectindex(`mata_varlist'[.,1]:=="`var'"),2] = "`short_`i''"
+					mata `mata_varlist'[xtdcce_selectindex(`mata_varlist'[.,1]:=="`var'"),2] = "`short_`i''"
 				}			
 				
 				*process lr list
@@ -597,7 +689,7 @@ program define xtdcce221 , eclass sortpreserve
 				**change varlists
 				local i = 3
 				foreach list in lhs rhs pooled crosssectional exogenous_vars endogenous_vars lr_1 lr_rest  {
-					mata st_local("`list'",invtokens(`mata_varlist'[xtdcce_m_selectindex(`mata_varlist'[.,`i']:=="1"),2]'))
+					mata st_local("`list'",invtokens(`mata_varlist'[xtdcce_selectindex(`mata_varlist'[.,`i']:=="1"),2]'))
 					local i = `i' + 1
 				}
 				local lr `lr_1' `lr_rest'		
@@ -787,7 +879,7 @@ program define xtdcce221 , eclass sortpreserve
 				
 				** correct number of rhs if constant is in lr and rhs list
 				if "`lr'" != "" {
-					mata st_local("constant_lr",strofreal((`mata_varlist'2[selectindex(`mata_varlist'[.,1]:=="_cons"),2]:==1):*(`mata_varlist'2[selectindex(`mata_varlist'[.,1]:=="_cons"),8]:==1)))
+					mata st_local("constant_lr",strofreal((`mata_varlist'2[xtdcce_selectindex(`mata_varlist'[.,1]:=="_cons"),2]:==1):*(`mata_varlist'2[xtdcce_selectindex(`mata_varlist'[.,1]:=="_cons"),8]:==1)))
 					if `constant_lr' == 1 {
 						local num_rhs = `num_rhs' - `N_g'
 					}
@@ -806,7 +898,7 @@ program define xtdcce221 , eclass sortpreserve
 					tempname PanelMatrix					
 					mata `PanelMatrix' = (st_matrix("r(PanelMatrix)"))[.,(1,2)]
 					mata `PanelMatrix'[.,2] = (`PanelMatrix'[.,2] :+ (-`num_pooled' - `num_mg_regression' / `N_g' - `num_partialled_out' / `N_g'))
-					mata `PanelMatrix' = `PanelMatrix'[xtdcce_m_selectindex(`PanelMatrix'[.,2]:<1),.]
+					mata `PanelMatrix' = `PanelMatrix'[xtdcce_selectindex(`PanelMatrix'[.,2]:<1),.]
 					mata strofreal(rows(`PanelMatrix'))
 					mata st_local("NUnitsToRemove",strofreal(rows(`PanelMatrix'))) 
 					
@@ -857,6 +949,7 @@ program define xtdcce221 , eclass sortpreserve
 					restore
 					xtdcce_err 2001 `d_idvar' `d_tvar' , msg("More variables (`K_total') than observations (`N').")
 				}
+								
 				**Only working, for old results (<version 1.1)
 				if "`xtdcceold'" == "xtdcceold" {
 					if "`cr_lags'" > "0" {
@@ -869,23 +962,66 @@ program define xtdcce221 , eclass sortpreserve
 ********************** Calculation of CSA
 *******************************************************************************************************					
 				***Specify sample - if fullsample then ignore touse
+				tempvar tousecr
+				
 				if "`fullsample'" != "" {
-					local tousecr
-					if "`if'" != "" {
-						local tousecr "`tousecr' if `if'"
-										}
-					if "`in'" != "" {
-						local tousecr "`tousecr' in `in'"
+					*gen `tousecr' = `touse_start'
+					if "`if'" != "" & "`in'" == ""  {
+						gen `tousecr' = (`if') 
 					}
+					else if "`in'" != "" & "`if'" == "" {
+						gen `tousecr' = `touse' in `in'
+					}
+					else if "`in'" != "" & "`if'" != "" {
+						replace `tousecr' = (`if') in `in'
+					}
+					else {
+					    gen `tousecr' = 1						
+					}
+					*noi disp "`ifinct'"
+					*gen `tousecr' = (`if') `ifinct'
 					
 				}
 				else {
-					local tousecr "if `touse'"
+					gen `tousecr' = `touse'
 				}
-	
+				
 				*create CR Lags
 				if "`crosssectional'" != "" {					
-					tempvar cr_mean					
+					if "`scrosssectional'" != "" {						
+						mata st_local("scrosssectionalt",invtokens(`mata_varlist'[xtdcce2_mm_which2(`mata_varlist'[.,1],(tokens("`scrosssectional'"))'),2]'))
+						tempname scsa
+						noi sum `scrosssectionalt' if `tousecr'
+						xtdcce2_csa `scrosssectionalt' , idvar(`idvar') tvar(`tvar') cr_lags(`scr_lags') touse(`tousecr') csa(`scsa')  numberonly tousets(`touse')
+						local scsa `r(varlist)'	
+						local cr_lags "`r(cross_structure)'"
+					}
+					
+					if "`globalcrosssectional'" != "" {
+						tempvar touseglobal
+						gen `touseglobal' = 1
+						mata st_local("globalcrosssectionalt",invtokens(`mata_varlist'[xtdcce2_mm_which2(`mata_varlist'[.,1],(tokens("`globalcrosssectional'"))'),2]'))
+						
+						tempname gcsa
+						xtdcce2_csa `globalcrosssectionalt' , idvar(`idvar') tvar(`tvar') cr_lags(`gcr_lags') touse(`touseglobal') csa(`gcsa')  numberonly
+						local gcsa `r(varlist)'	
+						local gcr_lags "`r(cross_structure)'"
+						drop `touseglobal'
+					}
+					
+					if "`clustercrosssectional'" != "" {
+						
+						mata st_local("clustercrosssectionalt",invtokens(`mata_varlist'[xtdcce2_mm_which2(`mata_varlist'[.,1],(tokens("`clustercrosssectional'"))'),2]'))
+						
+						tempname ccsa
+						xtdcce2_csa `clustercrosssectionalt' , idvar(`idvar') tvar(`tvar') cr_lags(`ccr_lags') touse(`tousecr') csa(`ccsa') cluster(`csa_cluster') numberonly
+						local ccsa `r(varlist)'	
+						local ccr_lags "`r(cross_structure)'"
+					}
+					local clist1 `scsa' `gcsa' `ccsa'
+					*noi sum `clist1'
+					/*
+					tempvar cr_mean	
 					foreach var in `crosssectional' {
 						*get number of lags						
 						mata st_local("n_lag",`mata_varlist'[xtdcce2_mm_which2(`mata_varlist'[.,2],"`var'"),11])
@@ -897,6 +1033,7 @@ program define xtdcce221 , eclass sortpreserve
 						}
 						drop `cr_mean' 
 					}
+					*/
 					
 				}
 				**Add constant if heterogenous to list with variable to partialled out
@@ -960,7 +1097,7 @@ program define xtdcce221 , eclass sortpreserve
 					
 					gen double `var'_jk = `var'
 					
-					mata `mata_varlist'[selectindex(`mata_varlist'[.,2]:=="`var'"),13] = "`var'_jk"
+					mata `mata_varlist'[xtdcce_selectindex(`mata_varlist'[.,2]:=="`var'"),13] = "`var'_jk"
 					
 					local jackvars "`jackvars' `var'_jk"
 				}
@@ -1003,7 +1140,7 @@ program define xtdcce221 , eclass sortpreserve
 						sum `var'
 						capture assert `var' == `r(max)' | `var' == `r(min)'
 						if _rc == 0 {						
-							mata st_local("tmp_var",`mata_varlist'[selectindex(`mata_varlist'[.,2]:=="`var'"),1])
+							mata st_local("tmp_var",`mata_varlist'[xtdcce_selectindex(`mata_varlist'[.,2]:=="`var'"),1])
 							local dummy_var "`dummy_var' `tmp_var'"
 						}
 					}
@@ -1375,26 +1512,26 @@ program define xtdcce221 , eclass sortpreserve
 				
 				**lr1 is mg, so lr_rest is mg too
 				if `num_lr1_pooled' == 0 {
-					mata st_local("lr_vars_mg",invtokens("lr_":+uniqrows(`mata_varlist'[xtdcce_m_selectindex(`mata_varlist'[.,12]:!="0"),12])'))
+					mata st_local("lr_vars_mg",invtokens("lr_":+uniqrows(`mata_varlist'[xtdcce_selectindex(`mata_varlist'[.,12]:!="0"),12])'))
 				}
 				else {
 					**all lr1 vars pooled, so add to list for mean group program
-					mata st_local("lr_vars_pooled","lr_":+uniqrows((`mata_varlist'[xtdcce_m_selectindex((`mata_varlist'[.,12]:!="0"):*(`mata_varlist'[.,9]:!="0")),12])))
-					mata `lr_bases' = uniqrows(`mata_varlist'[xtdcce_m_selectindex(`mata_varlist'[.,12]:!="0"),12])
+					mata st_local("lr_vars_pooled","lr_":+uniqrows((`mata_varlist'[xtdcce_selectindex((`mata_varlist'[.,12]:!="0"):*(`mata_varlist'[.,9]:!="0")),12])))
+					mata `lr_bases' = uniqrows(`mata_varlist'[xtdcce_selectindex(`mata_varlist'[.,12]:!="0"),12])
 					mata `lr_pooled' = colsum(strtoreal(J(1,rows(`lr_bases'),`mata_varlist'[.,5])):*(J(rows(`mata_varlist'),1,`lr_bases''):==`mata_varlist'[.,12]))
 					mata `lr_pooled' = `lr_pooled' :/ colsum(J(rows(`mata_varlist'),1,`lr_bases''):==`mata_varlist'[.,12])
-					mata `lr_select' = xtdcce_m_selectindex(("lr_":+`lr_bases'):!="`lr_vars_pooled'")
+					mata `lr_select' = xtdcce_selectindex(("lr_":+`lr_bases'):!="`lr_vars_pooled'")
 					mata `lr_bases' =  `lr_bases'[`lr_select']
 					mata `lr_pooled' = `lr_pooled'[`lr_select']
 					
 					mata st_local("num_lr_vars_pooled",strofreal(sum(`lr_pooled':==1)))
 					if `num_lr_vars_pooled' > 0 {
-						mata st_local("lr_vars_pooled1",invtokens("lr_":+`lr_bases'[xtdcce_m_selectindex(`lr_pooled':==1)]'))
+						mata st_local("lr_vars_pooled1",invtokens("lr_":+`lr_bases'[xtdcce_selectindex(`lr_pooled':==1)]'))
 					}
 					*check if no mg 
 					mata st_local("num_lr_vars_mg",strofreal(sum(`lr_pooled':!=1)))
 					if `num_lr_vars_mg' > 0 {	
-						mata st_local("lr_vars_mg",invtokens("lr_":+`lr_bases'[xtdcce_m_selectindex(`lr_pooled':!=1)]'))
+						mata st_local("lr_vars_mg",invtokens("lr_":+`lr_bases'[xtdcce_selectindex(`lr_pooled':!=1)]'))
 					}
 					else {
 						local lr_vars_mg ""
@@ -1415,22 +1552,22 @@ program define xtdcce221 , eclass sortpreserve
 			**read varlists back
 			local i = 3
 			foreach list in lhs rhs pooled crosssectional exogenous_vars endogenous_vars lr_1 lr_rest  {
-				mata st_local("`list'",invtokens(`mata_varlist'[xtdcce_m_selectindex(`mata_varlist'[.,`i']:=="1"),1]'))
+				mata st_local("`list'",invtokens(`mata_varlist'[xtdcce_selectindex(`mata_varlist'[.,`i']:=="1"),1]'))
 				local i = `i' + 1
 			}
 			*read varnames back
-			mata st_local("list_long",invtokens(`mata_varlist'[xtdcce_m_selectindex(strlen(`mata_varlist'[.,1]):>23),1]'))
+			mata st_local("list_long",invtokens(`mata_varlist'[xtdcce_selectindex(strlen(`mata_varlist'[.,1]):>23),1]'))
 			local i = 1
 			foreach var in `list_long' {
-				mata st_local("short",`mata_varlist'[xtdcce_m_selectindex(`mata_varlist'[.,1]:=="`var'"),2])
+				mata st_local("short",`mata_varlist'[xtdcce_selectindex(`mata_varlist'[.,1]:=="`var'"),2])
 				rename `short' `var' 
 			}
 			local rhs: list rhs - pooled
 
 			local lr `lr_1' `lr_rest'
 			
-			mata st_local("old_list",invtokens(`mata_varlist'[xtdcce_m_selectindex(`mata_varlist'[.,1]:!=`mata_varlist'[.,2]),1]'))
-			mata st_local("change_list",invtokens(`mata_varlist'[xtdcce_m_selectindex(`mata_varlist'[.,1]:!=`mata_varlist'[.,2]),2]'))
+			mata st_local("old_list",invtokens(`mata_varlist'[xtdcce_selectindex(`mata_varlist'[.,1]:!=`mata_varlist'[.,2]),1]'))
+			mata st_local("change_list",invtokens(`mata_varlist'[xtdcce_selectindex(`mata_varlist'[.,1]:!=`mata_varlist'[.,2]),2]'))
 	
 			
 			*Change names back for b_mg cov sd t b_i cov_i sd_i and t_i
@@ -1669,7 +1806,25 @@ program define xtdcce221 , eclass sortpreserve
 			ereturn scalar rss = SSR
 			ereturn scalar mss = SSE	
 			
-			ereturn local cr_lags = "`cr_lags'"
+			if "`scrosssectional'" != "" {
+				ereturn local cr_lags  "`scr_lags'"
+				ereturn local csa "`scrosssectional'"
+			}
+			if "`globalcrosssectional'" != "" {
+				ereturn local gcr_lags  "`gcr_lags'"
+				ereturn local gcsa "`globalcrosssectional'"
+			}
+			if "`clustercrosssectional'" != "" {
+				ereturn local ccr_lags	 "`ccr_lags'"
+				ereturn local ccsa "`clustercrosssectional'"
+				ereturn local ccsa_cluster "`csa_cluster'"
+			}
+			
+			ereturn local gcr_lags = "`gcr_lags'"
+			ereturn local ccr_lags = "`ccr_lags'"
+			
+			ereturn local cr_vars ""
+			
 			ereturn local indepvar "`pooled' `rhs'"
 			ereturn local idvar = "`d_idvar'"
 			ereturn local tvar = "`d_tvar'"	
@@ -2001,9 +2156,50 @@ program define xtdcce221 , eclass sortpreserve
 		di as text  "Mean Group Variables: `rhs'"
 	}
 	if strtrim("`crosssectional'") != "" {
+		
+		if "`scrosssectional'" != "" {
+			local crosssectional_output ""
+			if wordcount("`scr_lags'") > 1 {
+				forvalues i = 1(1)`=wordcount("`scrosssectional'")' {
+					local crosssectional_output "`crosssectional_output' `=word("`scrosssectional'",`i')'(`=word("`scr_lags'",`i')')"				
+				}
+			}
+			else {
+				local crosssectional_output "`scrosssectional'"				
+			}
+			display  as text "Cross Sectional Averaged Variables: `crosssectional_output'"
+		}
+		if "`globalcrosssectional'" != "" {
+			local crosssectional_output ""
+			if wordcount("`gcr_lags'") > 1 {
+				forvalues i = 1(1)`=wordcount("`globalcrosssectional'")' {
+					local crosssectional_output "`crosssectional_output' `=word("`globalcrosssectional'",`i')'(`=word("`gcr_lags'",`i')')"				
+				}
+			}
+			else {
+				local crosssectional_output "`globalcrosssectional'"				
+			}
+			display  as text "Global Cross Sectional Averaged Variables: `crosssectional_output'"
+		}
+		
+		if "`clustercrosssectional'" != "" {
+			local crosssectional_output ""
+			if wordcount("`ccr_lags'") > 1 {
+				forvalues i = 1(1)`=wordcount("`clustercrosssectional'")' {
+					local crosssectional_output "`crosssectional_output' `=word("`clustercrosssectional'",`i')'(`=word("`ccr_lags'",`i')' - `=word("`csa_cluster'",`i')')"				
+				}
+			}
+			else {
+				local crosssectional_output "`clustercrosssectional'"				
+			}
+			display  as text "Clustered Cross Sectional Averaged Variables: `crosssectional_output'"
+		}
+		
+		
+		/*
 		if wordcount("`cr_lags'") > 1 {
 			tempname mata_cr_output
-			mata `mata_cr_output' = `mata_varlist'[xtdcce_m_selectindex((`mata_varlist'[.,6]:=="1")),(1,11)]			
+			mata `mata_cr_output' = `mata_varlist'[xtdcce_selectindex((`mata_varlist'[.,6]:=="1")),(1,11)]			
 			mata `mata_cr_output' = (`mata_cr_output'[.,1] :+ "(":+`mata_cr_output'[.,2]:+")")
 			mata st_local("crosssectional_output",invtokens(`mata_cr_output''))
 			mata mata drop `mata_cr_output'
@@ -2020,7 +2216,10 @@ program define xtdcce221 , eclass sortpreserve
 		else {
 			display  as text "Cross-sectional Averaged Variables: `crosssectional_output'"
 		}
-		ereturn hidden local cr_options "`crosssectional_output'" 
+		*ereturn hidden local cr_options "`crosssectional_output'" 
+		*/
+		
+		
 	}
 	if strtrim("`lr'") != "" { 
 		display  as text "Long Run Variables: `lr_pooled' `lr_rest'"
@@ -2177,7 +2376,7 @@ program define xtdcce221 , eclass sortpreserve
 		
 	}
 	foreach tmp in `mata_drop' `cov_i1'{
-		capture mata mata drop `tmp'
+		*capture mata mata drop `tmp'
 	}
 	
 	if "`residuals_old'" != "" {
@@ -2828,8 +3027,8 @@ mata:
 			i = 1
 			b_pooled = J(1,0,.)
 			while (i<= cols(input_pooled_vnames)) {
-				xtdcce_m_selectindex(bp_names:==input_pooled_vnames[1,i])
-				b_pooled = (b_pooled,bp[1,xtdcce_m_selectindex(bp_names:==input_pooled_vnames[1,i])])
+				xtdcce_selectindex(bp_names:==input_pooled_vnames[1,i])
+				b_pooled = (b_pooled,bp[1,xtdcce_selectindex(bp_names:==input_pooled_vnames[1,i])])
 				i++
 			}
 		}
@@ -2853,7 +3052,7 @@ mata:
 			j = 1
 			while (j <= N) {				
 				varn = v_names_mg[1,i]+"_"+strofreal(uniqueid[j])
-				b_mg_w[i,j] = bi[1,xtdcce_m_selectindex(bi_names:==varn)]
+				b_mg_w[i,j] = bi[1,xtdcce_selectindex(bi_names:==varn)]
 				j++
 			}
 			i++
@@ -2872,7 +3071,7 @@ mata:
 				j = 1
 				while (j <= N) {
 					varn = v_names_bp_mg[1,i]+"_"+strofreal(uniqueid[j])
-					b_mg_wmix[i,j] = bp_mg[1,xtdcce_m_selectindex(bp_mg_names:==varn)]
+					b_mg_wmix[i,j] = bp_mg[1,xtdcce_selectindex(bp_mg_names:==varn)]
 					j++
 				}
 				i++
@@ -2897,8 +3096,8 @@ mata:
 					indics = xtdcce2_mm_which2(input_pooled_vnames',exclude_p_vars')
 					input_pooled_vnames_tmp = input_pooled_vnames
 					input_pooled_vnames_tmp[indics'] = J(1,rows(indics),"")
-					xtdcce_m_selectindex(input_pooled_vnames_tmp[1,.]:!="")
-					input_pooled_vnames_tmp = input_pooled_vnames_tmp[1,xtdcce_m_selectindex(input_pooled_vnames_tmp:!="")]
+					xtdcce_selectindex(input_pooled_vnames_tmp[1,.]:!="")
+					input_pooled_vnames_tmp = input_pooled_vnames_tmp[1,xtdcce_selectindex(input_pooled_vnames_tmp:!="")]
 					input_pooled_vnames_tmp
 					X = st_data(.,input_pooled_vnames_tmp,touse)
 					X = (X,J(rows(X),cols(exclude_p_vars),0))
@@ -3043,7 +3242,7 @@ mata:
 					while (i<=cols(exclude_p_vars)) {
 						vari = exclude_p_vars[i]
 						///select bases
-						indic = xtdcce_m_selectindex("lr_":+mata_varlist[.,12]:==vari)
+						indic = xtdcce_selectindex("lr_":+mata_varlist[.,12]:==vari)
 						///get varnames
 						indic = mata_varlist[indic,2]
 						///get pos in input_pooled_vnames
@@ -3154,7 +3353,7 @@ mata:
 					m_lr_1_indic = strmatch(outputnames,lr_1+"*")	
 					m_lr_1 = select(b_output,m_lr_1_indic')
 					///m_lr_1 = ( 1 :- m_lr_1)
-					m_lr_1_index = xtdcce_m_selectindex(m_lr_1_indic)				
+					m_lr_1_index = xtdcce_selectindex(m_lr_1_indic)				
 					m_lr_tmp = m_lr_1
 					///b_output
 					///outputnames
@@ -3165,7 +3364,7 @@ mata:
 						m_lr_indic = strmatch(outputnames,lr_rest[i]+"*") 
 						"current var"
 						lr_rest[i]
-						m_lr_index = xtdcce_m_selectindex(m_lr_indic)
+						m_lr_index = xtdcce_selectindex(m_lr_indic)
 						///check if running lr variable is pooled, if so, then take mean of lr_1
 						m_lr_tmp = m_lr_1
 						if (fast == 0) {
@@ -3198,13 +3397,13 @@ mata:
 			else {
 				"CS-ARDL estimator"		
 				/// get first lr, only names required
-				lr_1 = mata_varlist[xtdcce_m_selectindex(mata_varlist[.,9]:=="1"),2]
+				lr_1 = mata_varlist[xtdcce_selectindex(mata_varlist[.,9]:=="1"),2]
 				//basename
-				lr_1_base = uniqrows(mata_varlist[xtdcce_m_selectindex(mata_varlist[.,9]:=="1"),12])
+				lr_1_base = uniqrows(mata_varlist[xtdcce_selectindex(mata_varlist[.,9]:=="1"),12])
 				"basename lr1"
 				lr_1_base
 
-				b_lr1_tmp_indic = xtdcce_m_selectindex(strmatch(outputnames,lr_1[1]+"*"))
+				b_lr1_tmp_indic = xtdcce_selectindex(strmatch(outputnames,lr_1[1]+"*"))
 				
 				b_lr1 = b_output[b_lr1_tmp_indic]				
 				
@@ -3216,7 +3415,7 @@ mata:
 				
 				i = 2
 				while (i<=rows(lr_1)) {
-					b_lr1_tmp_indic = xtdcce_m_selectindex(strmatch(outputnames,lr_1[i]+"*") )					
+					b_lr1_tmp_indic = xtdcce_selectindex(strmatch(outputnames,lr_1[i]+"*") )					
 					if (fast == 0) {
 						if (cols(b_lr1_tmp_indic) > rows(m_g_i1)) {
 							"m_g_i1 adjusted"
@@ -3257,7 +3456,7 @@ mata:
 				"b_lr1 done"			
 				
 				/// rest of lr vars, get basenames
-				lr_rest = mata_varlist[xtdcce_m_selectindex(mata_varlist[.,10]:=="1"),(2,12)]
+				lr_rest = mata_varlist[xtdcce_selectindex(mata_varlist[.,10]:=="1"),(2,12)]
 				lr_rest_base = uniqrows(lr_rest[.,2])
 				basei=1
 				"lr rest calc"
@@ -3279,11 +3478,11 @@ mata:
 					lr_base_i = lr_rest_base[basei]
 					"base i"
 					lr_base_i
-					lr_rest_tmpvars = lr_rest[xtdcce_m_selectindex(lr_rest[.,2]:==lr_base_i),1]					
+					lr_rest_tmpvars = lr_rest[xtdcce_selectindex(lr_rest[.,2]:==lr_base_i),1]					
 					"first var"
 					lr_rest_tmpvars[1]
 					//first of base_i
-					b_lr_rest_tmp_indic = xtdcce_m_selectindex(strmatch(outputnames,lr_rest_tmpvars[1]+"*"))
+					b_lr_rest_tmp_indic = xtdcce_selectindex(strmatch(outputnames,lr_rest_tmpvars[1]+"*"))
 					b_lr_rest = b_output[b_lr_rest_tmp_indic]
 					"dim b_lr_rest"
 					(rows(b_lr_rest),cols(b_lr_rest))
@@ -3301,7 +3500,7 @@ mata:
 					while (i<=rows(lr_rest_tmpvars)) {
 						"starting with i"
 						i
-						b_lr_rest_tmp_indic = xtdcce_m_selectindex(strmatch(outputnames,lr_rest_tmpvars[i]+"*"))
+						b_lr_rest_tmp_indic = xtdcce_selectindex(strmatch(outputnames,lr_rest_tmpvars[i]+"*"))
 						"tempvar:"
 						lr_rest_tmpvars[i]
 						if (fast == 0) {

@@ -19,7 +19,7 @@ Oct   2018 - changed xtdcce2133 to xtdcce2 in line 37
 */
 *capture program drop xtdcce2_p
 program define xtdcce2_p
-	syntax anything [in] [if] [, replace *]
+	syntax anything [in] [if] [, replace * ]
 	*local options `*'
 	if "`replace'" != "" {
 		local predvar = word("`anything'",`=wordcount("`anything'")') 
@@ -46,70 +46,115 @@ program define xtdcce2_p_int
 	gen byte `smpl' = 1
 
 	if "`e(cmd)'" == "xtdcce2fast" {
-		qui{
-			local newvar `varlist'
-			
-			if "`e(p_if)'" != "" {
-				*local p_if "& `e(p_if)'"
-				replace `smpl' = `smpl' * (`e(p_if)')
-			}
-			if "`e(p_in)'" != "" {
-				*local p_in "in `e(p_in)'"
-				replace `smpl' = `smpl' * (`e(p_in)')
-			}		
-			
-			local lr "`e(lr)'"		
-			local crosssectional "`e(crosssectional)'"
-			local cr_lags "`e(cr_lags)'"			
-			
-			*** parse cmd line
-			tokenize "`e(cmdline)'", p(",")
-			local lhsrhs `1'
-			
-			local smplcr "`smpl'"
-			tokenize "`e(cmdline)'", p(",")
-			if regexm("`3'","fullsample") == 1 {
-				local smplcr ""
-			}
+		*if "`xb'`coefficient'"
+		qui{			
+			if ("`e(posttype)'" == "mata" | "`e(posttype)'" == "frame") & "`wildbootstrap'" == "" {
+				local newvar `varlist'
 				
-			if regexm("`2'","noconst*") == 0 {
-				tempname constant
-				gen double `constant'  = 1
-			}
-			gettoken cmd lhsrhs: lhsrhs		
-			
-			** remove anything after if
-			local rest "`lhsrhs'"
-			local lhsrhs ""
-			while "`rest'" != "" {
-				gettoken rhsi rest: rest 					
-				if "`rhsi'" != "if" {
-					local lhsrhs `lhsrhs' `rhsi'
+				qui xtset
+				local idvar "`r(panelvar)'"
+				local tvar "`r(timevar)'"	
+				
+				if "`e(posttype)'" == "frame" {
+					tempname frlink
+					frlink 1:1 `id' `tvar' , from(xtdcce2fast) gen(`frlink')
+					frget `newvar' = residuals , from(`frlink')
 				}
-				else {
-					local rest ""
+				else if "`e(posttype)'" == "mata" {
+					putmata xtdcce2fast_p = (`idvar' `tvar' `tousecr' `touse'), replace						
+					mata xtdcce2_mata2stata("`newvar'",xtdcce2fast_p[.,(5)],"`idvar' `tvar'",xtdcce2fast_p[.,(1,2)],"`touse'",0)
 				}
+				
 			}
-			
-			tsrevar `lhsrhs'
-			local lhsrhs "`r(varlist)'"
-			
-			qui xtset
-			local idvar "`r(panelvar)'"
-			local tvar "`r(timevar)'"
-			
-			if "`crosssectional'" != "" {
-				tempname csa
-				xtdcce2_csa `crosssectional' , idvar(`idvar') tvar(`tvar') cr_lags(`cr_lags') touse(`smplcr') csa(`csa')
-				local clistfull `r(varlist)'
+			else {
+				local newvar `varlist'
+				
+				local lr "`e(lr)'"		
+							
+				*** parse cmd line
+				tokenize "`e(cmdline)'", p(",")
+				local lhsrhs `1'
+				
+				gettoken cmd lhsrhs: lhsrhs		
+				
+				** remove anything after if
+				local rest "`lhsrhs'"
+				local lhsrhs ""
+				while "`rest'" != "" {
+					gettoken rhsi rest: rest 					
+					if "`rhsi'" != "if" {
+						local lhsrhs `lhsrhs' `rhsi'
+					}
+					else {
+						local rest ""
+					}
+				}
+				
+				tsrevar `lhsrhs'
+				local lhsrhs "`r(varlist)'"
+				
+				qui xtset
+				local idvar "`r(panelvar)'"
+				local tvar "`r(timevar)'"				
+				
+				markout `touse' `lhsrhs' `lr' 
+				
+				markout `smpl' `lhsrhs' `lr'
+				if "`e(p_if)'" != "" {
+					replace `smpl' = `smpl' * (`e(p_if)') 
+				}
+				if "`e(p_in)'" != "" {
+					replace `smpl' = `smpl' * (`e(p_in)') 
+				}				
+				
+				tempname smplcr
+				gen  `smplcr' = 1
+				tokenize "`e(cmdline)'", p(",")
+				if regexm("`3'","fullsample") == 1 {
+					if "`e(p_if)'" != "" {
+						replace `smplcr' = `smpl'  * (`e(p_if)') 
+					}
+					else {
+						replace `smplcr' = `smpl' 
+					}
+				}
+					
+				if regexm("`2'","noconst*") == 0 {
+					tempname constant
+					gen double `constant'  = 1
+				}
+				
+				
+				if "`e(csa)'" != "" {
+					tempname csa
+					xtdcce2_csa `e(csa)' , idvar(`idvar') tvar(`tvar') cr_lags(`e(cr_lags)') touse(`smplcr') csa(`csa') 
+					local csa `r(varlist)'
+				}
+				if "`e(gcsa)'" != "" {
+					tempname gcsa
+					tempname touseglobal
+					gen `touseglobal' = 1
+					xtdcce2_csa `e(gcsa)' , idvar(`idvar') tvar(`tvar') cr_lags(`e(gcr_lags)') touse(`touseglobal') csa(`gcsa') 
+					local gcsa `r(varlist)'
+					drop `touseglobal'
+				}
+				if "`e(ccsa)'" != "" {
+					tempname ccsa
+					xtdcce2_csa `e(ccsa)' , idvar(`idvar') tvar(`tvar') cr_lags(`e(ccr_lags)') touse(`smplcr') csa(`ccsa') cluster(`e(ccsa_cluster)') 
+					local ccsa `r(varlist)'
+				}
+				
+				local clistfull `csa' `gcsa' `ccsa'
+				
+				if "`cfresiduals'" != "" {
+					local clistfull ""
+				}
+				markout `touse' `lhsrhs' `lr' `clistfull'
+				replace `touse' = `touse' * e(sample) * `smpl'
+				*noi disp "touse partia"
+				*noi tab `touse'
+				mata xtdcce2_error_calc("`lhsrhs' `lr' ","`clistfull' `constant'","`touse'","`idvar'","`newvar'",xtdcce2fast_bi,"`wildbootstrap'")
 			}
-			if "`cfresiduals'" != "" {
-				local clistfull ""
-			}
-			markout `touse' `lhsrhs' `lr' `clistfull'
-			replace `touse' = `touse' * e(sample) * `smpl'
-			
-			mata xtdcce2_error_calc("`lhsrhs' `lr' ","`clistfull' `constant'","`touse'","`idvar'","`newvar'",xtdcce2fast_bi,"`wildbootstrap'")
 		}
 	}
 	else {
@@ -170,7 +215,7 @@ program define xtdcce2_p_int
 			local mg_vars : list uniq mg_vars
 			local pooled_vars `e(p_pooled_vars)'
 			local cr_vars `e(p_cr_vars)' 
-			local cr_options "`e(cr_options)'"		
+			*local cr_options "`e(cr_options)'"		
 			local lr_vars "`e(lr)'"	
 			
 			
@@ -378,61 +423,47 @@ program define xtdcce2_p_int
 			
 			*create CR Lags
 			if ("`cr_vars'" != "" & ("`xb'" == "" | "`xb2'" == "") ) | `constant_type' == 1 | "`e(insts)'" != ""  {
-				tempvar cr_mean
-				
-				**check if cr_options include "(", if so, then ok, if not, build new with var#1 (#cr lags), var#2 (#cr lags)....
-				if strmatch("`cr_options'","*(*") == 0 | strmatch("`cr_options'","*)*") == 0  {
-					local cr_options 
-					foreach var in `cr_vars' {
-						local cr_options "`cr_options' `var' `cr_lags'"
-					}
-				}
-				else {
-					*remove any "(" or ")"
-					local cr_options = subinstr("`cr_options'",")"," ",.)
-					local cr_options = subinstr("`cr_options'","("," ",.)
-				}
-				if `constant_type' == 1 {
-					local cr_options "`cr_options' `constant' 0"
-					
-				}
-				
-				local cr_options "`cr_options' `exo_cr'"
 			
-				sort `idvar' `tvar'
-				
-				** use smplcr for calculation of cross-sectional averages, necessary when using fullsample option
-				local smplcr "if `smpl'"
+				tempvar smplcr
+				gen `smplcr' = `smpl'
 				tokenize "`e(cmdline)'", p(",")
 				if regexm("`3'","fullsample") == 1 {
-					local smplcr ""
+					replace `smplcr' = `touse'
 				}
-							
-				tokenize "`cr_options'" 
-				while "`1'" != "" {
-					local var `1'
-					local lags_i `2'
-					macro shift
-					macro shift
-					** check if variable has ts operators
-					tsrevar `var'
-					local var `r(varlist)'
-					
-					by `tvar'  , sort: egen double `cr_mean' = mean(`var')  `smplcr' /*was touse*/
-					forvalues lag=0(1)`lags_i' {
-						sort `idvar' `tvar'
-						tempvar L`lag'_m_`var'
-						gen double `L`lag'_m_`var'' = L`lag'.`cr_mean' if `smpl'   /*was touse*/
-						local clist1  `clist1'  `L`lag'_m_`var'' 
-					}
-					drop `cr_mean' 
+				noi disp "smplcr"
+				noi tab `smplcr'
+				noi tab `smpl'
+				noi tab `touse'
+				if "`e(csa)'" != "" {
+					tempname csa
+					xtdcce2_csa `e(csa)' , idvar(`idvar') tvar(`tvar') cr_lags(`e(cr_lags)') touse(`smplcr') csa(`csa') tousets(`smpl')
+					local csa `r(varlist)'
 				}
+				if "`e(gcsa)'" != "" {
+					tempname gcsa
+					tempname touseglobal
+					gen `touseglobal' = 1
+					xtdcce2_csa `e(gcsa)' , idvar(`idvar') tvar(`tvar') cr_lags(`e(gcr_lags)') touse(`touseglobal') csa(`gcsa') tousets(`smpl')
+					local gcsa `r(varlist)'
+					drop `touseglobal'
+				}
+				if "`e(ccsa)'" != "" {
+					tempname ccsa
+					xtdcce2_csa `e(ccsa)' , idvar(`idvar') tvar(`tvar') cr_lags(`e(ccr_lags)') touse(`smplcr') csa(`ccsa') cluster(`e(ccsa_cluster)') tousets(`smpl')
+					local ccsa `r(varlist)'
+				}
+				drop `smplcr' 
+				local clist1 `csa' `gcsa' `ccsa' 
+				
+				if `constant_type' == 1 {
+					local clist1 "`clist1' `constant'"
+				}			
+				
 				markout `smpl' `lhs' `pooled_vars' `mg_vars' `clist1'
-				tempvar touse_ctry
 				tempname mrk
-				local mata_drop `mata_drop' `mrk'
-				gen `touse_ctry' = 0
 				sort `idvar' `tvar'	
+				noi disp "smpl before partial"
+				noi tab `smpl'
 				mata xtdcce_m_partialout2("`lhs' `pooled_vars' `mg_vars'","`clist1'","`smpl'","`idvar'",`useqr',`mrk'=.)
 				
 			}
@@ -641,5 +672,6 @@ program define xtdcce2_p_int
 			tsset `d_idvar' `d_tvar'
 		} 
 	}
+
 end
 

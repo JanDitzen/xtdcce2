@@ -9,8 +9,10 @@ Changelog
 - added support for residuals (BKP 2019)
 - bug fixes
 */
+
 program define xtcse2, rclass
-	syntax [varlist(default=none ts)] [if], [pca(integer 4) STANDardize nocd inprog size(real 0.1) tuning(real 0.5) Reps(integer 0) RESidual lags(integer 0)]
+
+	syntax [varlist(default=none ts)] [if], [pca(integer 4) STANDardize nocd inprog size(real 0.1) tuning(real 0.5) Reps(integer 0) RESidual lags(integer 0) ]
 	version 14
 	
 	tempname xtdcceest xtdcceesttouse
@@ -153,7 +155,7 @@ program define xtcse2, rclass
 				forvalues i = 1(1)`r(max)' {			
 					*** eit
 					replace `tousei' = (`tmpid' == `i' & `touse')
-					mata `eitt' = selectindex(st_data(.,"`tousei'","`touse'"))
+					mata `eitt' = xtdcce_selectindex(st_data(.,"`tousei'","`touse'"))
 					mata `eitv'[`eitt',.] = `eitm'[.,`i']
 					
 					replace `tousei' = 0
@@ -372,7 +374,7 @@ program define xtcse2, rclass
 		return matrix T = `Tm'	
 	}
 	if "`cd'" == "" & "`inprog'" == "" {
-		if rowsof(`CDm') == 1 {
+		if colsof(`CDm') == 1 {
 			scalar `CDm' = `CDm'[1,1]
 			return scalar CD = `CDm'
 			scalar `CDpm' = `CDpm'[1,1]
@@ -421,7 +423,7 @@ mata:
 		/// loop necessary because difference between xbart and xbar, need to get xbart
 		/// build et here (see below)
 		while (i <=T) {
-			indic = selectindex(idt[.,2] :==i)
+			indic = xtdcce_selectindex(idt[.,2] :==i)
 			
 			xbartt = quadcolsum(x[indic,.]):/N
 			xbart[i,.] = xbartt
@@ -482,7 +484,7 @@ mata:
 		s_size = sort((size,s_ttest[.,2]),2)
 		
 		x_str = (s_size[.,1]':*xm)'
-		x_str1 = x_str[selectindex(x_str[.,1]:!=0),.]
+		x_str1 = x_str[xtdcce_selectindex(x_str[.,1]:!=0),.]
 		/// step 4
 		if (x_str[1,1] == .) {
 			"missings"
@@ -694,7 +696,7 @@ mata:
 			
 			///"no lags"
 			while (i<=N) {
-				indic = selectindex(idt[.,1]:==i)
+				indic = xtdcce_selectindex(idt[.,1]:==i)
 				tindic = idt[indic,2]
 				
 				eit = r[indic,.]
@@ -720,7 +722,7 @@ mata:
 			"with lags"
 			
 			while (i<=N) {
-				indic = selectindex(idt[.,1]:==i)
+				indic = xtdcce_selectindex(idt[.,1]:==i)
 				tindic = idt[indic,2]
 				
 				eit = r[indic,.]
@@ -749,7 +751,7 @@ mata:
 			}
 			
 			if (hasmissing(alphab)==1) {
-				alphab = alphab[selectindex(alphab:!=.)]
+				alphab = alphab[xtdcce_selectindex(alphab:!=.)]
 			}			
 			alphabq = mm_quantile(alphab,1,(1-c("level")/100, c("level")/100))
 			///alphabq = mm_quantile(alphab,1,((100-c("level"))/2,(1-(100-c("level"))/2,(100-c("level"))/2))
@@ -795,7 +797,7 @@ mata:
 					indici = zi :!=.
 					indicj = zj :!=.
 					
-					indic = selectindex(indici:*indicj)
+					indic = xtdcce_selectindex(indici:*indicj)
 
 					///rhoij = quadsum(zi[indic,.]:*zj[indic,.]) :/ (rows(indic))
 					rhoij = quadcorrelation((zi[indic,.],zj[indic,.]))[2,1]
@@ -823,7 +825,7 @@ mata:
 					indici = zi :!=.
 					indicj = zj :!=.
 					
-					indic = selectindex(indici:*indicj)	
+					indic = xtdcce_selectindex(indici:*indicj)	
 				
 					rhoij = quadsum(zi[indic,.]:*zj[indic,.]) :/ (rows(indic)-H)
 					///rhoij = quadcorrelation((zi[indic,.],zj[indic,.]))[2,1] :* rows(indic) :/ (rows(indic-H))
