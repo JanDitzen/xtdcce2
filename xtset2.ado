@@ -1,9 +1,14 @@
-*! xtset2 1.0 - January 2018
+*! xtset2 1.1 - June 2020
 *! author Jan Ditzen
 *! www.jan.ditzen.net - j.ditzen@hw.ac.uk
 *! see viewsource xtset2.ado for more info.
 /*
 xtset2 extends xtset.
+
+Version history
+1.0 to 1.1
+- bug fix in svmat .. ,name(); adds a "1" to the name, fixed.
+
 */
 
 version 11.1
@@ -88,7 +93,7 @@ program define xtset2, rclass
 			tempname Tmat
 			tab `tvar' , matcell(`Tmat')
 			svmat `Tmat' , name(`Tmat')
-			inspect `Tmat'
+			inspect `Tmat'1
 			if `r(N_unique)' == 1 {
 				local Cond3 = 1
 			}
@@ -104,7 +109,7 @@ program define xtset2, rclass
 			}
 			
 			**count gaps
-			sum `Tmat' 
+			sum `Tmat'1 
 			scalar NumGaps = (r(max) - r(mean))*r(N)
 			
 			** check 5)
