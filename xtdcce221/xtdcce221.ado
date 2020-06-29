@@ -504,10 +504,10 @@ program define xtdcce221 , eclass sortpreserve
 						
 						
 						** check for duplicates
-						mata st_local("dupcheck",strofreal(rows(uniqrows(`cross_mat'[.,1])):==rows(`cross_mat')))
-						if `dupcheck' == 0 {
-							xtdcce_err 198  , msg("Variables cannot appear in more than cross-sectional average list.")							
-						}
+						*mata st_local("dupcheck",strofreal(rows(uniqrows(`cross_mat'[.,1])):==rows(`cross_mat')))
+						*if `dupcheck' == 0 {
+						*	xtdcce_err 198  , msg("Variables cannot appear in more than cross-sectional average list.")							
+						*}
 						
 						mata st_local("cr_lags_min",strofreal(min(strtoreal(`cross_mat'[.,2]))))
 						mata st_local("cr_lags_max",strofreal(max(strtoreal(`cross_mat'[.,2]))))
@@ -878,8 +878,9 @@ program define xtdcce221 , eclass sortpreserve
 				mata st_local("num_crosssectional",strofreal(`N_g'*sum((`mata_varlist'2[.,4]:*(`mata_varlist'2[.,9]:+1)))))
 				
 				** correct number of rhs if constant is in lr and rhs list
-				if "`lr'" != "" {
+				if "`lr'" != "" & `constant_type' > 0 {
 					mata st_local("constant_lr",strofreal((`mata_varlist'2[xtdcce_selectindex(`mata_varlist'[.,1]:=="_cons"),2]:==1):*(`mata_varlist'2[xtdcce_selectindex(`mata_varlist'[.,1]:=="_cons"),8]:==1)))
+					
 					if `constant_lr' == 1 {
 						local num_rhs = `num_rhs' - `N_g'
 					}
@@ -990,8 +991,7 @@ program define xtdcce221 , eclass sortpreserve
 				if "`crosssectional'" != "" {					
 					if "`scrosssectional'" != "" {						
 						mata st_local("scrosssectionalt",invtokens(`mata_varlist'[xtdcce2_mm_which2(`mata_varlist'[.,1],(tokens("`scrosssectional'"))'),2]'))
-						tempname scsa
-						noi sum `scrosssectionalt' if `tousecr'
+						tempname scsa						
 						xtdcce2_csa `scrosssectionalt' , idvar(`idvar') tvar(`tvar') cr_lags(`scr_lags') touse(`tousecr') csa(`scsa')  numberonly tousets(`touse')
 						local scsa `r(varlist)'	
 						local cr_lags "`r(cross_structure)'"
@@ -2185,8 +2185,19 @@ program define xtdcce221 , eclass sortpreserve
 		if "`clustercrosssectional'" != "" {
 			local crosssectional_output ""
 			if wordcount("`ccr_lags'") > 1 {
+				local cluster_def `=word("`csa_cluster'",`i')'
+				
 				forvalues i = 1(1)`=wordcount("`clustercrosssectional'")' {
-					local crosssectional_output "`crosssectional_output' `=word("`clustercrosssectional'",`i')'(`=word("`ccr_lags'",`i')' - `=word("`csa_cluster'",`i')')"				
+					
+					local clusteri = word("`csa_cluster'",`i')
+					if "`clusteri'" == "" {
+						local clusteri `cluster_def'
+					}
+					else {
+						local cluster_def `clusteri'
+					}
+					
+					local crosssectional_output "`crosssectional_output' `=word("`clustercrosssectional'",`i')'(`=word("`ccr_lags'",`i')' - `clusteri')"				
 				}
 			}
 			else {
