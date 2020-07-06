@@ -1,6 +1,6 @@
 clear
 
-*Requires testdataset, available at https://www.dropbox.com/s/0087vh8brhid5ws/xtdcce2_sample_dataset.dta?dl=0
+*Requires testdataset, available at https://github.com/JanDitzen/xtdcce2/raw/master/xtdcce2_sample_dataset.dta
 use xtdcce2_sample_dataset.dta, clear
 
 **xtdcce2
