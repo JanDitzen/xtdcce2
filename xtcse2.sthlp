@@ -169,7 +169,7 @@ sorted according to their absolute value.{p_end}
 
 {marker examples}{title:Examples}
 
-{p 4 4}An example dataset of the Penn World Tables 8 is available for download {browse "https://www.dropbox.com/s/0087vh8brhid5ws/xtdcce2_sample_dataset.dta?dl=0":here}.
+{p 4 4}An example dataset of the Penn World Tables 8 is available for download {browse "https://github.com/JanDitzen/xtdcce2/raw/master/xtdcce2_sample_dataset.dta":here}.
 The dataset contains yearly observations from 1960 until 2007 and is already tsset.
 To estimate a growth equation the following variables are used:
 log_rgdpo (real GDP), log_hc (human capital), log_ck (physical capital) and log_ngd (population growth + break even investments of 5%).{p_end}
