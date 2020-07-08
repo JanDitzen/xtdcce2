@@ -46,6 +46,7 @@ program define xtdcce2_p_int
 	gen byte `smpl' = 1
 
 	if "`e(cmd)'" == "xtdcce2fast" {
+		noi disp "in fast"
 		*if "`xb'`coefficient'"
 		qui{			
 			if ("`e(posttype)'" == "mata" | "`e(posttype)'" == "frame") & "`wildbootstrap'" == "" {
@@ -100,6 +101,7 @@ program define xtdcce2_p_int
 				markout `touse' `lhsrhs' `lr' 
 				
 				markout `smpl' `lhsrhs' `lr'
+				
 				if "`e(p_if)'" != "" {
 					replace `smpl' = `smpl' * (`e(p_if)') 
 				}
@@ -110,6 +112,7 @@ program define xtdcce2_p_int
 				tempname smplcr
 				gen  `smplcr' = 1
 				tokenize "`e(cmdline)'", p(",")
+				
 				if regexm("`3'","fullsample") == 1 {
 					if "`e(p_if)'" != "" {
 						replace `smplcr' = `smpl'  * (`e(p_if)') 
@@ -128,7 +131,8 @@ program define xtdcce2_p_int
 				if "`e(csa)'" != "" {
 					tempname csa
 					xtdcce2_csa `e(csa)' , idvar(`idvar') tvar(`tvar') cr_lags(`e(cr_lags)') touse(`smplcr') csa(`csa') 
-					local csa `r(varlist)'
+					local csa `r(varlist)'					
+					
 				}
 				if "`e(gcsa)'" != "" {
 					tempname gcsa
@@ -192,8 +196,7 @@ program define xtdcce2_p_int
 			local newvar `varlist'
 			
 			tempvar tvar idvar  
-			
-				
+										
 			if "`e(p_if)'" != "" {
 				*local p_if "& `e(p_if)'"
 				replace `smpl' = `smpl' * (`e(p_if)')
@@ -423,21 +426,19 @@ program define xtdcce2_p_int
 			
 			*create CR Lags
 			if ("`cr_vars'" != "" & ("`xb'" == "" | "`xb2'" == "") ) | `constant_type' == 1 | "`e(insts)'" != ""  {
-			
+				
 				tempvar smplcr
 				gen `smplcr' = `smpl'
 				tokenize "`e(cmdline)'", p(",")
 				if regexm("`3'","fullsample") == 1 {
 					replace `smplcr' = `touse'
 				}
-				noi disp "smplcr"
-				noi tab `smplcr'
-				noi tab `smpl'
-				noi tab `touse'
+				
 				if "`e(csa)'" != "" {
+					
 					tempname csa
 					xtdcce2_csa `e(csa)' , idvar(`idvar') tvar(`tvar') cr_lags(`e(cr_lags)') touse(`smplcr') csa(`csa') tousets(`smpl')
-					local csa `r(varlist)'
+					local csa `r(varlist)'													
 				}
 				if "`e(gcsa)'" != "" {
 					tempname gcsa
@@ -453,17 +454,18 @@ program define xtdcce2_p_int
 					local ccsa `r(varlist)'
 				}
 				drop `smplcr' 
-				local clist1 `csa' `gcsa' `ccsa' 
 				
+				local clist1 `csa' `gcsa' `ccsa' 				
+		
 				if `constant_type' == 1 {
 					local clist1 "`clist1' `constant'"
 				}			
 				
 				markout `smpl' `lhs' `pooled_vars' `mg_vars' `clist1'
 				tempname mrk
-				sort `idvar' `tvar'	
-				noi disp "smpl before partial"
-				noi tab `smpl'
+				
+				issorted `idvar' `tvar'	
+			
 				mata xtdcce_m_partialout2("`lhs' `pooled_vars' `mg_vars'","`clist1'","`smpl'","`idvar'",`useqr',`mrk'=.)
 				
 			}
