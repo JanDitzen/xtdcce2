@@ -130,6 +130,7 @@ fixed. was before assuming same s2 for all csu
 20.12.2019 - added nominus options for ARDL in lr_options. this is essentially an ECM, but with features of the ARDL (SE and sum of LR)
 19.02.2020 - bug in predict program fixed if option nodivide was used
 15.06.2020 - replaced selectindex with xtdcce_selectindex
+08.07.2020 - bug with if/in and new CSA syntax corrected
 */
 
 program define xtdcce221 , eclass sortpreserve
@@ -194,6 +195,10 @@ program define xtdcce221 , eclass sortpreserve
 		local xtdcce2v xtdcce221
 		local cmd_line `xtdcce2v' `0'
 		
+		** save if and in
+		local cmd_if `if'
+		local cmd_in `in'
+		
 		* Legacy Locals
 		if "`e_ivreg2'" != "" {
 			local fulliv "fulliv"
@@ -219,7 +224,7 @@ program define xtdcce221 , eclass sortpreserve
 			noi disp as text "Options 'endogenous_vars' and 'exogenous_vars' not supported since version 1.2." , _continue
 			noi disp as smcl "See {help xtdcce2:help xtdcce2}."
 			noi disp as text "Please run instead:"
-			noi disp in smcl " {stata xtdcce2 `anything' (`endogenous_vars' = `exogenous_vars') `if' `in', `op_woiv'}"
+			noi disp in smcl " {stata xtdcce2 `anything' (`endogenous_vars' = `exogenous_vars') `cmd_if' `cmd_in', `op_woiv'}"
 			exit			
 		}
 		if "`residuals'" != "" {
@@ -429,6 +434,7 @@ program define xtdcce221 , eclass sortpreserve
 							else {
 								local scr_lags `cr_lags'					
 							}
+							
 						}
 						
 						if "`globalcrosssectional'" != "" {
@@ -967,20 +973,20 @@ program define xtdcce221 , eclass sortpreserve
 				
 				if "`fullsample'" != "" {
 					*gen `tousecr' = `touse_start'
-					if "`if'" != "" & "`in'" == ""  {
-						gen `tousecr' = (`if') 
+					if "`cmd_if'" != "" & "`cmd_in'" == ""  {
+						gen `tousecr' = (`cmd_if') 
 					}
-					else if "`in'" != "" & "`if'" == "" {
-						gen `tousecr' = `touse' in `in'
+					else if "`cmd_in'" != "" & "`cmd_if'" == "" {
+						gen `tousecr' = `touse' in `cmd_in'
 					}
-					else if "`in'" != "" & "`if'" != "" {
-						replace `tousecr' = (`if') in `in'
+					else if "`cmd_in'" != "" & "`cmd_if'" != "" {
+						replace `tousecr' = (`cmd_if') in `cmd_in'
 					}
 					else {
 					    gen `tousecr' = 1						
 					}
 					*noi disp "`ifinct'"
-					*gen `tousecr' = (`if') `ifinct'
+					*gen `tousecr' = (`cmd_if') `ifinct'
 					
 				}
 				else {
@@ -991,7 +997,8 @@ program define xtdcce221 , eclass sortpreserve
 				if "`crosssectional'" != "" {					
 					if "`scrosssectional'" != "" {						
 						mata st_local("scrosssectionalt",invtokens(`mata_varlist'[xtdcce2_mm_which2(`mata_varlist'[.,1],(tokens("`scrosssectional'"))'),2]'))
-						tempname scsa						
+						tempname scsa
+												
 						xtdcce2_csa `scrosssectionalt' , idvar(`idvar') tvar(`tvar') cr_lags(`scr_lags') touse(`tousecr') csa(`scsa')  numberonly tousets(`touse')
 						local scsa `r(varlist)'	
 						local cr_lags "`r(cross_structure)'"
@@ -1019,22 +1026,7 @@ program define xtdcce221 , eclass sortpreserve
 						local ccr_lags "`r(cross_structure)'"
 					}
 					local clist1 `scsa' `gcsa' `ccsa'
-					*noi sum `clist1'
-					/*
-					tempvar cr_mean	
-					foreach var in `crosssectional' {
-						*get number of lags						
-						mata st_local("n_lag",`mata_varlist'[xtdcce2_mm_which2(`mata_varlist'[.,2],"`var'"),11])
-						by `tvar' , sort: egen double `cr_mean' = mean(`var')  `tousecr' 
-						sort `idvar' `tvar'
-						forvalues lag=0(1)`n_lag' {							
-							gen double L`lag'_m_`var' = L`lag'.`cr_mean'  if `touse'
-							local clist1  `clist1'  L`lag'_m_`var' 
-						}
-						drop `cr_mean' 
-					}
-					*/
-					
+										
 				}
 				**Add constant if heterogenous to list with variable to partialled out
 				if  "`constant_type'" == "1" {
@@ -1042,10 +1034,12 @@ program define xtdcce221 , eclass sortpreserve
 					local crosssectional `crosssectional' `constant'
 				}
 
-				local num_adjusted = `num_partialled_out' 
+				local num_adjusted = `num_partialled_out' 				
+				
+				
 				*Restrict set and exclude variables with missings (25.1.2017 added clist)
 				markout `touse' `lhs' `pooled' `rhs' `exogenous_vars' `endogenous_vars' `endo_pooled' `exo_pooled' 	`clist1'
-				
+								
 				** Check for omitted variables
 				if "`omitted'" == "" {
 					
@@ -1862,8 +1856,8 @@ program define xtdcce221 , eclass sortpreserve
 			ereturn hidden local p_lr_1 "`lr_1'"
 			ereturn hidden local p_lr_vars_mg "`lr_vars_mg'"
 			ereturn hidden local p_lr_vars_pooled "`lr_vars_pooled'"
-			ereturn hidden local p_if "`if'"
-			ereturn hidden local p_in "`in'"
+			ereturn hidden local p_if "`cmd_if'"
+			ereturn hidden local p_in "`cmd_in'"
 			ereturn hidden scalar constant_type = `constant_type'
 			ereturn hidden local lr_options "`lr_options'"
 			if "`res_check'" != "" {
