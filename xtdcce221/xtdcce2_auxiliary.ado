@@ -490,12 +490,19 @@ program define xtdcce2_csa, rclass
 			}
 			local ii `=strtoname("`var'")'
 			tempvar `ii'
-			*by `tvar' `clusteri' (`idvar'), sort: egen ``ii'' = mean(`var') if `touse'		
-			by `tvar' `clusteri' (`idvar'), sort: gen ``ii'' = sum(`var') if `touse'
-			by `tvar' `clusteri' (`idvar'), sort: replace ``ii'' = ``ii''[_N] / _N if `touse'
+			*** slow by `tvar' `clusteri' (`idvar'), sort: egen ``ii'' = mean(`var') if `touse'				
+			
+			by `tvar' `clusteri' `touse' (`idvar'), sort: gen ``ii'' = sum(`var') if `touse'			
+			by `tvar' `clusteri' `touse'  (`idvar'), sort: replace ``ii'' = ``ii''[_N] / _N 
+			
+			*** replace CSA with . if touse == 0 to make sure it is missing
+			replace ``ii'' = . if `touse' == 0
+			
 			local clist `clist' ``ii''
 			local c_i = `c_i' + 1
+			
 		}
+				
 		if "`cr_lags'" == "" {
 			local cr_lags = 0
 		}
@@ -510,7 +517,7 @@ program define xtdcce2_csa, rclass
 				local lagidef = `lagi'					
 			}
 			sort `idvar' `tvar'
-			noi disp "lags `lagi'"
+			
 			tsrevar L(0/`lagi').`var'		
 			local clistfull `clistfull' `r(varlist)'
 			
@@ -529,6 +536,7 @@ program define xtdcce2_csa, rclass
 				else {
 					local cluster_def `clusteri'					
 				}
+				
 				if "`numberonly'" == "" {
 					local cross_structure "`cross_structure' `=word("`varlist'",`i')'(`lagi'; `clusteri')"
 				}
@@ -549,11 +557,13 @@ program define xtdcce2_csa, rclass
 		}
 		local i = 1
 		foreach var in `clistfull' {
-			rename `var' `csa'_`i'
+			*rename `var' `csa'_`i'
+			gen double `csa'_`i' = `var'
+			drop `var'
 			local clistn `clistn' `csa'_`i'
 			local i = `i' + 1
 		}
-		
+				
 	return local varlist "`clistn'"
 	return local cross_structure "`cross_structure'"
 end
