@@ -14,6 +14,8 @@ xtdcce2 auxiliary programs
 10. xtdcce2_csa 
 11. xtdcce2_errorcalc
 12. xtdcce2_wbsadj
+13. issorted
+14. xtdcce2_mata2stata
 */
 
 
@@ -227,7 +229,7 @@ mata:
 	}
 end
 
-*** Partial Out Program
+*** Partial Out Program - single cross-section
 ** quadcross automatically removes missing values and therefore only uses (and updates) entries without missing values
 ** X1 variable which is partialled out
 capture mata mata drop xtdcce_m_partialout()
@@ -493,7 +495,7 @@ program define xtdcce2_csa, rclass
 			*** slow by `tvar' `clusteri' (`idvar'), sort: egen ``ii'' = mean(`var') if `touse'				
 			
 			by `tvar' `clusteri' `touse' (`idvar'), sort: gen ``ii'' = sum(`var') if `touse'			
-			by `tvar' `clusteri' `touse'  (`idvar'), sort: replace ``ii'' = ``ii''[_N] / _N 
+			by `tvar' `clusteri' `touse'  (`idvar'), sort: replace ``ii'' = ``ii''[_N] / _N
 			
 			*** replace CSA with . if touse == 0 to make sure it is missing
 			replace ``ii'' = . if `touse' == 0
