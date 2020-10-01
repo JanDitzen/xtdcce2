@@ -121,7 +121,7 @@ mata:
 				if (rank < rows(A)) {	
 					/// not full rank, use invsym
 					method = "invsym"
-					coln = xtdcce_selectindex(colsum(A:==0):==rows(A):==0)			
+					coln = xtdcce_selectindex(colsum(C:==0):==rows(C):==0)			
 				}
 				else {
 					/// full rank use cholsolve

@@ -99,14 +99,16 @@ program define xtdcce2fast, eclass sortpreserve
 				syntax varlist(ts) , [cr_lags(numlist) CLuster(varlist) ]
 				local clustercrosssectional `varlist'
 				local csa_cluster "`cluster'"
-				local checkccsa "`varlist'"
-				local checkcsa1: list checkgcsa & checkccsa
-				local checkcsa2: list checkscsa & checkccsa
 				
-				if "`checkcsa1'`checkcsa2'" != "" {
-					noi disp as error "Variables (`checkcsa1' `checkcsa2') occur in clustercrosssectional() and globalcrosssectional() or crosssectional()."
-					exit
-				}				
+				*** not necessary!?
+				*local checkccsa "`varlist'"
+				*local checkcsa1: list checkgcsa & checkccsa
+				*local checkcsa2: list checkscsa & checkccsa
+				
+				*if "`checkcsa1'`checkcsa2'" != "" {
+				*	noi disp as error "Variables (`checkcsa1' `checkcsa2') occur in clustercrosssectional() and globalcrosssectional() or crosssectional()."
+				*	exit
+				*}				
 				if "`cluster'" == "" {
 				    noi disp "No cluster set."
 					exit
@@ -204,19 +206,19 @@ program define xtdcce2fast, eclass sortpreserve
 				tempname scsa
 				xtdcce2_csa `crosssectional' , idvar(`idvar') tvar(`tvar') cr_lags(`scr_lags') touse(`tousecr') csa(`scsa') tousets(`touse')
 				local scsa `r(varlist)'
-				local scross_structure `r(cross_structure)'
+				local scross_structure `r(cross_structure)'	
 			}
 			
 			if "`globalcrosssectional'" != "" {
 				tempvar gtouse
-				tempvar gcsa
+				tempname gcsa
 				gen `gtouse' = 1
 				xtdcce2_csa `globalcrosssectional' , idvar(`idvar') tvar(`tvar') cr_lags(`gcr_lags') touse(`gtouse') csa(`gcsa') tousets(`touse')		
 				local gcsa `r(varlist)'	
 				local gcross_structure "`r(cross_structure)'"
 				drop `gtouse'
 			}			
-			
+						
 			if "`clustercrosssectional'" != "" {
 				tempname ccsa	
 				xtdcce2_csa `clustercrosssectional' , idvar(`idvar') tvar(`tvar') cr_lags(`ccr_lags') touse(`tousecr') csa(`ccsa') cluster(`cluster') tousets(`touse')		
@@ -224,8 +226,7 @@ program define xtdcce2fast, eclass sortpreserve
 				local ccross_structure "`r(cross_structure)'"
 			
 			}
-			
-			
+						
 			local clistfull `scsa' `gcsa' `ccsa'
 			
 			*** update 
@@ -334,6 +335,7 @@ program define xtdcce2fast, eclass sortpreserve
 		ereturn hidden local p_mg_vars "`rhsi'"
 		
 		ereturn local predict "xtdcce2`pred'_p"
+		ereturn local estat_cmd "xtdcce2_estat"
 		
 		if "`lr'" != "" {
 			ereturn local lr "`CleanLR'"
@@ -518,6 +520,12 @@ program define xtdcce2fast, eclass sortpreserve
 				di as text "{hline `col_i'}{c +}{hline `=`maxline'-`col_i''}"
 				local sr_text "  "
 			}
+			
+			if "`lr_options'" == "ecm" {
+				local rhsi `lr_1' `rhsi'
+				local varlr: list varlr - lr_1
+			}
+			
 			if "`rhsi'" != ""   {
 				di _col(2) as text "`sr_text'Mean Group:"  _col(`col_i')  " {c |}"
 				local lrcount = wordcount("`CleanLR'")

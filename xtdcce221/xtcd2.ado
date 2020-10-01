@@ -289,6 +289,10 @@ program define xtcd2, rclass
 	
 end
 
+** auxiliary file with auxiliary programs
+findfile "xtdcce2_auxiliary.ado"
+include "`r(fn)'"
+
 
 capture mata mata drop xtcd2_make_rho()
 mata:

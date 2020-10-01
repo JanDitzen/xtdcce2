@@ -1,6 +1,6 @@
 {smcl}
 {hline}
-{hi:help xtdcce2}{right: v. 1.0 - 16. January 2018}
+{hi:help xtset2}{right: v. 1.0 - 16. January 2018}
 {hline}
 {title:Title}
 
@@ -8,7 +8,7 @@
 
 {title:Syntax}
 
-{p 4 13}{cmd:xtcd2} [{it:panelvar} {it:timevar}]  [{it:if}]
+{p 4 13}{cmd:xtset2} [{it:panelvar} {it:timevar}]  [{it:if}]
 [{cmd:,}
 {cmd:checkvars({varlist})}
 {cmd:matrix}
@@ -18,7 +18,8 @@
 {p_end}
 
 {p 4 4}{it:panelvar} is the panel identifier (cross-section) and {it:timevar} the time identifier.
-{cmd:xtset2} without the panel and time identifier displays the current setting.{p_end}
+{cmd:xtset2} without the panel and time identifier displays the current setting.
+{cmd:tsoptions} are options passed on to {help xtset}.{p_end}
 
 
 {title:Contents}

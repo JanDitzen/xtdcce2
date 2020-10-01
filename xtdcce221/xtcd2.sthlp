@@ -112,7 +112,7 @@ If {cmd:name({it:string})} is set, then the histogram is saved and not drawn.{p_
 
 
 {marker examples}{title:Examples}
-{p 4 4}An example dataset of the Penn World Tables 8 is available for download {browse "https://drive.google.com/open?id=1mL4s0X_pUjvTLTccmLbGNtfVBQ63Mon2":here}.
+{p 4 4}An example dataset of the Penn World Tables 8 is available for download {browse "https://github.com/JanDitzen/xtdcce2/raw/master/xtdcce2_sample_dataset.dta":here}.
 The dataset contains yearly observations from 1960 until 2007 and is already tsset.
 Estimating a simple panel version of the Solow model and run the CD test afterwards:{p_end}
 

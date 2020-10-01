@@ -40,9 +40,9 @@ with a large number of observations over groups and time periods.{p_end}
 {cmdab:nodim:check}
 {cmd:useqr}
 {cmd:useinvsym}
-{cmd:showomitted}
 {cmdab:NOOMIT:ted}]{p_end}
 
+[ADD OPTIONS FOR GLOBALCSA AND CLUSTERCSA]
 
 {p 4 4} where {varlist}2 are endogenous variables and {varlist}_iv the instruments.{p_end}
 {p 4 4}Data has to be {cmd:xtset} before using {cmd:xtdcce2}; see {help tsset}.
@@ -149,7 +149,7 @@ No options for the CS-DL model are necessary.{p_end}
 	{col 12}{cmd:ardl} estimates the CS-ARDL estimator. For further details see {help xtdcce2##ardl:xtdcce2, ardl}.
 	{col 12}{cmd:nodivide} coefficients are not divided by the error correction speed of adjustment vector. Equation (7) is estimated, see {help xtdcce2##pmg:xtdcce2, pmg}.
 	{col 12}{cmd:xtpmgnames} coefficient names in {cmd: e(b_p_mg)} (or {cmd: e(b_full)}) and {cmd: e(V_p_mg)} (or {cmd: e(V_full)}) match the name convention from {help xtpmg}.
-
+HERE LR OPTION NO MINUS
 {p 4 8 12}{cmd:trend} adds a linear unit specific trend. May not be combined with {cmd:pooledtrend}.{p_end}
 
 {p 4 8 12}{cmdab:pooledt:rend} adds a linear common trend. May not be combined with {cmd:trend}.{p_end}
@@ -203,7 +203,6 @@ The following options are available to alter the behaviour of {cmd:xtdcce2}
 with respect to matrices of not full rank:{p_end}
 {col 12}{cmd:useqr} calculates the generalized inverse via QR decomposition. This was the default for rank-deficient matrices for {cmd:xtdcce2} pre version 1.35.
 {col 12}{cmd:useinvsym} calculates the generalized invers via {help mata invsym}.
-{col 12}{cmd:showomitted} displays a cross-sectional unit - variable breakdown of omitted coefficients.
 {col 12}{cmdab:noomit:ted} no omitted variable checks on the entire model.
 
 
@@ -485,9 +484,8 @@ and the number in {cmd:e(K_omitted)}.
 {p 6 6}{cmd:xtdcce2} automatically drops variables (columns) from the right
 for those cross-sectional units with collinear variables (columns).
 An error message appears. More details can be obtained using
-the option {cmd:showomitted} by showing a matrix with a detailed
-break down on a cross-section - variable level. 
-The matrix is stored in {cmd:e(omitted_var_i)} as well.{p_end}
+the option {cmd:estat ebistructure} by showing a matrix with a detailed
+break down on a cross-section - variable level.{p_end}
 
 {p 4 4}Results obtained with {cmd:xtdcce2} can differ from those obtained
 with {help reg} or {help xtmg}. 
@@ -528,15 +526,16 @@ matrix of covariances for the cross-sectional unit specific coefficients, or the
 (N_g x 1) matrix itself.
 If the number of cross-sectional units is very large, {cmd:xtdcce2} cannot post
 this matrix and aborts with an error. 
-Other problems arise when {cmd:xtdcce2} uses Stata commands such as {help rmcoll}
-to check for collinearities.{p_end}
+The same problems arise when {cmd:xtdcce2} uses Stata commands such as {help rmcoll}
+to check for collinearities.
+In addition collinearity checks can be computatinally intensive for large panels and slow 
+an estiamtion significantly down.{p_end}
 
 {p 4 4}To circument the speed and the size issue, 
 {cmd:xtdcce2} contains a program called {help xtdcce2fast}. 
-{cmd:xtdcc2fast} can only estimate a mean group model, does no collinearity checks. 
-Only the {p_end}
-
-
+{cmd:xtdcc2fast} can only estimate a mean group model and does no collinearity checks. 
+Only the mean group coefficients are saved in {cmd:e()}, individual coefficients 
+are saved in a {cmd:mata} matrix.{p_end}
 
 {marker saved_vales}{title:Saved Values}
 
@@ -649,7 +648,21 @@ and ytilde and xtilde are y and x with the common factors partialled out:{p_end}
 {col 11} gamma(i)*f(t) + e(i,t) {col 37}{cmd:cfresiduals} 
 
 {p 2}{ul: estat}{p_end}
-{p 4 4}{cmd: estat} can be used to create a box, bar or range plot. The syntax is:{p_end}
+{p 4 4}{cmd: estat} can be used display the structure or values of individual coefficients and
+to create a box, bar or range plot. {p_end}
+
+{p 4 4}To display the individual coefficients ordered by the cross-sectional units:{p_end}
+{p 6 13}{cmd: estat} {it:ebi}{p_end}
+
+{p 4 4}{cmd: estat} will save the matrix displayed as 
+{it:r(blockmatrix)}. 
+{p_end}
+
+{p 4 4}{cmd: estat} {cmdab:ebis:tructure} displays the structure for each cross-sectional unit.
+It indicates if a coefficient was estimated, dropped, set to zero and if the coefficient 
+is pooled.{p_end}
+
+{p 4 4}The syntax for the box, bar or range plot is:{p_end}
 
 {p 6 13}{cmd: estat} {it:graphtype} [{varlist}] {ifin} [{cmd:, }{cmdab:c:ombine}{cmd:({it:string}) }{cmdab:i:ndividual}{cmd:({it:string})}{cmd: nomg }{cmdab:clearg:raph}]{p_end}
 
@@ -673,7 +686,7 @@ and ytilde and xtilde are y and x with the common factors partialled out:{p_end}
 
 {marker examples}{title:Examples}
 
-{p 4 4}An example dataset of the Penn World Tables 8 is available for download {browse "https://drive.google.com/open?id=1mL4s0X_pUjvTLTccmLbGNtfVBQ63Mon2":here}.
+{p 4 4}An example dataset of the Penn World Tables 8 is available for download {browse "https://github.com/JanDitzen/xtdcce2/raw/master/xtdcce2_sample_dataset.dta":here}.
 The dataset contains yearly observations from 1960 until 2007 and is already tsset.
 To estimate a growth equation the following variables are used:
 log_rgdpo (real GDP), log_hc (human capital), log_ck (physical capital) and log_ngd (population growth + break even investments of 5%).{p_end}

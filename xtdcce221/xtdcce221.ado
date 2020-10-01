@@ -131,6 +131,8 @@ fixed. was before assuming same s2 for all csu
 19.02.2020 - bug in predict program fixed if option nodivide was used
 15.06.2020 - replaced selectindex with xtdcce_selectindex
 08.07.2020 - bug with if/in and new CSA syntax corrected
+24.07.2020 - moved option showomitted to estat.
+		   - added cluster csa and global csa.
 */
 
 program define xtdcce221 , eclass sortpreserve
@@ -209,6 +211,7 @@ program define xtdcce221 , eclass sortpreserve
 		
 		if "`trace'" != "" {
 			local tracenoi "noisily"
+			noi disp "this is version 221"
 		}
 		
 		*Legacy for IV options and 
@@ -451,9 +454,13 @@ program define xtdcce221 , eclass sortpreserve
 						
 						if "`clustercrosssectional'" != "" {
 							local 0 `clustercrosssectional'
-							syntax varlist(ts) , [cr_lags(numlist) CLuster(varlist) ]
+							syntax varlist(ts) , [cr_lags(numlist) CLustercr(varlist) ]
 							local clustercrosssectional `varlist'
-							local csa_cluster "`cluster'"
+							if "`clustercr'" == "" {
+								xtdcce_err 198 `d_idvar' `d_tvar' , msg("No clustervariable set.")
+								
+							}
+							local csa_cluster "`clustercr'"
 							if "`cr_lags'" == "" {
 								local ccr_lags = 0
 							}
@@ -1371,7 +1378,6 @@ program define xtdcce221 , eclass sortpreserve
 						`tracenoi' mata xtdcce_m_reg("`lhs' `endogenous_vars' `endo_pooled' `rhs' `pooled'","`touse'","`idvar'","","`lr'","`lr_options'",`num_adjusted',"`resid2'","`eb_mgi'","`cov_i1'","`sd_i'","`t_i'","`stats_i'","`jack_indicator_a' `jack_indicator_b'",`mata_varlist',1,"`exogenous_vars' `exo_pooled' `rhs' `pooled'",`blockdiaguse',`useqr',"`RankReg'","`UsedCols'")
 					}	
 				}
-
 				*claculate long run coefficients
 				if "`lr'" != "" {
 					*run over all three possibilities for coefficients
@@ -1444,6 +1450,9 @@ program define xtdcce221 , eclass sortpreserve
 				}
 			}
 			`tracenoi' display "Regression done"
+							*** save row names for omitted output
+				*noi matrix list `b_i'
+				local bi_cols_omit : colnames `b_i'
 			******************************Regression End************************************
 			***CD Test			
 			if "`cd'" == "" & "`fast'" == "0" {	
@@ -1892,6 +1901,9 @@ program define xtdcce221 , eclass sortpreserve
 	if `ardl_indic' == 1 {
 		local textcsardl " (CS-ARDL)"
 	}
+	else if `ardl_indic' == 0 & "`lr'" != "" {
+	    local textcsardl " (CS-ECM)"
+	}
 	display as text "(Dynamic) Common Correlated Effects Estimator - `textpooled'`textmg'`textiv'`textcsardl'"
 	
 	**Assume standard of 80 and extend only if variable names larger than 80 and linesize sufficient.
@@ -2047,11 +2059,7 @@ program define xtdcce221 , eclass sortpreserve
 	
 	scalar cv = invnorm(1 - ((100-`level')/100)/2)
 	
-	if "`lr'" != "" {
-		di as text _col(2) _col(2) "Short Run Est." _col(`col_i')  "{c |}"
-		di as text "{hline `col_i'}{c +}{hline `=`maxline'-`col_i''}"
-		local sr_text "  "
-	}
+	
 	if `ardl_indic' == 1 {
 		local lr_np : list lr - pooled
 		local lr_p : list lr - lr_np
@@ -2064,21 +2072,31 @@ program define xtdcce221 , eclass sortpreserve
 		local rhs_vars `endogenous_vars' `rhs' 
 		local pooled_vars `pooled' `endo_pooled' 
 
+		local lr_p1: list lr_1 & pooled_vars
+		local lr_mg1: list lr_1  - lr_p1
+		
 		local pooled_vars : list pooled_vars - lr
 		local rhs_vars : list rhs_vars - lr
 	}
-	if "`pooled_vars'" != "" { 
-		di as text _col(2) "`sr_text'Pooled: " _col(`col_i') " {c |}"
-		foreach var in `pooled_vars' {
-			xtdcce_output_table `var' `col_i' `b_mg' `sd' `t' cv `var'
-		}
+	
+	if "`lr'" != "" {
+		di as text _col(2) _col(2) "Short Run Est." _col(`col_i')  "{c |}"
+		di as text "{hline `col_i'}{c +}{hline `=`maxline'-`col_i''}"
+		local sr_text "  "
 	}
 	
 	
-	if "`rhs_vars'" != ""   {
+	if "`pooled_vars'`lr_p1'" != "" { 
+		di as text _col(2) "`sr_text'Pooled: " _col(`col_i') " {c |}"
+		foreach var in `lr_p1' `pooled_vars' {
+			xtdcce_output_table `var' `col_i' `b_mg' `sd' `t' cv `var'
+		}
+	}	
+	
+	if "`rhs_vars'`lr_mg1'" != ""   {
 		di _col(2) as text "`sr_text'Mean Group:"  _col(`col_i')  " {c |}"
 		local lrcount = wordcount("`rhs_vars'")
-		foreach var in `rhs_vars' {
+		foreach var in `lr_mg1' `rhs_vars' {
 			if "`full'" != "" {
 				di "" _col(`col_i') " {c |}"
 			}
@@ -2098,17 +2116,47 @@ program define xtdcce221 , eclass sortpreserve
 		}
 	}	
 	if strtrim("`lr'") != "" {
-		if `ardl_indic' == 0 {
-			local lr_pooled : list lr & pooled
-			local lr_rest : list lr - lr_pooled
-		}
-		else {
+		
+		if `ardl_indic' == 1 {
+		    
+			local lr_p1: list lr_1 & lr_p
+			local lr_mg1: list lr_1 & lr_np		
+			
+			
+		    tsrevar `lr_1' , list
+			local lr_1_ardl = word("`r(varlist)'",1)
+			local lr_1_ardl "lr_`lr_1_ardl'"
+			
+			di as text "{hline `col_i'}{c +}{hline `=`maxline'-`col_i''}"	
+			di as text _col(2) "Adjust. Term" _col(`col_i') " {c |}"
+			di as text "{hline `col_i'}{c +}{hline `=`maxline'-`col_i''}"			
+						
+			if "`lr_p1'" != "" di as text _col(2) "`sr_text'Pooled: " _col(`col_i') " {c |}"
+			if "`lr_mg1'" != "" di as text _col(2) "`sr_text'Mean Group:" _col(`col_i') " {c |}"
+
+			xtdcce_output_table `lr_1_ardl' `col_i' `b_mg' `sd' `t' cv `lr_1_ardl'
+						
+			local lr_p1 
+			local lr_mg1
+			
 			local lr_pooled `lr_vars_pooled'
-			local lr_rest `lr_vars_mg'
+			local lr_rest `lr_vars_mg'		
+			
+		}		
+		else if `ardl_indic' == 0 {
+			local lr_pooled : list lr & pooled
+			local lr_rest : list lr - lr_pooled					
 		}
 		
 		ereturn hidden local lr_pooled "`lr_pooled'"
 		ereturn hidden local lr_mg "`lr_rest'"
+		
+		*** remove lr_1
+		if `ardl_indic' == 0 {
+			local lr_pooled: list lr_pooled - lr_1
+			local lr_rest: list lr_rest - lr_1
+		}		
+		
 		if "`rhs_vars'" != "" {
 			di as text "{hline `col_i'}{c +}{hline `=`maxline'-`col_i''}"
 		}
@@ -2226,14 +2274,16 @@ program define xtdcce221 , eclass sortpreserve
 		
 		
 	}
-	if strtrim("`lr'") != "" { 
+		if strtrim("`lr'") != "" { 
 		display  as text "Long Run Variables: `lr_pooled' `lr_rest'"
 		if `ardl_indic' == 0 {
 			display  as text "Cointegration variable(s): `lr_1'"
 		}
 		else {
 			tsrevar `lr_1' , list
-			display  as text "Cointegration variable(s): lr_`r(varlist)'"
+			local list1 `r(varlist)'
+			tsunab tslistun : `lr_1' 
+			display  as text "Adjustment variable(s): lr_`list1' (`tslistun')"
 		}
 	}
 	if `IV' == 1 {
@@ -2247,16 +2297,16 @@ program define xtdcce221 , eclass sortpreserve
 		display  as text _col(2) "`omitted_var'"
 	}
 	if "`constant_type'" == "1" {
-		display  as text "Heterogenous constant partialled out." , _c
+		display  as text "Heterogenous constant partialled out." , 
 	}
 	if "`constant_type'" == "2" {
-		display  as text "Homogenous constant removed from model." , _c
+		display  as text "Homogenous constant removed from model." ,
 	}
 	if "`constant_type'" == "4" {
-		display  as text "Homogenous constant not displayed." , _c
+		display  as text "Homogenous constant not displayed." , 
 	}
 	if "`jackknife'" == "jackknife" {
-		display  as text "Jackknife bias correction used." , _c
+		display  as text "Jackknife bias correction used." ,
 		ereturn local bias_correction = "jackknife" 
 	}
 	if "`recursive'" == "recursive" {
@@ -2271,79 +2321,23 @@ program define xtdcce221 , eclass sortpreserve
 	}
 	** check for failure of rank condition for CSA regression
 	if `rank_cond' > 0 {
-		display in red "Warning:"
-		display as text "Rank condition on matrix of cross product of cross sectional averages not satisfied!" _n "Only mean group estimates are consistent, unit specific estimates are inconsistent." /*_n "See Chudik, Pesaran (2015, Journal of Econometrics), Assumption 6 and page 398." */ , _newline
+		display in red "Warning:" 
+		display as text "Rank condition on matrix of cross product of cross sectional averages not satisfied!" _n "Only mean group estimates are consistent, unit specific estimates are inconsistent." /*_n "See Chudik, Pesaran (2015, Journal of Econometrics), Assumption 6 and page 398." */ 
 	}
 	** check for failure of rank condition for main regression, only for non-IV case
 	if `IV' == 0 {
 		mata `RankReg' = st_matrix("`RankReg'")
-		mata `UsedCols' = st_matrix("`UsedCols'")
 		mata: st_local("rk_indic",strofreal(all(`RankReg'[.,1]:==`RankReg'[.,2])))
 		if `rk_indic' != 1 {
-			display in red "Warning:"
-			if "`showomitted'" == "" {
-				display as text "Collinearities detected. One or more variables are dropped and set to zero. Use option " , _c 
-				display as result "showomitted" , _c
-				display as text " to show more details."
-			}
-			else {
-				display as text "Collinearities detected. Structure of dropped coefficients is:"
-				disp ""
-				*** Output Table
-				** get length of variables
-				local tbl_interval  7
-				local j = 1
-				foreach var in `rhs_vars' `pooled_vars' {
-					local tmp = 2 + length(abbrev("`var'",`abname')) + `=word("`tbl_interval'",`j')'
-					local tbl_interval `tbl_interval'  `tmp'
-					local j = `j' + 1
-				}
-				local j = `j' - 1			
-				*** Output Header
-				disp as text _column(3) "CSA" , _c 
-				local i = 1
-				foreach var in `rhs_vars' `pooled_vars' {
-					local cols = word("`tbl_interval'",`i')
-					if `i' < `j' {
-						local cont "_c"
-					}
-					else {
-						local cont ""
-					}
-					disp as text _column(`cols') abbrev("`var'",`abname'), `cont'
-					local i = `i' + 1
-				}
-				*disp as text "" , _n
-				forvalues s=1(1)`N_g' {
-					disp as text _column(4) "`s'" , _c
-					forvalues ii = 1(1)`=`i'-1' {
-						local cols_start = word("`tbl_interval'",`ii')
-						*if `ii' < `i' {
-							local cols_end = word("`tbl_interval'",`=`ii'+1')
-						*else {
-						*	local cols_end = 
-						*}
-						local cols = round(`cols_start' + (`cols_end'-`cols_start')/2)
-						if `=`i'-1' > `ii' {
-							local cont "_c"
-						}
-						else {
-							local cont = ""
-						}
-						disp as text _col(`cols') `UsedCols'[`s',`ii'] , `cont'
-						local `ii' = `ii' + 1
-					}
-					*disp as text "", _n
-				}
-				disp "where CSA is the number of the cross section."
-				disp "0 implies coefficient is set to zero."
-				matrix colnames `UsedCols' = `rhs_vars' `pooled_vars'
-				ereturn matrix omitted_var_i = `UsedCols'
-				ereturn hidden matrix rankreg = `RankReg'
-			}
+			display in red "Warning:" 
+			display as text "Collinearities detected. One or more variables are dropped and set to zero."
+			display as text in smcl "Use {stata estat ebistructure} to display more details." 
+				
+			matrix colnames `UsedCols' = `rhs_vars' `pooled_vars'
+			ereturn matrix omitted_var_i = `UsedCols'
+			ereturn hidden matrix rankreg = `RankReg'			
 		}
-	}
-	
+	}	
 	
 	if "`exponent'" != "" & "`fast'" == "0" {
 		di ""
@@ -2504,7 +2498,7 @@ mata:
 		if (cols(tokens(ccep)) > 0) {
 			pooled = tokens(ccep)
 			pooled_d = 1
-			num_Kp = cols(ccep)
+			num_Kp = cols(pooled)
 			num_K = num_K + num_Kp
 		}
 		if (args() < 16) {
@@ -2622,6 +2616,8 @@ mata:
 						"start calculating b"
 						bii = m_xtdcce_solver(tmp_xx,tmp_xy,useqr,ranki=.,colni=0,method="")
 						b_output = (b_output \ bii)
+						"cols"
+						colni
 						"inverter used:"
 						method
 						if (colni == 0) {
@@ -2630,6 +2626,7 @@ mata:
 						else {
 							UsedCols[i,colni] = J(1,cols(colni),1)
 						}
+						rank[i,.] = ranki
 						
 						//for covariance
 						if (fast == 0) {
@@ -2648,8 +2645,7 @@ mata:
 							else {
 								XX_cov = blockdiag(XX_cov,m_xtdcce_inverter(tmp_xx,useqr)*s2ii)
 							}
-						}
-						
+						}						
 					} 
 					/// now build X matrix for later use. needed if mixed model and for residual calculation
 					
@@ -2670,6 +2666,7 @@ mata:
 					i++
 				}
 				"cross specific done"
+				UsedCols
 				if (pooled_d == 1) {
 					"pooled included, mixed"
 					X = (X, st_data(.,pooled,touse))
@@ -2689,15 +2686,27 @@ mata:
 					if (num_Kmg > 0) {
 						"col check of omitted vars, if 0 problem"
 						num_Kmg*N <= cols(UsedCols)
-						if (num_Kmg*N <= cols(UsedCols)) {
+						num_Kmg*N , cols(UsedCols)
+						//// problem: used cols too small!
+						/// does not work? why
+						if (num_Kmg*N > cols(UsedCols)) {
 							"adjust UsedCols for mixed model"
-							UsedMG = UsedCols[1..num_Kmg*N]
+							/// dirty solution
+							UsedMG = J(1,N*num_Kmg,0)
+							UsedPooled = J(N,num_Kp,0)
+
+							UsedMGi = UsedCols[selectindex(UsedCols:<=N*num_Kmg)]							
+							UsedMG[1,UsedMGi] = J(1,cols(UsedMGi),1)					
+							UsedMG = rowshape(UsedMG,N)							
+											
+							UsedPooledi = UsedCols[selectindex(UsedCols:>N*num_Kmg)]:-N*num_Kmg
+							UsedPooled[.,UsedPooledi] = J(N,cols(UsedPooledi),1) 
 							
-							UsedPooled = UsedCols[num_Kmg*N+1..cols(UsedCols)]
-							UsedCols = (rowshape(UsedMG,N),J(N,1,UsedPooled))
+							UsedCols = UsedMG, UsedPooled
 						}
 					}
-					
+					"used cols"
+					UsedCols
 					outputnames = (outputnames , pooled)	
 					//for covariance
 					if (fast == 0) {
