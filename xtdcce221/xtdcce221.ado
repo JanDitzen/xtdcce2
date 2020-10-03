@@ -1,6 +1,6 @@
-*! xtdcce2 2.1 - 13.07.2019
+*! xtdcce2 2.21 - xx.xx.2020
 *! author Jan Ditzen
-*! www.jan.ditzen.net - j.ditzen@hw.ac.uk
+*! www.jan.ditzen.net - jan.ditzen@unibz.it
 *! see viewsource xtdcce2.ado for more info.
 /*
 Packages Required:
@@ -133,6 +133,7 @@ fixed. was before assuming same s2 for all csu
 08.07.2020 - bug with if/in and new CSA syntax corrected
 24.07.2020 - moved option showomitted to estat.
 		   - added cluster csa and global csa.
+03.10.2020 - if option jackknife used, check added if both halfs have the same number of cross-sectional units.
 */
 
 program define xtdcce221 , eclass sortpreserve
@@ -1091,6 +1092,29 @@ program define xtdcce221 , eclass sortpreserve
 				gen `jack_indicator_a' = `touse' * (`tvar' <= `jack_T')
 				gen `jack_indicator_b' = `touse' * (`tvar' > `jack_T')
 				
+				*** check if each id in both panels occurs
+				tempname jackcheck_a  jackcheck_b jackcheck_total
+				mata `jackcheck_a' = uniqrows(st_data(.,"`d_idvar'","`jack_indicator_a'"))
+				mata `jackcheck_b' = uniqrows(st_data(.,"`d_idvar'","`jack_indicator_b'"))
+				mata `jackcheck_total' = uniqrows(st_data(.,"`d_idvar'","`touse'"))
+				
+				mata st_local("jackcheck",strofreal((`jackcheck_a'==`jackcheck_b'==`jackcheck_total')))
+				if `jackcheck' == 0 {
+					mata st_local("N1",strofreal(rows(`jackcheck_a')))
+					mata st_local("N2",strofreal(rows(`jackcheck_b')))
+					mata st_local("N3",strofreal(rows(`jackcheck_total')))
+					
+					mata st_local("jackcheck_a_list",invtokens(strofreal(`jackcheck_a'')))
+					mata st_local("jackcheck_b_list",invtokens(strofreal(`jackcheck_b'')))
+					mata st_local("jackcheck_t_list",invtokens(strofreal(`jackcheck_total'')))
+					
+					local missing_jack_a : list jackcheck_t_list - jackcheck_a_list
+					local missing_jack_b : list jackcheck_t_list - jackcheck_b_list
+					local missing_jack : list missing_jack_a | missing_jack_b
+					
+					xtdcce_err 451 `d_idvar' `d_tvar', msg("One or more cross-sectional units have no observations in one of the half panels. Missing panels are: `missing_jack'") msg2("Number of ross-sectional units are: `N3' (total), `N1' (first half), `N2' (second half), half point: `jack_T'.")
+				}
+			
 				mata `mata_varlist' = (`mata_varlist', J(rows(`mata_varlist'),1,""))
 				
 				foreach var in `lhs' `pooled' `rhs' `exogenous_vars' `endogenous_vars' `endo_pooled' `exo_pooled' {
@@ -2788,9 +2812,11 @@ mata:
 			"in jack"
 			b_b = xtdcce_m_reg(variabaljack,jack_indic_b,id_var,ccep_jack,"","",0,"e","eb","cov","sd","t","st","jack2",mata_var_names,1,input_exo_j,blockdiaguse,useqr)
 			"outputs"
-			"first two units"
-			b_a[(1..2*(cols(tokens(variabaljack))-1))],b_b[(1..2*(cols(tokens(variabaljack))-1))],b_output[(1..2*(cols(tokens(variabaljack))-1))]	
-			///,b_b,b_output
+			"first half"
+			b_a
+			"second half"
+			b_b
+			"adjust for jack"
 			b_output = 2:*b_output :- 0.5:*(b_a :+ b_b)
 			"jack done"
 		}
