@@ -1098,7 +1098,8 @@ program define xtdcce221 , eclass sortpreserve
 				mata `jackcheck_b' = uniqrows(st_data(.,"`d_idvar'","`jack_indicator_b'"))
 				mata `jackcheck_total' = uniqrows(st_data(.,"`d_idvar'","`touse'"))
 				
-				mata st_local("jackcheck",strofreal((`jackcheck_a'==`jackcheck_b'==`jackcheck_total')))
+				mata st_local("jackcheck",strofreal(((`jackcheck_a'==`jackcheck_total') & (`jackcheck_b'==`jackcheck_total'))))
+				
 				if `jackcheck' == 0 {
 					mata st_local("N1",strofreal(rows(`jackcheck_a')))
 					mata st_local("N2",strofreal(rows(`jackcheck_b')))
@@ -1112,7 +1113,7 @@ program define xtdcce221 , eclass sortpreserve
 					local missing_jack_b : list jackcheck_t_list - jackcheck_b_list
 					local missing_jack : list missing_jack_a | missing_jack_b
 					
-					xtdcce_err 451 `d_idvar' `d_tvar', msg("One or more cross-sectional units have no observations in one of the half panels. Missing panels are: `missing_jack'") msg2("Number of ross-sectional units are: `N3' (total), `N1' (first half), `N2' (second half), half point: `jack_T'.")
+					xtdcce_err 451 `d_idvar' `d_tvar', msg("One or more cross-sectional units have no observations in one of the half panels. Missing panels are: `missing_jack'") msg2("Number of cross-sectional units are: `N3' (total), `N1' (first half), `N2' (second half), half point: `jack_T'.")
 				}
 			
 				mata `mata_varlist' = (`mata_varlist', J(rows(`mata_varlist'),1,""))
