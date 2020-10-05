@@ -1,6 +1,6 @@
 {smcl}
 {hline}
-{hi:help xtdcce2}{right: v. 2.1 - xx. October 2019}
+{hi:help xtdcce2}{right: v. 2.21 - xx. October 2020}
 {right:SJ18-3: st0536}
 {hline}
 {title:Title}
@@ -915,8 +915,8 @@ Journal of Applied Econometrics: 1-6.{p_end}
 
 {marker about}{title:Author}
 
-{p 4}Jan Ditzen (Heriot-Watt University){p_end}
-{p 4}Email: {browse "mailto:j.ditzen@hw.ac.uk":j.ditzen@hw.ac.uk}{p_end}
+{p 4}Jan Ditzen (Free University of Bozen-Bolzano){p_end}
+{p 4}Email: {browse "mailto:jan.ditzen@unibz.it":jan.ditzen@unibz.it}{p_end}
 {p 4}Web: {browse "www.jan.ditzen.net":www.jan.ditzen.net}{p_end}
 
 {p 4 8}I am grateful to Arnab Bhattacharjee, David M. Drukker, Markus Eberhardt, Tullio Gregori, Erich Gundlach, 

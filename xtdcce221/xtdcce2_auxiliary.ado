@@ -492,10 +492,11 @@ program define xtdcce2_csa, rclass
 			}
 			local ii `=strtoname("`var'")'
 			tempvar `ii'
-			*** slow by `tvar' `clusteri' (`idvar'), sort: egen ``ii'' = mean(`var') if `touse'				
-			
-			by `tvar' `clusteri' `touse' (`idvar'), sort: gen ``ii'' = sum(`var') if `touse'			
-			by `tvar' `clusteri' `touse'  (`idvar'), sort: replace ``ii'' = ``ii''[_N] / _N
+		
+			*by `tvar' `clusteri' `touse' (`idvar'), sort: gen ``ii'' = sum(`var') if `touse'			
+			*by `tvar' `clusteri' `touse'  (`idvar'), sort: replace ``ii'' = ``ii''[_N] / _N
+			*** keep slow version :/, is using _N, then if statement does not work
+			by `tvar' `clusteri' (`idvar'), sort: egen ``ii'' = mean(`var') if `touse'				
 			
 			*** replace CSA with . if touse == 0 to make sure it is missing
 			replace ``ii'' = . if `touse' == 0
