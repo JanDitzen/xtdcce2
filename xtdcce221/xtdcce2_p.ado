@@ -221,6 +221,7 @@ program define xtdcce2_p_int
 			*local cr_options "`e(cr_options)'"		
 			local lr_vars "`e(lr)'"	
 			
+			local mg_vars: list mg_vars - pooled_vars
 			
 			** check if constant in lr_vars
 			local cons_lr = strmatch("`lr_vars'","*_cons*")

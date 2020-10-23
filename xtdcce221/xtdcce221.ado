@@ -596,7 +596,7 @@ program define xtdcce221 , eclass sortpreserve
 				fvunab all_vars : `all_vars'
 				local all_vars : list uniq all_vars
 				local n_vars : list sizeof all_vars
-				
+
 				tempname mata_varlist
 				local mata_drop `mata_drop' `mata_varlist'
 				mata `mata_varlist' = (J(1,1,tokens("`all_vars'")') , J(`n_vars',11,"0"))	
@@ -1579,7 +1579,7 @@ program define xtdcce221 , eclass sortpreserve
 			`tracenoi' mata xtdcce_m_meangroup("`eb_asisi'","`eb_mgi'","`eb_pi'","`rhs' `endogenous_vars'  `lr_vars_mg'","`pooled' `endo_pooled' `lr_vars_pooled'","","`idvar'","`touse'","`b_mg'","`cov'","`sd'","`t'","`lr_vars_pooled'",`mata_varlist',`pooledvce',"`residuals'",`useqr' )
 			**read varlists back
 			local i = 3
-			foreach list in lhs rhs pooled crosssectional exogenous_vars endogenous_vars lr_1 lr_rest  {
+			foreach list in lhs rhs pooled crosssectional exogenous_vars endogenous_vars lr_1 lr_rest    {
 				mata st_local("`list'",invtokens(`mata_varlist'[xtdcce_selectindex(`mata_varlist'[.,`i']:=="1"),1]'))
 				local i = `i' + 1
 			}
@@ -1773,8 +1773,8 @@ program define xtdcce221 , eclass sortpreserve
 		ereturn post b V , obs(`N') esample(`touse') depname(`lhs') 
 		
 		if `IV' == 1 {
-			ereturn local insts "`exogenous_vars' `exo_pooled'"
-			ereturn local instd "`endogenous_vars' `endo_pooled'"
+			ereturn local insts "`exogenous_vars'"
+			ereturn local instd "`endogenous_vars' "
 			*ereturn local enogenous_vars `endogenous_vars'
 			*ereturn local exogenous_vars `exogenous_vars'
 			
@@ -1864,7 +1864,7 @@ program define xtdcce221 , eclass sortpreserve
 			*ereturn local version = `xtdcce2_version'
 			
 			if "`pooled'`endo_pooled'" != "" {
-				ereturn local pooled "`pooled' `endo_pooled'"
+				ereturn local pooled "`pooled' "
 				ereturn scalar K_pooled = `num_pooled'
 			}
 			if "`lr'" != "" {
@@ -1882,10 +1882,12 @@ program define xtdcce221 , eclass sortpreserve
 				ereturn matrix alpha = `alphaM', copy
 				ereturn matrix alphaSE = `alphaSEM', copy
 			}
+			local p_pooled_vars : list pooled - exogenous_vars
+			local rhs: list rhs - exogenous_vars
 			
 			**Hidden returns for estat and predict
 			ereturn hidden local p_mg_vars "`rhs' `endogenous_vars'"
-			ereturn hidden local p_pooled_vars "`pooled' `endo_pooled'"
+			ereturn hidden local p_pooled_vars "`p_pooled_vars' "
 			ereturn hidden local p_cr_vars "`crosssectional'"
 			ereturn hidden local p_lr_1 "`lr_1'"
 			ereturn hidden local p_lr_vars_mg "`lr_vars_mg'"
@@ -2095,8 +2097,9 @@ program define xtdcce221 , eclass sortpreserve
 	}
 	else {
 		local rhs_vars `endogenous_vars' `rhs' 
-		local pooled_vars `pooled' `endo_pooled' 
-
+		local pooled_vars `pooled'
+		local pooled_vars : list pooled_vars - exogenous_vars
+		local rhs_vars: list rhs_vars - pooled_vars
 		local lr_p1: list lr_1 & pooled_vars
 		local lr_mg1: list lr_1  - lr_p1
 		
@@ -2109,7 +2112,6 @@ program define xtdcce221 , eclass sortpreserve
 		di as text "{hline `col_i'}{c +}{hline `=`maxline'-`col_i''}"
 		local sr_text "  "
 	}
-	
 	
 	if "`pooled_vars'`lr_p1'" != "" { 
 		di as text _col(2) "`sr_text'Pooled: " _col(`col_i') " {c |}"
@@ -2217,7 +2219,8 @@ program define xtdcce221 , eclass sortpreserve
 	
 	
 	if wordcount("`pooled'") > 0 | wordcount("`lr_pooled'") > 0 {
-		di as text  "Pooled Variables: `endo_pooled' `pooled'"
+		*di as text  "Pooled Variables: `endo_pooled' `pooled'"
+		di as text  "Pooled Variables: `pooled'"
 	}
 	if strtrim("`rhs'") != "" | strtrim("`lr_rest'") != "" {
 		di as text  "Mean Group Variables: `rhs'"
@@ -2312,8 +2315,10 @@ program define xtdcce221 , eclass sortpreserve
 		}
 	}
 	if `IV' == 1 {
-		display  as text "Endogenous Variables: `endo_pooled' `endogenous_vars'"
-		display  as text "Exogenous Variables: `exo_pooled' `exogenous_vars'"
+		*display  as text "Endogenous Variables: `endo_pooled' `endogenous_vars'"
+		*display  as text "Exogenous Variables: `exo_pooled' `exogenous_vars'"
+		display  as text "Endogenous Variables:  `endogenous_vars'"
+		display  as text "Exogenous Variables:  `exogenous_vars'"
 	}
 	
 	if strtrim("`omitted_var'") != "" {
@@ -3127,7 +3132,6 @@ mata:
 		if (ind_pooled != -1) {
 			"in pooled"
 			///construct R and PSI for Cov	
-			args()
 			if (args()  >12) {
 				exclude_p_vars
 				
@@ -3254,8 +3258,9 @@ mata:
 					j = 1
 					while (j <= p) {
 						tmp_xep =  tmp_xe[j+1..Ti,.]
-						tmp_xepJ = tmp_xe[1..Ti-j,.]						
-						tmp_tmp = tmp_xep' * tmp_xepJ :/ Ti		
+						tmp_xepJ = tmp_xe[1..Ti-j,.]	
+						/// error in gauss, T*N?
+						tmp_tmp = tmp_xep' * tmp_xepJ :/ (Ti)	
 						sij = sij :+  (1- j/(p+1)) :* (tmp_tmp + tmp_tmp')						
 						j++
 					}
