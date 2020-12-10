@@ -787,7 +787,7 @@ mata:
 					b_i = b_i , -omega_lag
 				}
 				else {
-					omega_x = quadrowsum(b_i[.,index]):/(-omega_lag)
+					omega_x = quadrowsum(b_i[.,index]):/(omega_lag)
 					b_i = b_i, omega_x
 				}
 				
