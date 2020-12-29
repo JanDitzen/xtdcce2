@@ -956,7 +956,7 @@ program define xtdcce221 , eclass sortpreserve
 					
 						local num_partialled_out = `num_crosssectional' + `N_g' * (`=`constant_type'==1')
 						local K_total = `num_K' + `num_partialled_out'
-						noi disp "New dimension are: N_g=`N_g', T=``N'/`N_g'' with `K_total' number of regressors."
+						*noi disp "New dimension are: N_g=`N_g',  T=`=`N'/`N_g'' with `K_total' regressors."
 					}
 					mata mata drop `PanelMatrix'
 				}
@@ -1694,7 +1694,9 @@ program define xtdcce221 , eclass sortpreserve
 						local col_eq `col_eq' `tmp'
 					}
 					matrix coleq `mat' = `col_eq'
-					matrix roweq `mat' = `row_eq'	
+					matrix roweq `mat' = `row_eq'
+
+					*local lr_1 "ec"	
 				}				
 			}
 	
@@ -2096,6 +2098,11 @@ program define xtdcce221 , eclass sortpreserve
 		local rhs_vars: list uniq rhs_vars
 	}
 	else {
+
+		if strmatch("`lr_options'","*xtpmg*") == 1 {
+			local lr_1 "ec"
+		}
+
 		local rhs_vars `endogenous_vars' `rhs' 
 		local pooled_vars `pooled'
 		local pooled_vars : list pooled_vars - exogenous_vars
@@ -2113,17 +2120,17 @@ program define xtdcce221 , eclass sortpreserve
 		local sr_text "  "
 	}
 	
-	if "`pooled_vars'`lr_p1'" != "" { 
+	if "`pooled_vars'" != "" { 
 		di as text _col(2) "`sr_text'Pooled: " _col(`col_i') " {c |}"
 		foreach var in `lr_p1' `pooled_vars' {
 			xtdcce_output_table `var' `col_i' `b_mg' `sd' `t' cv `var'
 		}
 	}	
 	
-	if "`rhs_vars'`lr_mg1'" != ""   {
+	if "`rhs_vars'" != ""   {
 		di _col(2) as text "`sr_text'Mean Group:"  _col(`col_i')  " {c |}"
 		local lrcount = wordcount("`rhs_vars'")
-		foreach var in `lr_mg1' `rhs_vars' {
+		foreach var in `rhs_vars' {
 			if "`full'" != "" {
 				di "" _col(`col_i') " {c |}"
 			}
@@ -2172,18 +2179,34 @@ program define xtdcce221 , eclass sortpreserve
 		}		
 		else if `ardl_indic' == 0 {
 			local lr_pooled : list lr & pooled
-			local lr_rest : list lr - lr_pooled					
+			local lr_rest : list lr - lr_pooled		
+
+			di as text "{hline `col_i'}{c +}{hline `=`maxline'-`col_i''}"	
+			di as text _col(2) "Adjust. Term" _col(`col_i') " {c |}"
+			di as text "{hline `col_i'}{c +}{hline `=`maxline'-`col_i''}"			
+						
+			if "`lr_p1'" != "" di as text _col(2) "`sr_text'Pooled: " _col(`col_i') " {c |}"
+			if "`lr_mg1'" != "" di as text _col(2) "`sr_text'Mean Group:" _col(`col_i') " {c |}"
+
+			xtdcce_output_table `lr_p1'`lr_mg1' `col_i' `b_mg' `sd' `t' cv `lr_p1'`lr_mg1' 
+
+
 		}
 		
 		ereturn hidden local lr_pooled "`lr_pooled'"
 		ereturn hidden local lr_mg "`lr_rest'"
 		
-		*** remove lr_1
+		*** remove lr_1 if ecm
 		if `ardl_indic' == 0 {
 			local lr_pooled: list lr_pooled - lr_1
 			local lr_rest: list lr_rest - lr_1
 		}		
-		
+		if `ardl_indic' == 1 {
+			local lr_pooled: list lr_pooled - lr_1_ardl
+			local lr_rest: list lr_rest - lr_1_ardl
+		}
+
+
 		if "`rhs_vars'" != "" {
 			di as text "{hline `col_i'}{c +}{hline `=`maxline'-`col_i''}"
 		}
@@ -2849,6 +2872,7 @@ mata:
 				"dimension X"				
 				(rows(X),cols(X))
 				sum(X)
+				sum(Y)
 				"dimension b_output"
 				(rows(b_output),cols(b_output))
 				sum(b_output)
@@ -2870,6 +2894,8 @@ mata:
 				///(Y, Y_hat, e_output)
 				/// variance/covariance matrix and stats for entire sample	
 				SSE = e_output' * e_output
+				"SSE is"
+				SSE
 				dfr = N - K
 				s2 = SSE / dfr
 				SST = sum((Y :- mean(Y)):^2)
@@ -3234,6 +3260,7 @@ mata:
 				"NW estimator for pooled coefficients"
 				/// Eq 50 - 52 from Pesaran 2006, with p = round(4 * (Ti/100)^(2/9)), see Gauss code
 				e = st_data(.,residuals_name,touse)
+				
 				Sigma = J(cols(X),cols(X),0)
 				Shat = J(cols(X),cols(X),0)
 				
@@ -3274,7 +3301,9 @@ mata:
 				}
 				sigma1 = m_xtdcce_inverter(Sigma,useqr)
 				//// Eq. 74 
-				cov_p = 1/Ti *  sigma1 * Shat * sigma1
+				cov_p = 1/Ti *   sigma1 * Shat * sigma1
+				"ee here"
+				e'e
 			}
 			"covariance for pooled done"
 			cov_p
