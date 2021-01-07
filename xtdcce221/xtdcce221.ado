@@ -579,10 +579,11 @@ program define xtdcce221 , eclass sortpreserve
 					noi disp ""
 				}
 				
-				*** make sure all var lists contain unique elements
+				*** make sure all var lists contain unique elements; ts and fvunabbrev here
 				gettoken lr_1 lr_rest : lr , match(paren)
 				foreach varl in rhs exogenous_vars endogenous_vars crosssectional pooled lr_1 lr_rest {
-					local `varl' : list uniq `varl'
+					fvunab `varl' : ``varl'', min(0)
+					local `varl' : list uniq `varl'					
 				}
 				**get lr without paren:
 				local rest `lr'
