@@ -3,6 +3,7 @@ d Jan Ditzen, Heriot-Watt University, j.ditzen@hw.ac.uk, jan.ditzen.net
 d xtdcce2 estimates heterogeneous coefficient models using common correlated effects in a dynamic panel.
 d xtcse2 estimates exponent of cross-sectional dependence.
 d xtcd2 testing for weak cross-sectional dependence.
+d xtset2 
 
 p xtdcce2 xtdcce2 version 2.0
 p xtcse2 xtcse2 version 1.01
