@@ -1,6 +1,6 @@
 {smcl}
 {hline}
-{hi:help xtcse2}{right: v. 1.02 - xx. July 2019}
+{hi:help xtcse2}{right: v. 1.02 - 11. January 2021}
 {hline}
 {title:Title}
 
@@ -11,12 +11,14 @@
 {p 4 13}{cmd:xtcse2} [{varlist}] [if] [{cmd:,}
 {cmd:pca(integer)}
 {cmdab:stand:ardize}
+{cmd:nocenter}
 {cmd:nocd}
 {cmdab:RES:sidual}
 {cmdab:R:eps(integer)}
 {cmd:size(real)}
 {cmd:tuning(real)}
 {cmd:lags(integer)}
+{cmd:noadjust}
 ]
 
 {p 4 4}Data has to be {cmd:xtset} before using {cmd:xtcse2}; see {help tsset}.
@@ -60,7 +62,7 @@ For a discussion of {cmd:xtdcce2} and {cmd:xtcd2} see Ditzen (2018,2019).{p_end}
 
 {p 4 4}If the panel is unbalanced or observations are missing for a specific cross-section 
 unit-time combination, then the sample is restricted to the union of all time periods across
-cross-sectional units. 
+cross-sectional units using {help xtbalance2}.
 For unbalanced panels with many missings or a variable with many missings, many
 observations might be lost.{p_end}
 
@@ -69,7 +71,9 @@ observations might be lost.{p_end}
 {p 4 8}{cmd:pca(integer)} sets the number of principle components for the 
 calculation of {it:cn}. Default is to use the first 4 components.{p_end}
 
-{p 4 8}{cmdab:stand:ardize} do not standardizes variables.{p_end}
+{p 4 8}{cmdab:stand:ardize} standardizes variables.{p_end}
+
+{p 4 8}{cmd:nocenter} do not center variables.{p_end} 
 
 {p 4 8}{cmd:nocd} suppresses test for cross-sectional dependence using {help xtcd2}.{p_end}
 
@@ -86,6 +90,10 @@ standard error and confidence interval for exponent in residuals. Default is 0.{
 
 {p 4 8}{cmd:lags(integer)} number of lags (or training period) for calculation of 
 recursive residuals when estimating the exponent after a regression with weakly exogenous regressors.{p_end}
+
+{p 4 8}{cmd:noadjust} use unabalanced panel for CD test. 
+If {cmd:xtcse2} detects an unbalanced panel, it tries to create a balanced subsample using {help xtbalance2}.
+If {cmd:noadjust} is not used, the CD test will be applied to the balanced subsample.{p_end}
 
 {marker model}{title:Econometric Model and Estimation of the Exponent}
 
@@ -292,8 +300,8 @@ Econometric Reviews 34(6-10):1089–1117.{p_end}
 
 {marker about}{title:Author}
 
-{p 4}Jan Ditzen (Heriot-Watt University){p_end}
-{p 4}Email: {browse "mailto:j.ditzen@hw.ac.uk":j.ditzen@hw.ac.uk}{p_end}
+{p 4}Jan Ditzen (Free University of Bozen-Bolzano){p_end}
+{p 4}Email: {browse "mailto:jan.ditzen@unibz.it":jan.ditzen@unibz.it}{p_end}
 {p 4}Web: {browse "www.jan.ditzen.net":www.jan.ditzen.net}{p_end}
 
 {p 4 8}I am grateful to Sean Holly for the suggestion to implement the test 
@@ -319,7 +327,11 @@ Ditzen, J. 2019. xtcse2: Estimating Exponent of Cross-Sectional Dependence in la
 .{p_end}
 
 {marker ChangLog}{title:Changelog}
-{p 4 8}This version: 1.0 - 13. July 2019{p_end}
+{p 4 8}This version: 1.2 - 11. January 2021{p_end}
+{p 8 8}- added support for residuals{p_end}
+{p 8 8}- bug fixed{p_end}
+{p 8 8}- added option {cmd:nocenter}{p_end}
+{p 8 8}- added xtbalance2 to balance paneldataset{p_end}
 
 {title:Also see}
-{p 4 4}See also: {help xtdcce2}, {help xtcd2}{p_end} 
+{p 4 4}See also: {help xtdcce2}, {help xtcd2}, {help xtbalance2}{p_end} 

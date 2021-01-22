@@ -16,6 +16,7 @@ Oct   2018 - changed xtdcce2133 to xtdcce2 in line 37
 		   - if ("`cr_vars'" != "" & ("`xb'" == "" | "`xb2'" == "") )  was missing xb2. Thanks to Gergio Tullio for the pointer.
 02.03.2020 - when xtpmg names used, error occured with PutCoeff mata program
 04.03.2020 - fixed error when rec used.  Thanks to Gergio Tullio for the pointer.
+22.01.2021 - fixed error when fullsample and if used; Thanks to Gergio Tullio for the pointer.
 */
 *capture program drop xtdcce2_p
 program define xtdcce2_p
@@ -115,10 +116,11 @@ program define xtdcce2_p_int
 				
 				if regexm("`3'","fullsample") == 1 {
 					if "`e(p_if)'" != "" {
-						replace `smplcr' = `smpl'  * (`e(p_if)') 
+						*** use here only if condition!
+						replace `smplcr' =  (`e(p_if)') 
 					}
 					else {
-						replace `smplcr' = `smpl' 
+						*replace `smplcr' = `smpl' 
 					}
 				}
 					
@@ -144,7 +146,7 @@ program define xtdcce2_p_int
 				}
 				if "`e(ccsa)'" != "" {
 					tempname ccsa
-					xtdcce2_csa `e(ccsa)' , idvar(`idvar') tvar(`tvar') cr_lags(`e(ccr_lags)') touse(`smplcr') csa(`ccsa') cluster(`e(ccsa_cluster)') 
+					xtdcce2_csa `e(ccsa)' , idvar(`idvar') tvar(`tvar') cr_lags(`e(ccr_lags)') touse(`smplcr') csa(`ccsa') cluster(`e(ccsa_cluster)')  
 					local ccsa `r(varlist)'
 				}
 				
@@ -429,12 +431,20 @@ program define xtdcce2_p_int
 			if ("`cr_vars'" != "" & ("`xb'" == "" | "`xb2'" == "") ) | `constant_type' == 1 | "`e(insts)'" != ""  {
 				
 				tempvar smplcr
-				gen `smplcr' = `smpl'
+				*replace `smpl' = e(sample)
+				noi disp "`e(p_if)'"
+				gen `smplcr' = 1
 				tokenize "`e(cmdline)'", p(",")
 				if regexm("`3'","fullsample") == 1 {
-					replace `smplcr' = `touse'
+					if "`e(p_if)'" != "" {
+						*** use here only if condition!
+						replace `smplcr' = (`e(p_if)') 
+					}
+					else {
+						*replace `smplcr' = `smpl' 
+					}
 				}
-				
+
 				if "`e(csa)'" != "" {
 					
 					tempname csa
@@ -445,13 +455,13 @@ program define xtdcce2_p_int
 					tempname gcsa
 					tempname touseglobal
 					gen `touseglobal' = 1
-					xtdcce2_csa `e(gcsa)' , idvar(`idvar') tvar(`tvar') cr_lags(`e(gcr_lags)') touse(`touseglobal') csa(`gcsa') tousets(`smpl')
+					xtdcce2_csa `e(gcsa)' , idvar(`idvar') tvar(`tvar') cr_lags(`e(gcr_lags)') touse(`touseglobal') csa(`gcsa') 
 					local gcsa `r(varlist)'
 					drop `touseglobal'
 				}
 				if "`e(ccsa)'" != "" {
 					tempname ccsa
-					xtdcce2_csa `e(ccsa)' , idvar(`idvar') tvar(`tvar') cr_lags(`e(ccr_lags)') touse(`smplcr') csa(`ccsa') cluster(`e(ccsa_cluster)') tousets(`smpl')
+					xtdcce2_csa `e(ccsa)' , idvar(`idvar') tvar(`tvar') cr_lags(`e(ccr_lags)') touse(`smplcr') csa(`ccsa') cluster(`e(ccsa_cluster)')  
 					local ccsa `r(varlist)'
 				}
 				drop `smplcr' 

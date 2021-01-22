@@ -1,6 +1,6 @@
-*! xtcse2, version 1.02, xxxx 2019
+*! xtcse2, version 1.02, Jan 2021
 *! author Jan Ditzen
-*! www.jan.ditzen.net - j.ditzen@hw.ac.uk
+*! www.jan.ditzen.net - jan.ditzen@unibz.it
 /*
 Changelog
 **********1.01*****************************
@@ -8,11 +8,11 @@ Changelog
 **********1.02 - xx.0x.2019
 - added support for residuals (BKP 2019)
 - bug fixes
+- added option no center
+- added xtbalance2 to balance paneldataset. automatically balances with respect to N.
 */
-
 program define xtcse2, rclass
-
-	syntax [varlist(default=none ts)] [if], [pca(integer 4) STANDardize nocd inprog size(real 0.1) tuning(real 0.5) Reps(integer 0) RESidual lags(integer 0) ]
+	syntax [varlist(default=none ts)] [if], [pca(integer 4) STANDardize nocd inprog size(real 0.1) tuning(real 0.5) Reps(integer 0) RESidual lags(integer 0) NOCENTER NOADJUST ]
 	version 14
 	
 	tempname xtdcceest xtdcceesttouse
@@ -44,12 +44,7 @@ program define xtcse2, rclass
 		
 		*** Get info
 		local unbal = 0
-		qui xtset
-		if "`r(balanced)'" != "strongly balanced" & "`residual" == "" {
-				noi disp "Observations will be restricted to union of time periods across cross sectional units."
-				noi disp "Number of observations can become very small."
-				noi disp ""
-		}
+		qui xtset		
 		local idvar "`r(panelvar)'"
 		local tvar "`r(timevar)'"
 		tempvar tmpid tmpt
@@ -60,52 +55,51 @@ program define xtcse2, rclass
 		local run = 1
 
 		foreach res in `varl' {
-			tempvar touse
+			tempvar touse tousecd
 			sort `idvar' `tvar'
+
 			gen `touse' = (`res' != . & `touseAll')
-			
+			gen `tousecd' = `touse'
 			egen `tmpid' = group(`idvar') if `touse'
 			egen `tmpt' = group(`tvar') if `touse'
-			
-			** correct minimum
-			qui sum `tmpt' if `touse'
-			replace `tmpt' = `tmpt' - `r(min)' + 1 if `touse'
-			
-			qui sum `tmpid' if `touse'
-			replace `tmpid' = `tmpid' - `r(min)' + 1 if `touse'	
-			
-			** restrict to same sample
+
+
+			xtset2 if `touse' , checkvars(`res')
+
+			if "`r(balanced)'" != "strongly balanced" {
+				cap which xtbalance2
+
+				if _rc != 0 {
+					noi disp as smcl "Please install {help xtbalance2} to balance unbalanced panel."
+					noi disp as smcl `"Install from {net "des xtbalance2, from(https://janditzen.github.io/xtbalance2/)":github} or {stata ssc install xtbalance2:SSC}"'
+					error 199
+				}
+
+				tempname touse2
+				xtbalance2 `res' , gen(`touse2')
+				replace `touse' = `touse2'
+				drop `touse2' `tmpid' `tmpt'
+
+				** correct minimum
+				egen `tmpid' = group(`idvar') if `touse'
+				egen `tmpt' = group(`tvar') if `touse'
+				local isbalanced `isbalanced' `res'
+
+				if "`noadjust'" == "" {
+					replace `tousecd' = `touse'
+				}
+			}
+
 			if "`residual'" == "" {
-				tempname NumCross NumCrossIndic
-				by `tmpt', sort: egen `NumCross' = total(1) if `touse'
-				qui sum `tmpid' if `touse'
-				gen `NumCrossIndic' = (`r(max)'==`NumCross') 
-				
-				qui sum `NumCrossIndic' if `touse'
-				local NCI = r(sum)
-				qui sum `touse' if `touse'
-				local TI = r(sum)
-				
-				replace `touse' = `NumCrossIndic' 
-				
-				if `TI' != `NCI'{
-					local vartmp = word("`varn'",`run')
-					noi disp "Number of observations for variable `vartmp' adjusted from `TI' to `NCI' due to unbalanced panel or variable."
-					drop `tmpid' `tmpt'
-					egen `tmpid' = group(`idvar') if `touse'
-					egen `tmpt' = group(`tvar') if `touse' 
-					
-					** correct minimum
-					qui sum `tmpt' if `touse'
-					replace `tmpt' = `tmpt' - `r(min)' + 1 if `touse'
-				
-					qui sum `tmpid' if `touse'
-					replace `tmpid' = `tmpid' - `r(min)' + 1 if `touse'	
-					
-				}			
-				
-				drop `NumCrossIndic'  `NumCross'			
 			
+				*** Center variables so mean is zero
+				if "`nocenter'" == "" {
+					tempvar meantmp 
+					by `tmpid', sort: egen `meantmp' = mean(`res') if `touse'
+					replace `res' = (`res' - `meantmp')  if `touse'
+					drop `meantmp' 
+				}
+				
 				*** standardize						
 				if "`standardize'" != "" {
 					tempvar meantmp sdtmp
@@ -114,6 +108,7 @@ program define xtcse2, rclass
 					replace `res' = (`res' - `meantmp') / `sdtmp' if `touse'
 					drop `meantmp' `sdtmp'
 				}
+				
 				sort `idvar' `tvar'
 				
 				tempname xx PC 
@@ -151,7 +146,7 @@ program define xtcse2, rclass
 				
 				mata `eitm' = `xx' - `PC'*m_xtdcce_inverter(quadcross(`PC',`PC')) * quadcross(`PC',`xx')
 				
-				sum `tmpid'
+				sum `tmpid' if `touse'
 				forvalues i = 1(1)`r(max)' {			
 					*** eit
 					replace `tousei' = (`tmpid' == `i' & `touse')
@@ -181,7 +176,7 @@ program define xtcse2, rclass
 			}
 			*** CD Test
 			if "`cd'" == "" & "`inprog'" == "" {		
-				cap xtcd2 `res' , noest
+				cap xtcd2 `res' if `tousecd', noest
 				if _rc == 199 {
 					noi display as error "xtcd2 not installed" 
 					local cd nocd
@@ -324,7 +319,10 @@ program define xtcse2, rclass
 			di as text "SE and CI not available. Use option reps() to bootstrap SE and CI."
 		}
 	}
-	
+	if "`isbalanced'" != "" & "`noadjust'" != "" {
+		noi disp "Panel balanced for variables: `isbalanced'."
+	}
+
 	if "`cd'" == "" {
 		di ""
 		di as text "Pesaran (2015) test for weak cross-sectional dependence."
@@ -348,6 +346,16 @@ program define xtcse2, rclass
 		di as text "{hline `col_i'}{c BT}{hline `=`maxline'-`col_i'-22'}"
 	}
 	
+	if "`nocenter'" == "" {
+		noi disp "Variables are centered around zero."
+	}
+	else if "`standardize'" != "" {
+		noi disp "Variables are standardized."
+	}
+
+	if "`isbalanced'" != "" & "`noadjust'" == "" {
+		noi disp "Panel balanced for variables: `isbalanced'."
+	}
 	
 	*** Return
 

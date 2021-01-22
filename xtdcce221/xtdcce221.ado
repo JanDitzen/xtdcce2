@@ -134,6 +134,7 @@ fixed. was before assuming same s2 for all csu
 24.07.2020 - moved option showomitted to estat.
 		   - added cluster csa and global csa.
 03.10.2020 - if option jackknife used, check added if both halfs have the same number of cross-sectional units.
+22.01.2021 - if xtdcce2 dropped units, e(bi) names were not correctly adjusted. bug fixed.
 */
 
 program define xtdcce221 , eclass sortpreserve
@@ -279,7 +280,7 @@ program define xtdcce221 , eclass sortpreserve
 		**check if xtset2 is installed
 		capture xtset2, version		
 		if _rc != 0 {
-			xtdcce_err 199 `d_idvar' `d_tvar' , msg("xtset2 not installed.") msg2("To update, from within Stata type ")	msg_smcl(`"{net "describe xtset2 , from(http://www.ditzen.net/Stata/) "}"')
+			xtdcce_err 199 `d_idvar' `d_tvar' , msg("xtset2 not installed.") msg2("To update, from within Stata type ")	msg_smcl(`"{net "describe xtset2 , from(https://janditzen.github.io/xtdcce2/) "}"')
 		}
 		
 		** add auto check: if in lr variables have joint base, but ECM used, change to ARDL
@@ -935,9 +936,7 @@ program define xtdcce221 , eclass sortpreserve
 							xtdcce_err 2001 `d_idvar' `d_tvar' , msg("No observations left.")
 						}
 						
-						**refresh stats
-						drop `idvar'
-						egen `idvar' = group(`d_idvar') if `touse'
+						**refresh stats; no change in idvar necessary
 						xtset2 `idvar' `tvar' if `touse'
 						local N_g = `r(N_g)'
 						local N = `r(N)'

@@ -430,20 +430,25 @@ mata:
 		real scalar ids
 		real scalar output
 		real scalar id
+
 		id = st_data(.,idname,touse)
+		
 		ids = uniqrows(id)
+		
 		CoeffNames = st_matrixcolstripe(MatrixName)[.,2]
 		CoeffOriginal = st_matrix(MatrixName)
 		///CoeffNames
 		output = J(rows(id),cols(tokens(VarName)),.)
 		/// bring Coeff Matrix into NxK order
 		K = cols(tokens(VarName))
-		coeff = J(rows(ids),K,.)		
+		coeff = J(rows(ids),K,.)	
 		c=1
-		while (c<=K) {			
+		while (c<=K) {		
 			namei=tokens(ColNames)[c]
 			namei=namei[1]:+"_":+strofreal(ids)
 			index = xtdcce2_mm_which2(CoeffNames,namei)
+			
+			
 			coeff[.,c] = CoeffOriginal[index]'			
 			c++
 		}
