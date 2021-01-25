@@ -568,6 +568,7 @@ program define xtdcce221 , eclass sortpreserve
 				
 				*markout varlists not defined as varlist in syntax
 				markout `touse' `lhs' `rhs' `exogenous_vars' `endogenous_vars' `crosssectional' `pooled' `lr'
+				
 				xtset2 if `touse'
 				local N_g = `r(N_g)'
 				local N = `r(N)'
@@ -993,9 +994,6 @@ program define xtdcce221 , eclass sortpreserve
 					else {
 					    gen `tousecr' = 1						
 					}
-					*noi disp "`ifinct'"
-					*gen `tousecr' = (`cmd_if') `ifinct'
-					
 				}
 				else {
 					gen `tousecr' = `touse'
@@ -1136,7 +1134,8 @@ program define xtdcce221 , eclass sortpreserve
 	**********************************************************************************************************
 			local rank_cond = 0
 			*only partial out if list with variables to partial out is not empty
-			if "`clist1'" != "" {			
+			if "`clist1'" != "" {
+						
 				tempname mrk
 				local mata_drop `mata_drop' `mrk'
 				
@@ -1903,6 +1902,7 @@ program define xtdcce221 , eclass sortpreserve
 			}
 			ereturn hidden matrix PartialOutStat = `PartialOutStat'
 			ereturn hidden scalar useqr = `useqr'
+			ereturn hidden local UnitsRemoved = "`SummaryToRemove'"
 		
 			if "`cd'" == "" {
 				cap ereturn scalar cd = `cds'

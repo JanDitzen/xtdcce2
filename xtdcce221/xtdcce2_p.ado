@@ -47,7 +47,7 @@ program define xtdcce2_p_int
 	gen byte `smpl' = 1
 
 	if "`e(cmd)'" == "xtdcce2fast" {
-		noi disp "in fast"
+		
 		*if "`xb'`coefficient'"
 		qui{			
 			if ("`e(posttype)'" == "mata" | "`e(posttype)'" == "frame") & "`wildbootstrap'" == "" {
@@ -320,14 +320,13 @@ program define xtdcce2_p_int
 			}		
 			*** Markout here will all variables
 			gen `smpl'2 = `smpl'
-			markout `smpl' `lhs' `mg_vars' `pooled_vars' 
+			markout `smpl' `lhs' `mg_vars' `pooled_vars' `cr_vars' `lr_vars'
 			replace `smpl' = `smpl'* `smpl'2
 			**here add lr_vars
 			local unique_vars `pooled_vars' `mg_vars' `cr_vars' `lhs' `lr_vars'
 			local unique_vars : list uniq unique_vars
 			
 			***check for ts vars. tsrevar creates tempvars, then loop over remaining vars to create tempvars
-		
 			fvrevar `unique_vars' 
 			local no_temp_vars `r(varlist)'
 			local temp_vars : list unique_vars - no_temp_vars
@@ -430,20 +429,36 @@ program define xtdcce2_p_int
 			*create CR Lags
 			if ("`cr_vars'" != "" & ("`xb'" == "" | "`xb2'" == "") ) | `constant_type' == 1 | "`e(insts)'" != ""  {
 				
-				tempvar smplcr
-				*replace `smpl' = e(sample)
-				noi disp "`e(p_if)'"
-				gen `smplcr' = 1
-				tokenize "`e(cmdline)'", p(",")
-				if regexm("`3'","fullsample") == 1 {
-					if "`e(p_if)'" != "" {
-						*** use here only if condition!
-						replace `smplcr' = (`e(p_if)') 
-					}
-					else {
-						*replace `smplcr' = `smpl' 
+				*** Remove removed units
+				if "`e(UnitsRemoved)'" != "" {
+					foreach unit in `e(UnitsRemoved)' {
+						replace `smpl' = 0 if `idvar' == `unit'
 					}
 				}
+
+				tempvar smplcr
+				*replace `smpl' = e(sample)
+				
+				tokenize "`e(cmdline)'", p(",")
+				if regexm("`3'","fullsample") == 1 {
+					if "`e(p_if)'" != "" & "`e(p_in)'" == "" {
+						*** use here only if condition!
+						gen `smplcr' = (`e(p_if)') 
+					}
+					else if "`e(p_if)'" == "" & "`e(p_in)'" != "" {
+						gen `smplcr' = `smpl' in `e(p_in)'
+					}
+					else if "`e(p_if)'" == "" & "`e(p_in)'" != "" {
+						gen `smplcr' = (`e(p_if)')  in `e(p_in)'
+					}
+					else {
+						gen `smplcr' =  1 
+					}
+				}
+				else {
+					gen `smplcr' = `smpl'
+				}
+
 
 				if "`e(csa)'" != "" {
 					
@@ -476,7 +491,7 @@ program define xtdcce2_p_int
 				tempname mrk
 				
 				issorted `idvar' `tvar'	
-			
+				
 				mata xtdcce_m_partialout2("`lhs' `pooled_vars' `mg_vars'","`clist1'","`smpl'","`idvar'",`useqr',`mrk'=.)
 				
 			}
