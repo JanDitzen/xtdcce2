@@ -1,9 +1,9 @@
-*! xtcd2 2.2 Nov2019
+*! xtcd2 2.3 Feb 2021
 *! author Jan Ditzen
 *! see viewsource xtcd2.ado for more info.
 
 /* 
-Jan Ditzen - jd219@hw.ac.uk
+Jan Ditzen - jan.ditzen@unibz.it
 
 xtcd2 performs the CD test as poposed by Chudik and Pesaran (2013). Balanced as well as unbalanced panels are supported.
 xtcd2 is a postestimation command, a sample has to be marked by e(sample) in advance. 
@@ -37,10 +37,11 @@ Changelog:
 	10.06.2019 Uses xtset2 to detect type of panel rather than xtset.
 	25.11.2019 Added heatplot and contour plots for rho
 	25.02.2020 Added ts support
+	08.02.2021 Added Juodis, Reese weighted CD test (cdw), repetions and pea
 	*/
 cap program drop xtcd2
 program define xtcd2, rclass
-	syntax [varlist(default=none ts max=1)] [if] [, KDENsity name(string) rho NOESTimation VERsion contour(string) CONTOURmap order(varlist max=1) heatplot(string) HEATPLOTmap ]
+	syntax [varlist(default=none ts max=1)] [if] [, KDENsity name(string) rho NOESTimation VERsion contour(string) CONTOURmap order(varlist max=1) heatplot(string) HEATPLOTmap cdw reps(integer 1) pea ]
 	
 	version 10
 	
@@ -60,7 +61,7 @@ program define xtcd2, rclass
 	
 	tempvar id_n time_new 
 	
-	display "Pesaran (2015) test for weak cross-sectional dependence."
+	display as text "Pesaran (2015) test for weak cross-sectional dependence."
 	preserve
 		if "`if'" != "" {
 			qui keep `if'
@@ -146,32 +147,76 @@ program define xtcd2, rclass
 		qui putmata `RhoID' = `id' , replace
 		mata `RhoID' = uniqrows(`RhoID')
 		
+		*** if reps > 1, enforce cdw, otherwise test results will be the same for all draws
+		if `reps' > 1 {
+			local cdw cdw
+		}
+
+		mata CD = J(`reps',1,.)
+
+		*** repetitions start here:
+		forvalues r = 1(1)`reps' {
+
+			*** create TxN matrix
+			qui putmata r= `varlist'  , replace
+			*** r has now each cross-section unit as a column
+			mata: r = colshape(r,`T')'
+			
+			*** Juodis, Reese weighted CD test
+			if "`cdw'" != "" {
+				*** draw rademacher weights and multiply with r.
+				tempname weights
+				mata `weights' = 2*runiformint(1,`N',0,1):-1
+				mata r = r:*`weights'
+			}
+			
+			mata: RHO = xtcd2_make_rho(r,`N',`T',`balanced')
+			
+			mata: CDr = sqrt(2/(`N'*(`N'-1)))*sum(RHO) // equation 62 and 69 in Chudik, Pesaran (2013) - note: the sqrt(T) from 62 is missing and moved to calculations above
+			
+			*** correct rho for later use
+			mata: RHO_output = RHO / sqrt(2*`T')
+
+			*** RHO has only elements for i=2,..,N, j=1,..,i-1
+			if "`pea'" != "" {
+				mata rabs = abs(RHO_output)
+				mata CDr = CDr + sum(rabs:*(rabs:> 2*sqrt(log(`N'))/`T'))
+			} 
+			
+			mata CD[`r'] = CDr
+		}	
+
+		if "`cdw'" != "" {
+			if "`pea'" != "" {
+				local with "{break}  with power enhancement approach (Fan et. al. 2015)"
+			}
+			display as text in smcl  "Weighted CD statistic from Juodis, Reese (2019)`with' used."
+		}
+		else if ("`pea'") != "" {
+			display as text in smcl "Power enhancement approach (Fan et. al. 2015) used."
+		}
 		
-		timer clear 99
-		
-		
-		qui putmata r= `varlist'  , replace
-		mata: r = colshape(r,`T')'
-		timer on 99
-		mata: RHO = xtcd2_make_rho(r,`N',`T',`balanced')
-		timer off 99
-		mata: CD = sqrt(2/(`N'*(`N'-1)))*sum(RHO) // equation 62 and 69 in Chudik, Pesaran (2013) - note: the sqrt(T) from 62 is missing and moved to calculations above
-		
-		
-		
+		mata CD = sum(CD)/sqrt(`reps')
+
 		mata: st_numscalar("CD", CD)
 		scalar p_value = 2*(1-normal(abs(CD)))
 		disp ""
-		display "H0: errors are weakly cross-sectional dependent." , 
+		display as text "H0: errors are weakly cross-sectional dependent." , 
 		return scalar p = p_value
 		return scalar CD = CD
-		
-		display _col(9) "CD = " _col(14) in gr %-9.3f CD
+		if "`cdw'" == "" {
+			display _col(9) "CD = " _col(14) in gr %-9.3f CD
+		}
+		else {
+			display _col(8) "CDw = " _col(14) in gr %-9.3f CD
+		}
 		display _col(4) "p-value = " _col(14) in gr %-9.3f p_value
 		
+		if "`reps'" > "1" {
+			display _col(6) "Reps. =" _col(14) in gr %-10.0f `reps'
+		}
 		
-		*** correct rho for later use
-		mata: RHO_output = RHO / sqrt(2*`T')	
+	
 				
 		*** here order program
 		if "`order'" != "" {
@@ -283,7 +328,7 @@ program define xtcd2, rclass
 	}
 	
 	
-	foreach s in r i j sumij sqsumi_2 sqsumj_2 RHO nonmissing T_nonmissing RHO_output CD `RhoID' {
+	foreach s in r i j sumij sqsumi_2 sqsumj_2 RHO nonmissing T_nonmissing RHO_output CD `RhoID' rabs {
 			capture mata mata drop `s'
 		}
 	

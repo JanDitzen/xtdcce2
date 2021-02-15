@@ -944,6 +944,7 @@ xtdcce2 from {stata "net from http://www.ditzen.net/Stata/xtdcce2_beta"}.{p_end}
 {p 8 10} - message for large panels.{p_end}
 {p 8 10} - error in calculation for variances of cross-sectional unit specific coefficients{p_end}
 {p 8 10} - fix predict program: partial now only in-sample and bug fixed when xb2 and reportc was used (thanks to Tullio Gregori for the pointers).{p_end}
+{p 8 10} - added global and local cross-sectional averages{p_end}
 {p 4 8}Version 1.34 to 2.0{p_end}
 {p 8 10} - Bug fix in calculation of minimal T dimension, added option nodimcheck.{p_end}
 {p 8 10} - Speed improvements (thanks to Achim Ahrens for the suggestions).{p_end}

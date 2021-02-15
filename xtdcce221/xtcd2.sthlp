@@ -1,5 +1,7 @@
 {smcl}
-help {hi:xtcd2}
+{hline}
+{hi:help xtcd2}{right: v. 2.3 - Feburary 2021}
+{right:SJ18-3: st0536}
 {hline}
 {title:Title}
 
@@ -7,7 +9,7 @@ help {hi:xtcd2}
 
 {title:Syntax}
 
-{p 4 13}{cmd:xtcd2} [{varname}(max=1)] [if] [{cmd:,}{cmdab:noest:imation} {cmd:rho} {cmdab:kden:sity} {cmd:name({it:string})} 
+{p 4 13}{cmd:xtcd2} [{varname}(max=1)] [if] [{cmd:,}{cmdab:noest:imation} {cmd:rho} {cmd:cdw} {cmd:pea} {cmd:reps(integer)} {cmdab:kden:sity} {cmd:name({it:string})} 
 {cmd:heatplot[(}{cmdab:abs:olute} {it:options_heatplot}{cmd:)] contour[(}{cmdab:abs:olute} {it:options_contour}{cmd:)]}
 ]{p_end}
 
@@ -60,6 +62,27 @@ Under the null hypothesis the statistic is asymptotically{p_end}
 
 {p 4 4}distributed. 
 
+{marker CDw}
+{p 4 8}{cmd:xtcd2} supports two alternatives to test for weak cross-sectional dependence.
+It includes the weighted CD (CDw) test proposed by Juodis and Reese (2019).
+Juodis and Reese (2021) show that the CD test diverges if the time dimension grows and 
+the test is applied to residuals after a CCE or FE regression. The CDw test weights each observation by cross-section specific Rademacher weights. 
+The pair wise correlations are calculated as:{p_end}
+
+{p 8}rho(ij) = sum(t=1,T) w(i)eps(i,t)eps(j,t)w(j){p_end}
+
+{p 4 4}where w(i) and w(j) are the Rademacher weights 
+which take on the values 1 or -1 with equal probability. 
+To reduce the dependence on the random Rademacher weights,
+the draw can be repeated using the {cmd:reps()} option.{p_end} 
+
+{marker pea}
+{p 4 4}A second alterantive proposed by Juodis and Reese (2019) is the 
+Power Enhancement Approach (PEA) by Fan et. al. (2015). 
+The power of the CD test is improved by calcualting the CD test as:{p_end}
+
+{p 8} CD = [2*T / (N*(N-1))]^(1/2) * sum(i=1,N-1) sum(j=i+1,N) rho(ij) + sum(i=2,N)sum(j=1,N-1}|rho(ij)|*(|rho(ij)>2 log(N)^(1/2)T^(-1),{p_end}
+
 {p 4 4}{cmd:xtcd2} calculates the CD test statistic for a given variable, or if run after an estimation command which supports {cmd:predict} and {cmd:e(sample)}.
 In the latter case {cmd:xtcd2} calculates the error term using {cmd:predict, residuals} and then applies the CD test from above.
 In the former case and if the option {cmd:noestimation} is set, {cmd:e(sample)} is not needed and any variable can be tested for cross sectional dependence.
@@ -83,6 +106,13 @@ If not set, then {cmd:xtcd2} uses either the variable specified in {varname} or 
 In both cases the sample is restricted to {cmd:e(sample)}.{p_end}
 
 {p 4 4}{cmd:rho} saves the matrix with the cross correlations in {cmd:r(rho)}.{p_end}
+
+{p 4 4}{cmd:cdw} calculated the weighted CD test following Juodis and Reese (2019), see {help xtcd2##CDw:Description of Judis and Reese (2021)}.{p_end}
+
+{p 4 4}{cmd:pea} uses the Power Enhancement Approach (PEA) by Fan et. al. (2015), see {help xtcd2##pea:Description of Fan et. al. (2015)}.{p_end}
+
+{p 4 4}{cmd:reps(integer)} repeates the draw of the Rademacher weights. 
+Implies option {cmd:cdw}.{p_end}
 
 {p 4 4}{cmdab:kden:sity} plots a kernel density plot of the cross correlations, see {help twoway kdensity}.
 The number of observations, the mean, percentiles, minimum and maximum of the cross correlations are reported.
@@ -132,6 +162,24 @@ therefore rejecting the null hypothesis of weak cross sectional dependence.{p_en
 
 {p 8}{stata xtcd2 res, kdensity}{p_end}
 
+{p 4 4}The CD test statistic is known to diverge if many periodic
+specific parameters are used (Juodis, Reese, 2021). 
+Unit specific rademacher weights can be applied to prevent this behaviour
+by using the option {cmd:cdw}:{p_end}
+
+{p 8}{stata xtcd2 res, cdw}{p_end}
+
+{p 4 4}To reduce the dependence of the weighted CD test statistic,
+the test can be repeatetly performed with different weights using
+the {cmd:reps()} option:{p_end}
+
+{p 8}{stata xtcd2 res, cdw reps(20)}{p_end}
+
+{p 4 4}To improve the power of the weighted CD test, the Power Enhancement
+Approach can be applied by using the {cmd:pea} option:{p_end}
+
+{p 8}{stata xtcd2 res, pea}{p_end}
+
 {p 4 4}Testing the variable {it:log_rgdpo} for cross sectional dependence reads:{p_end}
 
 {p 8}{stata xtcd2 log_rgdpo, noestimation}{p_end}
@@ -139,22 +187,26 @@ therefore rejecting the null hypothesis of weak cross sectional dependence.{p_en
 
 {marker references}{title:References}
 
+{p 4 8}Chudik, A., Pesaran, M. H. 2015. Large Panel Data Models with Cross-Sectional Dependence A Survey.
+Oxford Handbook of Panel Data. Edition 1. Editor Badi H. Baltagi.{p_end}
+
+{p 4 8}Juodis, A., & Reese, S. 2021. The Incidental Parameters Problem in Testing for Remaining Cross-section Correlation. Working Paper, 451.{p_end}
+
+{p 4 8}Fan, J., Y. Liao & J. Yao. 2015. Power Enhancement in High-Dimensional Cross-Sectional Tests. Econometrica(83): 1497–1541.{p_end}
+
 {p 4 8}Feenstra, R. C., R. Inklaar, and M. Timmer. 2015. The Next Generation of the Penn World Table.
 American Economic Review . www.ggdc.net/pwt{p_end}
-
-{p 4 8}Chudik, A., Pesaran, M. H. 2015. Large Panel Data Models with Cross-Sectional Dependence A Survey.
-Oxford Handbook of Panel Data. Edition 1. Editor Badi H. Baltagi.
 
 {p 4 8}Pesaran, M. H. 2015. Testing Weak Cross-Sectional Dependence in Large Panels.
 Econometric Reviews 34(6-10): 1089-1117.{p_end}
 
 {marker about}{title:Author}
 
-{p 4}Jan Ditzen (Heriot-Watt University){p_end}
-{p 4}Email: {browse "mailto:j.ditzen@hw.ac.uk":j.ditzen@hw.ac.uk}{p_end}
+{p 4}Jan Ditzen (Free University of Bozen-Bolzano){p_end}
+{p 4}Email: {browse "mailto:jan.ditzen@unibz.it":jan.ditzen@unibz.it}{p_end}
 {p 4}Web: {browse "www.jan.ditzen.net":www.jan.ditzen.net}{p_end}
 
 {p 4}Thanks to Achim Ahrens for providing many helpful comments to the code and an anonymous reviewer for many helpful comments.{p_end}
 
 {title:Also see}
-{p 4 4}See also: {help xtdcce2} {help xtcse2}
+{p 4 4}See also: {help xtdcce2}, {help xtcse2}
