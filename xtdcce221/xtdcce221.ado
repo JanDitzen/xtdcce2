@@ -1418,30 +1418,32 @@ program define xtdcce221 , eclass sortpreserve
 							mata `m_covlr' = st_matrix("`cov_i'")
 							mata `m_blr_names' = st_matrixcolstripe("``mat''")[.,2]
 
-							qui mata `m_blr' = xtdcce_m_lrcalc(`m_blr',`m_covlr',`m_blr_names',"`lr'","`lr_options'",`ff',`mata_varlist',`idvar',`touse')	
+							qui mata `m_blr' = xtdcce_m_lrcalc(`m_blr',`m_covlr',`m_blr_names',"`lr'","`lr_options'",`ff',`mata_varlist',"`idvar'","`touse'")	
 							
 							mata st_matrix("``mat''",`m_blr'[.,1]')
+
 							mata st_matrixcolstripe("``mat''", (J(cols(`m_blr_names'),1,""),`m_blr_names'') )
 							if `ff' == 0 {	
 								mata st_matrix("`cov_i'`mat'",`m_blr'[.,2..cols(`m_blr')])
 								mata st_matrixcolstripe("`cov_i'`mat'", (J(cols(`m_blr_names'),1,""),`m_blr_names'') )
 								mata st_matrixrowstripe("`cov_i'`mat'", (J(cols(`m_blr_names'),1,""),`m_blr_names'') )
 							}
-							mata mata drop `m_blr' `m_covlr	' `m_blr_names'				
+							mata mata drop `m_blr' `m_covlr' `m_blr_names'				
 						}
 					}
 				}
 				**correct b_i, cov_i, sd_i and t_i
 				if "`rhs'" == "" & "`exogenous_vars'" == "" & "`endognous_vars'" == "" {
 					matrix `b_i' = `eb_pi'
-					matrix `cov_i' = `cov_i'``eb_pi''
-					mata st_matrix("`sd_i'",sqrt(diagonal(st_matrix("`cov_i'``eb_pi''")))')
+					matrix `cov_i' = `cov_i'eb_pi
+					mata st_matrix("`sd_i'",sqrt(diagonal(st_matrix("`cov_i'eb_pi")))')
 					mata st_matrix("`t_i'",(st_matrix("`b_i'"):/st_matrix("`sd_i'")))
 				}
 				if "`rhs'" != "" | "`exogenous_vars'" != "" | "`endognous_vars'" != ""{	
 					matrix `b_i' = `eb_asisi'
-					matrix `cov_i' = `cov_i'``eb_asisi''
-					mata st_matrix("`sd_i'",sqrt(diagonal(st_matrix("`cov_i'``eb_asisi''")))')
+					matrix `cov_i' = `cov_i'eb_asisi
+					mata st_matrix("`sd_i'",sqrt(diagonal(st_matrix("`cov_i'eb_asisi")))')
+
 					mata st_matrix("`t_i'",(st_matrix("`b_i'"):/st_matrix("`sd_i'")))
 				}
 				local tmp_row : rownames `b_i'
