@@ -12,7 +12,7 @@ Changelog
 - added xtbalance2 to balance paneldataset. automatically balances with respect to N.
 */
 program define xtcse2, rclass
-	syntax [varlist(default=none ts)] [if], [pca(integer 4) STANDardize nocd inprog size(real 0.1) tuning(real 0.5) Reps(integer 0) RESidual lags(integer 0) NOCENTER NOADJUST ]
+	syntax [varlist(default=none ts)] [if], [pca(integer 4) STANDardize nocd inprog size(real 0.1) tuning(real 0.5) Reps(integer 0) RESidual lags(integer 0) NOCENTER SAMESample ]
 	version 14
 	
 	tempname xtdcceest xtdcceesttouse
@@ -40,6 +40,10 @@ program define xtcse2, rclass
 			keep `if'
 		}
 		
+		if "`samesample'" == "" {
+			local noadjust "noadjust"
+		}
+
 		keep if `touseAll'
 		
 		*** Get info
