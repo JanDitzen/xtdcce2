@@ -348,6 +348,9 @@ capture mata mata drop xtdcce2_mm_which2()
 mata:
 	function xtdcce2_mm_which2(source,search,|real scalar exact )
 	{		
+		source = strlower(source)
+		search = strlower(search)
+
 		sums = 0
 		for (i=1;i<=length(search);i++) {
 			sums = sums + sum(source:==search[i])
@@ -411,7 +414,7 @@ mata:
 		i = 1
 		
 		while (i<=search_N) {
-			new_elvec = source:==search[i]	
+			new_elvec = strlower(source):==strlower(search[i])	
 			if (anyof(new_elvec,1)) {
 				output[i]= xtdcce_selectindex(new_elvec)
 			}
