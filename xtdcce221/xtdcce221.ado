@@ -1306,6 +1306,7 @@ program define xtdcce221 , eclass sortpreserve
 					
 					
 					matrix `cov_i' = e(V)
+					matrix `cov_i'eb_asisi = `cov_i'
 					mata st_matrix("`sd_i'",sqrt(diagonal(st_matrix("`cov_i'"))))
 					mata st_matrix("`t_i'",st_matrix("`eb_asisi'")':/st_matrix("`sd_i'"))
 					
