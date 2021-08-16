@@ -40,7 +40,7 @@ xtdcce2 _depvar_ [_indepvars_] [_varlist2_ = _varlist_iv_] [ifin] , crosssection
 and for an optimized version for speed and large datasets. 
 
 ```
-xtdcce2 _depvar_ [_indepvars_] [ifin] , crosssectional(_varlist_[,cr_lags(_numlist_)]) [clustercrosssectional(_varlist_, clustercr(_varlist_) [cr_lags(_numlist_)]) globalcrosssectional(_varlist_[,cr_lags(_numlist_)]) cr_lags(_string_) NOCRosssectional lr(_varlist_) lr_options(_string_) reportconstant noconstant cd fullsample notable cd postframe nopost ]
+xtdcce2fast _depvar_ [_indepvars_] [ifin] , crosssectional(_varlist_[,cr_lags(_numlist_)]) [clustercrosssectional(_varlist_, clustercr(_varlist_) [cr_lags(_numlist_)]) globalcrosssectional(_varlist_[,cr_lags(_numlist_)]) cr_lags(_string_) NOCRosssectional lr(_varlist_) lr_options(_string_) reportconstant noconstant cd fullsample notable cd postframe nopost ]
 ```
 
 where _varlist2_ are endogenous variables and _varlist_iv_ the instruments. Data has to be `xtset` before using `xtdcce2`; see `tssst`.
