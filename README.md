@@ -37,7 +37,7 @@ __Table of Contents__
 xtdcce2 _depvar_ [_indepvars_] [_varlist2_ = _varlist_iv_] [ifin] , crosssectional(_varlist_[,cr_lags(_numlist_)]) [clustercrosssectional(_varlist_, clustercr(_varlist_) [cr_lags(_numlist_)]) globalcrosssectional(_varlist_[,cr_lags(_numlist_)]) pooled(_varlist_) cr_lags(_numlist_) NOCRosssectional ivreg2options(_string_) e_ivreg2_ ivslow noisily lr(_varlist_) lr_options(_string_) pooledconstant reportconstant pooledvce(_string_) noconstant trend pooledtrend jackknife recursive nocd exponent xtcse2options(_string_) showindividual fullsample fast blockdiaguse nodimcheck useqr useinvsym noomitted]
 ```
 
-and for an optimized version for speed and large datasets. 
+and for an optimized version for speed and large datasets:
 
 ```
 xtdcce2fast _depvar_ [_indepvars_] [ifin] , crosssectional(_varlist_[,cr_lags(_numlist_)]) [clustercrosssectional(_varlist_, clustercr(_varlist_) [cr_lags(_numlist_)]) globalcrosssectional(_varlist_[,cr_lags(_numlist_)]) cr_lags(_string_) NOCRosssectional lr(_varlist_) lr_options(_string_) reportconstant noconstant cd fullsample notable cd postframe nopost ]
