@@ -34,7 +34,13 @@ __Table of Contents__
 # 1. Syntax
 
 ```
-xtdcce2 _depvar_ [_indepvars_] [_varlist2_ = _varlist_iv_] [ifin] , crosssectional(_varlist_) [pooled(_varlist_) cr_lags(_string_) NOCRosssectional ivreg2options(_string_) e_ivreg2_ ivslow noisily lr(_varlist_) lr_options(_string_) pooledconstant reportconstant noconstant trend pooledtrend jackknife recursive nocd exponent showindividual fullsample fast blockdiaguse nodimcheck useqr useinvsym NOOMITted]
+xtdcce2 _depvar_ [_indepvars_] [_varlist2_ = _varlist_iv_] [ifin] , crosssectional(_varlist_[,cr_lags(_numlist_)]) [clustercrosssectional(_varlist_, clustercr(_varlist_) [cr_lags(_numlist_)]) globalcrosssectional(_varlist_[,cr_lags(_numlist_)]) pooled(_varlist_) cr_lags(_numlist_) NOCRosssectional ivreg2options(_string_) e_ivreg2_ ivslow noisily lr(_varlist_) lr_options(_string_) pooledconstant reportconstant pooledvce(_string_) noconstant trend pooledtrend jackknife recursive nocd exponent xtcse2options(_string_) showindividual fullsample fast blockdiaguse nodimcheck useqr useinvsym noomitted]
+```
+
+and for an optimized version for speed and large datasets. 
+
+```
+xtdcce2 _depvar_ [_indepvars_] [_varlist2_ = _varlist_iv_] [ifin] , crosssectional(_varlist_[,cr_lags(_numlist_)]) [clustercrosssectional(_varlist_, clustercr(_varlist_) [cr_lags(_numlist_)]) globalcrosssectional(_varlist_[,cr_lags(_numlist_)]) cr_lags(_string_) NOCRosssectional lr(_varlist_) lr_options(_string_) reportconstant noconstant cd fullsample notable cd postframe nopost ]
 ```
 
 where _varlist2_ are endogenous variables and _varlist_iv_ the instruments. Data has to be `xtset` before using `xtdcce2`; see `tssst`.
@@ -65,13 +71,17 @@ For a further discussion see Ditzen (2018b).
 
 Additionally `xtdcce2` tests for cross sectional dependence (see `xtcd2`) and estimates the exponent of the
     cross sectional dependence alpha (see `xtcse2`). It also supports instrumental variable estimations (see [ivreg2](http://www.stata-journal.com/software/sj5-4/)).
-    
-    
+
+`xtdcce2fast` is an optimized version for speed and large datasets. In comparison to xtdcce2 it does not perform any collinearity checks does not support pooled estimations and instrumental variable regressions. It also stores some estimation results in mata rather than e() to circumvent some restrictions on matrix dimensions in Stata
+
+
 # 3. Options
 
 Option | Description
 --- | ---
-**crosssectional(_varlist_)** | defines the variables which are added as cross sectional averages to the equation. Variables in **crosssectional()** may be included in **pooled()**, **exogenous_vars()**, **endogenous_vars()** and **lr()**. Variables in **crosssectional()** are partialled out, the coefficients not estimated and reported. **crosssectional(_all_)** adds all variables as cross sectional averages. No cross sectional averages are added if **crosssectional(_none_)** is used, which is equivalent to **nocrosssectional**. **crosssectional()** is a required option but can be substituted by **nocrosssectional**.
+**crosssectional(_varlist_, [cr_lags(_numlist_)])** | defines the variables which are added as cross sectional averages to the equation. Variables in **crosssectional()** may be included in **pooled()**, **exogenous_vars()**, **endogenous_vars()** and **lr()**. Variables in **crosssectional()** are partialled out, the coefficients not estimated and reported. **crosssectional(_all_)** adds all variables as cross sectional averages. No cross sectional averages are added if **crosssectional(_none_)** is used, which is equivalent to **nocrosssectional**. **crosssectional()** is a required option but can be substituted by **nocrosssectional**. If **cr(..., cr_lags())** is used, then the global option **cr_lags()** (see below) is ignored.
+**globalcrosssectional(varlistcr1 [,cr_lags(_numlist_)])** define global cross-section averages. global cross-section averages are cross-section averages based on observeations which are excluded using if statements. If **cr(..., cr_lags())** is used, then the global option **cr_lags()** (see below) is ignored.
+**clusterosssectional(varlistcr1 [,cr_lags(_numlist_)] clustercr(varlist))** are clustered or local cross-section averages.  That is, the cross-section averages are the same for each realisation of the variables defined in clustercr().  For example, we have data observations regions of multiple countries, defined by variable country Now we want to add cross-section averages for each country.  We can define those by using the option clustercr(varlist , clustercr(country)). If **cr(..., cr_lags())** is used, then the global option **cr_lags()** (see below) is ignored.
 **pooled(_varlist_)** | specifies variables which estimated coefficients are constrained to be equal across all cross sectional units. Variables may occur in _indepvars_. Variables in **exogenous_vars()**, **endogenous_vars()** and **lr()** may be pooled as well.
 **cr_lags(_integers_)** | sets the number of lags of the cross sectional averages. If not defined but **crosssectional()** contains a _varlist_, then only contemporaneous cross sectional averages are added but no lags. **cr_lags(0)** is the equivalent. The number of lags can be different for different variables, where the order is the same as defined in **cr()**. For example if **cr(y x)** and only contemporaneous cross-sectional averages of y but 2 lags of x are added, then **cr_lags(0 2)**.
 **nocrosssectional** | suppresses adding any cross sectional averages Results will be equivalent to the Mean Group estimator.
@@ -89,6 +99,10 @@ Option | Description
 **fast** | omit calculation of unit specific standard errors.
 **blockdiaguse** | uses **mata blockdiag** rather than an alternative algorithm. **mata blockdiag** is slower, but might produce more stable results.
 **nodimcheck** | Does not check for dimension. Before estimating a model, `xtdcce2` automatically checks if the time dimension within each panel is long enough to run a mean group regression. Panel units with an insufficient number are automatically dropped.
+**notable** do not display output (only `xtdcce2fast`).
+**cd** calculate CD test statistic, see xtcd2 (only `xtdcce2fast`).
+**postframe** save predicted values to frame. Speeds up predict (only `xtdcce2fast`).
+**nopost** do not save/post predicted values (only `xtdcce2fast`).
 
 xtdcce2 checks for collinearity in three different ways.  It checks if matrix of the cross-sectional averages is of full rank.  After partialling out the cross-sectional averages, it checks if the entire model across all cross-sectional units exhibits multicollinearity.  The final check is on a cross-sectional level.  The outcome of the checks influence which method is used to invert matrices.  If a check fails xtdcce2 posts a warning message.  The default is cholinv and invsym if a matrix is of rank-deficient.  For a further discussion see   [collinearity issues](#410-collinearity-issues)) . 
 
@@ -658,7 +672,7 @@ Essays in Honor of Aman Ullah. 85-135.
 
 Ditzen, J. 2018. Estimating Dynamic Common Correlated Effcts in Stata. The Stata Journal, 18:3, 585 - 617.
 
-Ditzen, J. 2018b. Estimating long run effects in models with cross-sectional dependence using xtdcce2.
+Ditzen, J. 2021. Estimating long run effects and the exponent of cross-sectional dependence: an update to xtdcce2. The Stata Journal 21:3.
 
 Blackburne, E. F., and M. W. Frank. 2007.
 Estimation of nonstationary heterogeneous panels.
@@ -690,15 +704,15 @@ Journal of the American Statistical Association 94(446): 621-634.
 # 9. About
 
 ### Author
-Jan Ditzen (Heriot-Watt University)
+Jan Ditzen (Free University of Bolzano-Bozen)
 
-Email: [j.ditzen@hw.ac.uk](mailto:j.ditzen@hw.ac.uk)
+Email: [jan.ditzen@unibz.it](mailto:jan.ditzen@unibz.it)
 
 Web: [www.jan.ditzen.net](http://www.jan.ditzen.net)
 
 ### Acknowledgments
 
-I am grateful to Achim Ahrens, Arnab Bhattacharjee, David M. Drukker, Markus Eberhardt, Tullio Gregori, Erich Gundlach and Mark Schaffer, to the participants of the
+I am grateful to Achim Ahrens, Arnab Bhattacharjee, David M. Drukker, Markus Eberhardt, Tullio Gregori, Sebastian Kripfganz, Erich Gundlach and Mark Schaffer, to the participants of the
 2016 and 2018 Stata Users Group meeting in London and Zuerich, and two anonymous referees of The Stata Journal for many valuable comments and suggestions.
 
 The routine to check for  positive definite or singular matrices was provided by Mark Schaffer, Heriot-Watt University, Edinburgh, UK.
@@ -710,6 +724,10 @@ The routine to check for  positive definite or singular matrices was provided by
 Please cite as follows:
 
 Ditzen, J. 2018. xtdcce2: Estimating dynamic common correlated effects in Stata. The Stata Journal, 18:3, 585 - 617.
+
+or 
+
+Ditzen, J. 2021. Estimating long run effects and the exponent of cross-sectional dependence: an update to xtdcce2. The Stata Journal 21:3.
 
 # 10. Installation
 The latest versions can be obtained via
@@ -734,7 +752,19 @@ ssc install xtdcce2
 ```
 
 # 11. Change log
-This version: 2.0 (was 1.35) - 13. July 2019
+This version 3.0 - August 2021
+- several small bug fixes
+- improved support for factor variables
+- fix for mm_which2
+- message for large panels
+- error in calculation for variances of cross-sectional unit specific coefficients
+- fix predict program: partial now only in-sample and bug fixed when xb2 and reportc was used (thanks to Tullio Gregori for the pointers).
+- added global and local cross-sectional averages
+- improved output
+- xtdcce2fast
+- speed improvements
+
+Version 1.35 to Version 2.0
 - Bug fix in calculation of minimal T dimension, added option nodimcheck.
 - Speed improvements (thanks to Achim Ahrens for the suggestions).
 - Bug fixes for jackknife (thanks to Collin Rabe for the pointer).
