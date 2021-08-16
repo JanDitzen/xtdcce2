@@ -1,4 +1,4 @@
-*! xtdcce2 2.21 - xx.xx.2020
+*! xtdcce2 3.0 - 16.08.2021
 *! author Jan Ditzen
 *! www.jan.ditzen.net - jan.ditzen@unibz.it
 *! see viewsource xtdcce2.ado for more info.
@@ -137,7 +137,7 @@ fixed. was before assuming same s2 for all csu
 22.01.2021 - if xtdcce2 dropped units, e(bi) names were not correctly adjusted. bug fixed.
 */
 
-program define xtdcce221 , eclass sortpreserve
+program define xtdcce2 , eclass sortpreserve
 	** Stata Version check - version > 11.1 needed for putmata commands
 	if `c(version)' < 11.1 {
 		di in gr "xtdcce2 requires version 11.1 or higher."
