@@ -1,4 +1,4 @@
-*! xtdcce2 3.0 - 16.08.2021
+*! xtdcce2 2.21 - xx.xx.2020
 *! author Jan Ditzen
 *! www.jan.ditzen.net - jan.ditzen@unibz.it
 *! see viewsource xtdcce2.ado for more info.
@@ -196,7 +196,7 @@ program define xtdcce2 , eclass sortpreserve
 			*/ EXOgenous_vars(varlist ts fv) ENDOgenous_vars(varlist ts fv) RESiduals(string) /*
 			Working options: */ oldrestore demean demeant demeanid  Weight(string)  xtdcceold ]
 				
-		local xtdcce2v xtdcce221
+		local xtdcce2v xtdcce230
 		local cmd_line `xtdcce2v' `0'
 		
 		** save if and in
@@ -1883,8 +1883,8 @@ program define xtdcce2 , eclass sortpreserve
 			ereturn matrix Vi = `cov_i' , copy
 			
 			if "`exponent'" != "" {
-				ereturn matrix alpha = `alphaM', copy
-				ereturn matrix alphaSE = `alphaSEM', copy
+				cap ereturn matrix alpha = `alphaM', copy
+				cap ereturn matrix alphaSE = `alphaSEM', copy
 			}
 			local p_pooled_vars : list pooled - exogenous_vars
 			local rhs: list rhs - exogenous_vars
