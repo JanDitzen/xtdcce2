@@ -124,7 +124,7 @@ Jan - February
 22.08.2019 - auxiliary programs moved out, use findfile to find auxiliary.ado
 11.10.2019 - error in calculation for cross-section unit specific standard errors 
 fixed. was before assuming same s2 for all csu
-----------------------------------------xtdcce2 2.1
+----------------------------------------xtdcce2 2.1/3.0
 02.12.2019 - error if mixed models used fixed
 03.12.2019 - pooled and ardl works. 
 20.12.2019 - added nominus options for ARDL in lr_options. this is essentially an ECM, but with features of the ARDL (SE and sum of LR)
@@ -135,6 +135,8 @@ fixed. was before assuming same s2 for all csu
 		   - added cluster csa and global csa.
 03.10.2020 - if option jackknife used, check added if both halfs have the same number of cross-sectional units.
 22.01.2021 - if xtdcce2 dropped units, e(bi) names were not correctly adjusted. bug fixed.
+----------------------------------------xtdcce2 3.01
+14.09.2021 - error if abbreviation is cr() used fixed. use fvunab
 */
 
 program define xtdcce2 , eclass sortpreserve
@@ -425,7 +427,7 @@ program define xtdcce2 , eclass sortpreserve
 					if "`crosssectional'`globalcrosssectional'`clustercrosssectional'" != "" {
 						
 						if "`crosssectional'" != "" {
-							local scrosssectional "`crosssectional'"
+							fvunab scrosssectional : `crosssectional'
 							local scr_lags "`cr_lags'"
 							
 							if "`cr_lags'" == "" {
@@ -445,7 +447,7 @@ program define xtdcce2 , eclass sortpreserve
 						if "`globalcrosssectional'" != "" {
 							local 0 `globalcrosssectional'
 							syntax varlist(ts) , [cr_lags(numlist)]
-							local globalcrosssectional `varlist'
+							fvunab globalcrosssectional : `varlist'
 							if "`cr_lags'" == "" {
 								local gcr_lags = 0
 							}
@@ -457,7 +459,7 @@ program define xtdcce2 , eclass sortpreserve
 						if "`clustercrosssectional'" != "" {
 							local 0 `clustercrosssectional'
 							syntax varlist(ts) , [cr_lags(numlist) CLustercr(varlist) ]
-							local clustercrosssectional `varlist'
+							fvunab clustercrosssectional : `varlist'
 							if "`clustercr'" == "" {
 								xtdcce_err 198 `d_idvar' `d_tvar' , msg("No clustervariable set.")
 								
