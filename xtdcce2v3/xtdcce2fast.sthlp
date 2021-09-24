@@ -22,6 +22,9 @@ A faster version of {help xtdcce2}{p_end}
 {cmd:lr}({varlist})
 {cmd:lr_options}({it:string}) 
 {cmdab:noconst:ant}
+{cmd:pooled}
+{cmd:pooledconstant}
+{cmd:pooledvce({it:string})}
 {cmd:fullsample}
 {cmdab:not:able}
 {cmd:cd}
@@ -75,14 +78,14 @@ Additionally {cmd:xtdcce2fast} can test for cross sectional dependence (see {hel
 
 {p 4 4}{cmd:xtdcce2fast} is an optimized version for speed and large datasets. 
 In comparison to {help xtdcce2} it does not perform {ul:any} collinearity checks
-does {ul:not} support pooled estimations and instrumental variable regressions.
+does {ul:not} support instrumental variable regressions.
+Pooled regressions are possible, but only for the entire set of variables.
 It also stores some estimation results in {help mata} rather than {cmd:e()} to 
 circumvent some restrictions on matrix dimensions in Stata, see {help limits}.{p_end}
 
 {marker options}{title:Options}
 
 {p 4 8}{cmdab:cr:osssectional(}{help varlist}{cmd:cr1 [,cr_lags(#)])} defines the variables which are added as cross sectional averages to the equation. 
-Variables in {cmd:crosssectional()} may be included in {cmd:pooled()}, {cmd:exogenous_vars()}, {cmd:endogenous_vars()} and {cmd:lr()}. 
 Variables in {cmd: crosssectional()} are partialled out, the coefficients not estimated and reported.{p_end}
 {p 8 8}{cmd:crosssectional}(_all) adds all variables as cross sectional averages. 
 No cross sectional averages are added if {cmd:crosssectional}(_none) is used, which is equivalent to {cmd:nocrosssectional}.
@@ -111,6 +114,15 @@ then {cmd:cr_lags(0 2)}.{p_end}
 Results will be equivalent to the Mean Group estimator.{p_end}
 
 {p 4 8 12}{cmdab:noconst:ant} suppresses the constant term.{p_end}
+
+{p 4 8 12}{cmd:pooled} treats all variables as homogenous coefficients.
+The constant is still heterogenous.{p_end}
+
+{p 4 8 12}{cmd:pooledvce(np|nw)} which variance estimator to use, 
+{it:np} is the default and the non parametric estimator from Pesaran (2006).
+{it:nw} is the HAC robust Newey West type estimator.{p_end}
+
+{p 4 8 12}{pooledconstant} homogenous constant. Only in combination with {cmd:pooled}.{p_end}
 
 {p 4 8}{cmd:xtdcce2fast} is able to estimate long run coefficients. 
 Two models are supported:
