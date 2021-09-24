@@ -16,7 +16,7 @@ program define xtdcce2fast, eclass sortpreserve
 	}	
 	else {
 	
-		syntax varlist(min=1 ts) [if/] , [cr_lags(numlist) CRosssectional(string) GLOBALCRosssectional(string) CLUSTERCRosssectional(string) noconstant lr(string) fullsample NOTable lr_options(string) NOCROSSsectional cd trace postframe NOPOST ] 
+		syntax varlist(min=1 ts) [if/] , [cr_lags(numlist) CRosssectional(string) GLOBALCRosssectional(string) CLUSTERCRosssectional(string) noconstant lr(string) fullsample NOTable lr_options(string) NOCROSSsectional cd trace postframe NOPOST pooled pooledvce(string) POOLEDConstant ] 
 		qui{
 			version 15
 						
@@ -49,6 +49,35 @@ program define xtdcce2fast, eclass sortpreserve
 			local idvar "`r(panelvar)'"
 			local tvar "`r(timevar)'"
 			
+			*** pooled options
+			if "`pooled'" == "" {
+				local pooled = 0
+				local pooledvce = 0
+				local hasFEPooled = 0
+			}
+			else {
+				local pooled = 1
+			
+				** pooled VCE
+				if "`pooledvce'" == "np" {
+					local pooledvce = 1
+				}
+				else if "`pooledvce'" == "nw" {
+					local pooledvce = 2
+				}
+				else {
+					local pooledvce = 1
+				}
+				
+				if "`pooledconstant'" == "" {
+					/// has FE
+					local hasFEPooled = 1
+					local constant noconstant
+				}
+				else {
+					local hasFEPooled = 0
+				}
+			}	
 			** create cross sectional lags	
 			if "`nocrosssectional'" != "" {
 				local crosssectional ""
@@ -185,6 +214,7 @@ program define xtdcce2fast, eclass sortpreserve
 				gen double `constant' = 1
 				local varlistnew `varlistnew' `constant'
 				local varlistnames `varlistnames' _cons
+
 			}
 			
 			markout `touse' `varlistnew' `clustercrosssectional' `crosssectional' `globalcrosssectional'
@@ -261,7 +291,7 @@ program define xtdcce2fast, eclass sortpreserve
 			issorted `idvar' `tvar'
 			tempname b_output V_output stats b_i stats_i v_i
 			
-			`trace' mata m_xtdcce2fast("`varlistnew'","`clistfull'","`BaseIndex'","`touse'","`idvar' `tvar'","`b_output' `V_output' `stats'",`b_i'=.,`v_i'=.,`stats_i'=.,"`lr_options'","`residual'")
+			`trace' mata m_xtdcce2fast("`varlistnew'","`clistfull'","`BaseIndex'","`touse'","`idvar' `tvar'",`pooled',`pooledvce',`hasFEPooled',"`b_output' `V_output' `stats'",`b_i'=.,`v_i'=.,`stats_i'=.,"`lr_options'","`residual'")
 			
 			** link resdiduals
 			if "`posttype'" == "frame" {
@@ -417,8 +447,13 @@ program define xtdcce2fast, eclass sortpreserve
 			**set standard to 80, only if more vars needed, then extend. maximum is 100
 			local maxline = `abname' + 66	
 
-			
-			display as text "(Dynamic) Common Correlated Effects Estimator - Mean Group"
+			if `pooled' == 0 {
+				local mgtext "Mean Group"
+			}
+			else {
+				local mgtext "Pooled"
+			}
+			display as text "(Dynamic) Common Correlated Effects Estimator - `mgtext'"
 			
 			#delimit ;
 			di _n in gr "Panel Variable (i): " in ye e(idvar) 
@@ -437,9 +472,9 @@ program define xtdcce2fast, eclass sortpreserve
 							_col(`=`maxline'-80+50') in gr "Obs per group (T)" _col(`=`maxline'-80+68') "="
 							_col(`=`maxline'-80+71') in ye %9.0f e(T) ;
 					di in gr _col(2) "without cross-sectional averages"
-								_col(37) "=" _col(39) e(T)- e(Kmg);
+								_col(37) "=" _col(39) e(T)- e(K_mg);
 					di in gr _col(2) "with cross-sectional averages"
-							_col(37) "=" _col(39) e(T)-e(Kmg) - `K_csa' ;
+							_col(37) "=" _col(39) e(T)-e(K_mg) - `K_csa' ;
 				#delimit cr
 			}
 			else {	
@@ -448,20 +483,20 @@ program define xtdcce2fast, eclass sortpreserve
 						_col(`=`maxline'-80+50') in gr in gr "Obs per group:" _col(`=`maxline'-80+68') ;
 					di in gr _col(2) "without cross-sectional avg."
 						_col(31) "min"
-						_col(37) "=" _col(39) e(Tmin)- e(Kmg)
+						_col(37) "=" _col(39) e(Tmin)- e(K_mg)
 						_col(`=`maxline'-80+68-4') in gr "min = "
 						_col(`=`maxline'-80+71') in ye %9.0f e(Tmin) ;	
 					di in gr _col(31) "max"
-						_col(37) "=" _col(39) e(Tmax) - e(Kmg)
+						_col(37) "=" _col(39) e(Tmax) - e(K_mg)
 						_col(`=`maxline'-80+68-4') in gr "avg = " 
 						_col(`=`maxline'-80+71') in ye %9.0f e(Tbar) ;
 					di in gr _col(2) "with cross-sectional avg."
 						_col(31) "min"
-						_col(37) "=" _col(39) e(Tmin) - e(Kmg)- `K_csa'
+						_col(37) "=" _col(39) e(Tmin) - e(K_mg)- `K_csa'
 						_col(`=`maxline'-80+68-4') in gr "max = " 
 						_col(`=`maxline'-80+71') in ye %9.0f e(Tmax) ;
 					di in gr _col(31) "max"
-						_col(37) "=" _col(39) e(Tmax) - e(Kmg) - `K_csa' ;
+						_col(37) "=" _col(39) e(Tmax) - e(K_mg) - `K_csa' ;
 				#delimit cr
 			}
 			if wordcount("`scr_lags' `ccr_lags' `gcr_lags'") > 1 {
@@ -489,7 +524,7 @@ program define xtdcce2fast, eclass sortpreserve
 						_col(37) "`cr_lags_disp'"	`line1' ;
 
 			di in gr _col(2) "variables in mean group regression"
-						_col(37) "=" _col(39) e(Kmg)*e(N_g) `line2' ;
+						_col(37) "=" _col(39) e(K_mg)*e(N_g) `line2' ;
 
 			di in gr _col(2) "variables partialled out"
 						_col(37) "=" _col(39)  `K_csa'*`N_g' ;
@@ -636,8 +671,6 @@ program define xtdcce_output_table
 	di as result _column(`col') %9.7g ( `b_p_mg'[1,colnumb(`b_p_mg',"`i'")] + `cv'*sqrt(`se_p_mg'[rownumb(`se_p_mg',"`i'"),colnumb(`se_p_mg',"`i'")]))
 end
 
-
-
 capture mata mata drop m_xtdcce2fast()
 mata:
 	function m_xtdcce2fast (string scalar varlist, 			///
@@ -645,6 +678,9 @@ mata:
 							string scalar LongRunBases,		///
 							string scalar touse,			///
 							string scalar idtnames,			///
+							real scalar pooled,				///
+							real scalar vcepooled,			///
+							real scalar PooledHasFE,		///
 							string scalar outputnames,		///
 							real matrix b_iOutput,			///
 							real matrix V_iOutput,			///
@@ -661,6 +697,7 @@ mata:
 		X = st_data(.,varlist,touse)
 		Y = X[.,1]
 		X = X[.,(2..cols(X))]
+		
 		
 		if (resname[1,1] != "") {
 			st_view(residual,.,resname,touse)
@@ -693,19 +730,33 @@ mata:
 		cov_i = J(N_g*K,K+1,.)
 		
 		index = panelsetup(idt[.,1],1)
-	
+		
+		up_XY = J(K,1,0)
+		low_XX = J(K,K,0)
+
 		i=1
 		covend = K
 		covstart = 1
+
+		X_tilde = J(N,K,.)
+
 		while (i<=N_g) {
-			///Xi = X[(index[i,1]..index[i,2]),.]
-			///Yi = Y[(index[i,1]..index[i,2]),.]
 			Xi = X[|index[i,1],. \ index[i,2],.|]
 			Yi = Y[|index[i,1],. \ index[i,2],.|]
+
+			if (PooledHasFE == 1 & pooled == 1) {
+				/// demeaning, only for pooled
+				Xi = Xi :-mean(Xi)
+				Yi = Yi :-mean(Yi)
+			}
+
 			lower_i[i] =  quadcolsum(((Yi :- mean(Yi)):^2))
 			/// partial out
 			if (nocsa == 1) {
 				csai = csa[|index[i,1],. \ index[i,2],.|]
+				if (PooledHasFE == 1) {
+					csai = csai :- mean(csai)
+				}
 				x_p = (Yi,Xi)
 				tmp_xp = quadcross(csai,x_p)
 				tmp_csa = quadcross(csai,csai)
@@ -720,9 +771,17 @@ mata:
 			tmp_xx1 = invsym(tmp_xx)
 			b_i[i,.] = m_xtdcce_solver(tmp_xx,tmp_xy)'
 			
+			/// pooled
+			if (pooled==1) {
+				up_XY = up_XY + tmp_xy
+				low_XX = low_XX + tmp_xx
+			}
+
 			residi = Yi - Xi * b_i[i,.]'
 			
 			residual[|index[i,1],. \ index[i,2],.|] = residi 
+			
+			X_tilde[|index[i,1],. \ index[i,2],.|] = Xi
 			
 			s2_i[i] = residi'residi 
 			
@@ -737,6 +796,13 @@ mata:
 
 			i++
 		}
+
+		if (pooled==1) {
+			b_p = invsym(low_XX) * up_XY
+			b_mgi = b_i
+			b_i = b_p'#J(N_g,1,1)
+		}
+
 		K_csa
 		Ktotal = K + K_csa
 		upper = quadcolsum(s2_i)/ (N_g * (T - Ktotal))
@@ -797,9 +863,21 @@ mata:
 			}			
 		}
 		
-		b_mg = quadmeanvariance(b_i)
-		V = b_mg[(2..rows(b_mg)),.]:/N_g
-		b_mg = b_mg[1,.]
+		if (pooled == 0) {
+			b_mg = quadmeanvariance(b_i)
+			V = b_mg[(2..rows(b_mg)),.]:/N_g
+			b_mg = b_mg[1,.]
+		}
+		else {
+			b_mg = b_p'
+			if (vcepooled==1) {
+				/// var cov from Pesaran 2006, non parametric 
+				V = VarCov_NP(X_tilde,b_mgi,b_p,index,N_g)
+			}
+			else if (vcepooled == 2) {
+				V = VarCov_HAC(X_tilde,residual,index,N_g)
+			}
+		}
 		"b_mg"
 		b_mg
 		outputb = tokens(outputnames)[1]
@@ -818,6 +896,111 @@ mata:
 		stats_i_name = stats_i 
 		
 		"done"
+	}
+end
+
+// -------------------------------------------------------------------------------------------------
+// VarCov Estimators
+// -------------------------------------------------------------------------------------------------
+/// Implements the non parametric covariance estimator from Pesaran (2006)
+capture mata mata drop VarCov_NP()
+mata:
+	function VarCov_NP(real matrix X, real matrix beta_mgi, real matrix betaP, real matrix index,real matrix N)
+	{		
+		/// MG estimation for variance
+		beta_mg = mean(beta_mgi)
+		beta_diff = beta_mgi:- beta_mg 
+		"beta p"
+		betaP
+		/// covariance estimation
+		/// Standard VarianceCovarianceEstimator from Pesaran 2006, Eq 67 - 69.
+		cov_PSI = J(rows(betaP),cols(betaP),0) 
+		cov_R =  J(rows(betaP),cols(betaP),0)
+		cov_w = J(N,1,1/N)
+		cov_w_s = sum(cov_w:^2)		
+		
+		i = 1
+		while (i<=N) {
+			i
+			cov_w_i = cov_w[i]
+			cov_w_tilde = cov_w_i :/ sqrt(1/N :* cov_w_s)
+			b_i1 = beta_diff[i,.]'
+			
+			tmp_x = panelsubmatrix(X,i,index)
+			tmptmp = quadcross(tmp_x,tmp_x):/ rows(tmp_x)
+				cov_w_tilde:^2 :* tmptmp*b_i1*b_i1'*tmptmp	
+				"C_r"
+				cov_R	
+			/// eq. 67 Pesaran 2006
+			cov_R = cov_R :+ cov_w_tilde:^2 :* tmptmp*b_i1*b_i1'*tmptmp	
+			"cov_R"
+			cov_R
+			/// eq. 68 Pesaran 2006
+			cov_PSI = cov_PSI :+ cov_w_i :* tmptmp	
+			i++
+					
+		}
+		cov_R = cov_R / (N - 1)
+		PSI1 = invsym(cov_PSI)
+		//// eq. 69 Pesaran 2006 
+		cov =  cov_w_s :* PSI1 * cov_R * PSI1 	
+
+		return(cov)
+	}
+end
+
+
+
+
+/// VarCov from Karavias, Westerlund, Persyn (2021)
+/// VarCov is HAC robust
+capture mata mata drop VarCov_HAC()
+mata:
+	function VarCov_HAC(real matrix X, real matrix e, real matrix idt, real scalar N)
+	{
+		///e = Y - X* betaP
+		///uniqueid = uniqrows(idt[.,1])
+		///N = rows(uniqueid)
+		
+		Shat = J(cols(X),cols(X),0)
+		Shat0 = J(cols(X),cols(X),0)	
+		T_avg = 0
+		i = 1
+		while ( i <= N) {					
+			/// select data
+			///indic = (idt[.,1] :== uniqueid[i])
+			///tmp_x = select(X,indic)
+			///tmp_e = select(e,indic)
+			tmp_x = panelsubmatrix(X,i,idt)
+			tmp_e = panelsubmatrix(e,i,idt)
+
+			tmp_xe = tmp_e :* tmp_x
+			Ti = rows(tmp_x)	
+			
+			Shat0 = Shat0 + quadcross(tmp_xe,tmp_xe) 
+			sij = 0
+			///bandwith = floor(Ti:^(1/3))	
+			bandwith = round( 4 * (Ti:/100)^(2/9))	
+			j = 1
+			while (j <= bandwith){
+				tmp_xep =  tmp_xe[j+1..Ti,.]
+				tmp_xepJ = tmp_xe[1..Ti-j,.]	
+				tmp_tmp = quadcross(tmp_xep,tmp_xepJ)
+				/// add N*Ti for scaling down kernel parameter because it is in loops
+				sij = sij :+  (1- j/(bandwith+1)) :* (tmp_tmp + tmp_tmp')	
+				j++
+			}
+			Shat = Shat +  sij 
+			T_avg = Ti + T_avg
+			i++
+		}
+		T_avg = T_avg / N
+		Shat = (Shat + Shat0) / (N*T_avg)
+		tmp_xx = quadcross(X,X) 
+		Sigma =  tmp_xx / (N*T_avg)				
+		sigma1 = invsym(Sigma) 				
+		cov = sigma1 * Shat * sigma1 / (N*T_avg)
+		return(cov)
 	}
 end
 
