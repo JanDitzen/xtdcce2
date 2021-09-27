@@ -739,6 +739,7 @@ mata:
 		covstart = 1
 
 		X_tilde = J(N,K,.)
+		Y_tilde = J(N,1,.)
 
 		while (i<=N_g) {
 			Xi = X[|index[i,1],. \ index[i,2],.|]
@@ -768,21 +769,23 @@ mata:
 			
 			tmp_xx = quadcross(Xi,Xi)
 			tmp_xy = quadcross(Xi,Yi)
-			tmp_xx1 = invsym(tmp_xx)
+			tmp_xx1 = qrinv(tmp_xx)
 			b_i[i,.] = m_xtdcce_solver(tmp_xx,tmp_xy)'
 			
+			residi = Yi - Xi * b_i[i,.]'
+
 			/// pooled
 			if (pooled==1) {
 				up_XY = up_XY + tmp_xy
 				low_XX = low_XX + tmp_xx
 			}
+			else {			
+				residual[|index[i,1],. \ index[i,2],.|] = residi 
+			}
 
-			residi = Yi - Xi * b_i[i,.]'
-			
-			residual[|index[i,1],. \ index[i,2],.|] = residi 
-			
 			X_tilde[|index[i,1],. \ index[i,2],.|] = Xi
-			
+			Y_tilde[|index[i,1],. \ index[i,2],.|] = Yi
+
 			s2_i[i] = residi'residi 
 			
 			stats_i[i,.] = (rows(Xi),cols(Xi))
@@ -798,9 +801,10 @@ mata:
 		}
 
 		if (pooled==1) {
-			b_p = invsym(low_XX) * up_XY
+			b_p = qrinv(low_XX) * up_XY
 			b_mgi = b_i
 			b_i = b_p'#J(N_g,1,1)
+			residual = Y_tilde - X_tilde * b_p
 		}
 
 		K_csa
@@ -875,6 +879,8 @@ mata:
 				V = VarCov_NP(X_tilde,b_mgi,b_p,index,N_g)
 			}
 			else if (vcepooled == 2) {
+				"xx"
+				quadcross(residual,residual)
 				V = VarCov_HAC(X_tilde,residual,index,N_g)
 			}
 		}
@@ -958,36 +964,32 @@ capture mata mata drop VarCov_HAC()
 mata:
 	function VarCov_HAC(real matrix X, real matrix e, real matrix idt, real scalar N)
 	{
-		///e = Y - X* betaP
-		///uniqueid = uniqrows(idt[.,1])
-		///N = rows(uniqueid)
 		
 		Shat = J(cols(X),cols(X),0)
 		Shat0 = J(cols(X),cols(X),0)	
+		tmp_xx = J(cols(X),cols(X),0)
 		T_avg = 0
 		i = 1
 		while ( i <= N) {					
 			/// select data
-			///indic = (idt[.,1] :== uniqueid[i])
-			///tmp_x = select(X,indic)
-			///tmp_e = select(e,indic)
 			tmp_x = panelsubmatrix(X,i,idt)
 			tmp_e = panelsubmatrix(e,i,idt)
 
+			Ti = rows(tmp_x)
+
+			tmp_xx = tmp_xx + quadcross(tmp_x,tmp_x) 
 			tmp_xe = tmp_e :* tmp_x
-			Ti = rows(tmp_x)	
+				
 			
-			Shat0 = Shat0 + quadcross(tmp_xe,tmp_xe) 
+			Shat0 = Shat0 + quadcross(tmp_xe,tmp_xe) / (N*Ti)
 			sij = 0
-			///bandwith = floor(Ti:^(1/3))	
-			bandwith = round( 4 * (Ti:/100)^(2/9))	
+			bandwith = floor( 4 * (Ti:/100)^(2/9))	
 			j = 1
-			while (j <= bandwith){
-				tmp_xep =  tmp_xe[j+1..Ti,.]
-				tmp_xepJ = tmp_xe[1..Ti-j,.]	
-				tmp_tmp = quadcross(tmp_xep,tmp_xepJ)
-				/// add N*Ti for scaling down kernel parameter because it is in loops
-				sij = sij :+  (1- j/(bandwith+1)) :* (tmp_tmp + tmp_tmp')	
+			while (j <= (bandwith)){
+				tmp_xep =  tmp_xe[|j+1,. \ Ti,.|]
+				tmp_xepJ =  tmp_xe[|1,. \ Ti-j,.|]
+				tmp_tmp = quadcross(tmp_xep,tmp_xepJ) / (N*Ti)
+				sij = sij :+  (1- (j)/(bandwith+1)) :* (tmp_tmp + tmp_tmp')
 				j++
 			}
 			Shat = Shat +  sij 
@@ -995,11 +997,9 @@ mata:
 			i++
 		}
 		T_avg = T_avg / N
-		Shat = (Shat + Shat0) / (N*T_avg)
-		tmp_xx = quadcross(X,X) 
-		Sigma =  tmp_xx / (N*T_avg)				
-		sigma1 = invsym(Sigma) 				
-		cov = sigma1 * Shat * sigma1 / (N*T_avg)
+		Shat = (Shat + Shat0) 
+		sigma1 = invsym(tmp_xx) 				
+		cov = sigma1 * Shat * sigma1 * (T_avg*N)
 		return(cov)
 	}
 end
