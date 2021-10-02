@@ -1,4 +1,4 @@
-*! xtdcce2 2.21 - xx.xx.2020
+*! xtdcce2 3.01 - 19. September 2021
 *! author Jan Ditzen
 *! www.jan.ditzen.net - jan.ditzen@unibz.it
 *! see viewsource xtdcce2.ado for more info.
@@ -146,7 +146,7 @@ program define xtdcce2 , eclass sortpreserve
 		exit
 	}
 	version 11.1
-	local xtdcce2_version = 2.1
+	local xtdcce2_version = 3.01
 	if replay() {
 		syntax [, VERsion replay * ] 
 		if "`version'" != "" {
@@ -198,7 +198,7 @@ program define xtdcce2 , eclass sortpreserve
 			*/ EXOgenous_vars(varlist ts fv) ENDOgenous_vars(varlist ts fv) RESiduals(string) /*
 			Working options: */ oldrestore demean demeant demeanid  Weight(string)  xtdcceold ]
 				
-		local xtdcce2v xtdcce230
+		local xtdcce2v xtdcce2
 		local cmd_line `xtdcce2v' `0'
 		
 		** save if and in
