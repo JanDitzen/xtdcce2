@@ -1,6 +1,6 @@
 {smcl}
 {hline}
-{hi:help xtdcce2}{right: v. 3.0 - 16. August 2021}
+{hi:help xtdcce2}{right: v. 3.01 - 19. September 2021}
 {right:SJ18-3: st0536}
 {right:SJ21-3: st0xxx}
 {hline}
@@ -970,7 +970,9 @@ and beta versions including a full history of
 xtdcce2 from {stata "net from http://www.ditzen.net/Stata/xtdcce2_beta"}.{p_end}
 
 {marker ChangLog}{title:Version History}
-{p 4 8}This version: 3.0 - 16. August 2021{p_end}
+{p 4 8}This version: 3.01 - 19. September 2021{p_end}
+{p 8 10}  - error if abbreviation is cr() used fixed.{p_end}
+{p 4 8}Version 2.0 to 3.0{p_end}
 {p 8 10} - improved support for factor variables.{p_end}
 {p 8 10} - fix for mm_which2.{p_end}
 {p 8 10} - message for large panels.{p_end}
