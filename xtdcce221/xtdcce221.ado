@@ -143,6 +143,11 @@ program define xtdcce221 , eclass sortpreserve
 		di in gr "xtdcce2 requires version 11.1 or higher."
 		exit
 	}
+	noi disp as error "This is an old version of xtdcce2."
+	noi disp as text "Please install the latest version from either GitHub"
+	noi disp as smcl "{stata `"net install xtdcce2 , from("https://janditzen.github.io/xtdcce2/")"'}" 
+	noi disp as text "or SSC:" 
+	noi disp as smcl "{stata ssc install xtdcce2}"
 	version 11.1
 	local xtdcce2_version = 2.1
 	if replay() {
