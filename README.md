@@ -1,6 +1,6 @@
 # xtdcce2
 
-## A package for model specification and estimation for panel time series models with cross-sectional dependence
+## A package for model specification and estimation for linear panel time series models with cross-sectional dependence
 
 ![version](https://img.shields.io/github/v/release/janditzen/xtdcce2)  ![release](https://img.shields.io/github/release-date/janditzen/xtdcce2) 
 
@@ -59,13 +59,24 @@ __Table of Contents__
 # 1. Syntax
 
 ```
-xtdcce2 _depvar_ [_indepvars_] [_varlist2_ = _varlist_iv_] [ifin] , crosssectional(_varlist_[,cr_lags(_numlist_) rcce[(criterion(er/gr) scale npc(integer))]]) [clustercrosssectional(_varlist_, clustercr(_varlist_) [cr_lags(_numlist_)]) globalcrosssectional(_varlist_[,cr_lags(_numlist_)]) pooled(_varlist_) cr_lags(_numlist_) NOCRosssectional ivreg2options(_string_) e_ivreg2_ ivslow noisily lr(_varlist_) lr_options(_string_) pooledconstant reportconstant pooledvce(_string_) noconstant trend pooledtrend jackknife recursive nocd exponent xtcse2options(_string_) showindividual fullsample fast fast2 blockdiaguse nodimcheck useqr useinvsym noomitted mgmissing]
+xtdcce2 _depvar_ [_indepvars_] [_varlist2_ = _varlist_iv_] [ifin] , 
+crosssectional(_varlist_[,cr_lags(_numlist_) rcce[(criterion(er/gr) scale npc(integer))]]) 
+[clustercrosssectional(_varlist_, clustercr(_varlist_) [cr_lags(_numlist_)]) 
+globalcrosssectional(_varlist_[,cr_lags(_numlist_)]) pooled(_varlist_) cr_lags(_numlist_) 
+NOCRosssectional ivreg2options(_string_) e_ivreg2_ ivslow noisily lr(_varlist_) lr_options(_string_) 
+pooledconstant reportconstant pooledvce(_string_) noconstant trend 
+pooledtrend jackknife recursive nocd exponent xtcse2options(_string_) 
+showindividual fullsample fast fast2 blockdiaguse nodimcheck useqr useinvsym noomitted mgmissing]
 ```
 
 and for an optimized version for speed and large datasets:
 
 ```
-xtdcce2fast _depvar_ [_indepvars_] [ifin] , crosssectional(_varlist_[,cr_lags(_numlist_) rcce[(criterion(er/gr) scale npc(integer))]]) [clustercrosssectional(_varlist_, clustercr(_varlist_) [cr_lags(_numlist_)]) globalcrosssectional(_varlist_[,cr_lags(_numlist_)]) cr_lags(_string_) NOCRosssectional lr(_varlist_) lr_options(_string_) reportconstant noconstant cd fullsample notable cd postframe nopost ]
+xtdcce2fast _depvar_ [_indepvars_] [ifin] , crosssectional(_varlist_[,cr_lags(_numlist_) rcce[(criterion(er/gr) scale npc(integer))]]) 
+[clustercrosssectional(_varlist_, clustercr(_varlist_) [cr_lags(_numlist_)]) 
+globalcrosssectional(_varlist_[,cr_lags(_numlist_)]) cr_lags(_string_) 
+NOCRosssectional lr(_varlist_) lr_options(_string_) 
+reportconstant noconstant cd fullsample notable cd postframe nopost ]
 ```
 
 where _varlist2_ are endogenous variables and _varlist_iv_ the instruments. Data has to be `xtset` before using `xtdcce2`; see `tssst`.
@@ -108,8 +119,8 @@ Option | Description
 --- | ---
 **crosssectional(_varlist_, [cr_lags(_numlist_)])** | defines the variables which are added as cross sectional averages to the equation. Variables in **crosssectional()** may be included in **pooled()**, **exogenous_vars()**, **endogenous_vars()** and **lr()**. Variables in **crosssectional()** are partialled out, the coefficients not estimated and reported. **crosssectional(_all_)** adds all variables as cross sectional averages. No cross sectional averages are added if **crosssectional(_none_)** is used, which is equivalent to **nocrosssectional**. **crosssectional()** is a required option but can be substituted by **nocrosssectional**. If **cr(..., cr_lags())** is used, then the global option **cr_lags()** (see below) is ignored.
 **rcce[(criterion(er/gr) scale npc(integer))]** | implements the regularized CCE estimator from Juodis (2022). **criterion()** sets the er or gr criterion from Ahn and Horenstein (2023).  **scale** scales cross-section averages, see Juodis (2022). **npc(real)** specifies number of eigenvectors without estimating it. Cannot be combined with criterion.
-**globalcrosssectional(varlistcr1 [,cr_lags(_numlist_)])** define global cross-section averages. global cross-section averages are cross-section averages based on observeations which are excluded using if statements. If **cr(..., cr_lags())** is used, then the global option **cr_lags()** (see below) is ignored.
-**clusterosssectional(varlistcr1 [,cr_lags(_numlist_)] clustercr(varlist))** are clustered or local cross-section averages.  That is, the cross-section averages are the same for each realisation of the variables defined in clustercr().  For example, we have data observations regions of multiple countries, defined by variable country Now we want to add cross-section averages for each country.  We can define those by using the option clustercr(varlist , clustercr(country)). If **cr(..., cr_lags())** is used, then the global option **cr_lags()** (see below) is ignored.
+**globalcrosssectional(varlistcr1 [,cr_lags(_numlist_)])** | define global cross-section averages. global cross-section averages are cross-section averages based on observeations which are excluded using if statements. If **cr(..., cr_lags())** is used, then the global option **cr_lags()** (see below) is ignored.
+**clusterosssectional(varlistcr1 [,cr_lags(_numlist_)] clustercr(varlist))** | are clustered or local cross-section averages.  That is, the cross-section averages are the same for each realisation of the variables defined in clustercr().  For example, we have data observations regions of multiple countries, defined by variable country Now we want to add cross-section averages for each country.  We can define those by using the option clustercr(varlist , clustercr(country)). If **cr(..., cr_lags())** is used, then the global option **cr_lags()** (see below) is ignored.
 **pooled(_varlist_)** | specifies variables which estimated coefficients are constrained to be equal across all cross sectional units. Variables may occur in _indepvars_. Variables in **exogenous_vars()**, **endogenous_vars()** and **lr()** may be pooled as well.
 **cr_lags(_integers_)** | sets the number of lags of the cross sectional averages. If not defined but **crosssectional()** contains a _varlist_, then only contemporaneous cross sectional averages are added but no lags. **cr_lags(0)** is the equivalent. The number of lags can be different for different variables, where the order is the same as defined in **cr()**. For example if **cr(y x)** and only contemporaneous cross-sectional averages of y but 2 lags of x are added, then **cr_lags(0 2)**.
 **nocrosssectional** | suppresses adding any cross sectional averages Results will be equivalent to the Mean Group estimator.
@@ -129,10 +140,10 @@ Option | Description
 **fast2** | use xtdcce2fast instead of xtdcce2.
 **blockdiaguse** | uses **mata blockdiag** rather than an alternative algorithm. **mata blockdiag** is slower, but might produce more stable results.
 **nodimcheck** | Does not check for dimension. Before estimating a model, `xtdcce2` automatically checks if the time dimension within each panel is long enough to run a mean group regression. Panel units with an insufficient number are automatically dropped.
-**notable** do not display output (only `xtdcce2fast`).
-**cd** calculate CD test statistic, see xtcd2 (only `xtdcce2fast`).
-**postframe** save predicted values to frame. Speeds up predict (only `xtdcce2fast`).
-**nopost** do not save/post predicted values (only `xtdcce2fast`).
+**notable** |do not display output (only `xtdcce2fast`).
+**cd** | calculate CD test statistic, see xtcd2 (only `xtdcce2fast`).
+**postframe** | save predicted values to frame. Speeds up predict (only `xtdcce2fast`).
+**nopost** | do not save/post predicted values (only `xtdcce2fast`).
 
 xtdcce2 checks for collinearity in three different ways.  It checks if matrix of the cross-sectional averages is of full rank.  After partialling out the cross-sectional averages, it checks if the entire model across all cross-sectional units exhibits multicollinearity.  The final check is on a cross-sectional level.  The outcome of the checks influence which method is used to invert matrices.  If a check fails xtdcce2 posts a warning message.  The default is cholinv and invsym if a matrix is of rank-deficient.  For a further discussion see   [collinearity issues](#410-collinearity-issues)) . 
 
@@ -349,7 +360,8 @@ The CCE approach can involve a large number of cross-section averages which is l
 
             1. Calculate cross-sectional averages.
             2. Estimate number of common factors using the ER or GR criterion from Ahn and Horenstein (2013).
-            3. Replace the cross-sectional averages with eigenvectors from the cross-section averages. The eigenvectors are the eigenvectors of the largest eigenvalues and the number is obtained in step 2.
+            3. Replace the cross-sectional averages with eigenvectors from the cross-section averages. 
+            The eigenvectors are the eigenvectors of the largest eigenvalues and the number is obtained in step 2.
 
 The method requires bootstrapped standard errors, see bootstrapping. 
 
@@ -543,6 +555,7 @@ wild | Use wild bootstrap rather than cross-section bootstrap.
 cfresdiduals | Use residuals including common factors for wild bootstrap.
 percentile | Bootstrap confidence intervals.
 showindividual | show unit specific results.
+
 estat bootstrap implements two types of bootstraps, the wild bootstrap and the cross-section bootstrap.  The cross-section bootstrap is the default.
 
 The cross-section bootstrap draws with replacement from the cross-sectional dimension.  That is it draws randomly cross-sectional units with their entire time series.  It then estimates the model using xtdcce2. The cross-section bootstrap has been proposed in Westerlund et. al. (2019) or Goncalves and Perron (2014).
@@ -759,7 +772,10 @@ estat bootstrap, seed(123) wild percentile
 The `xtdcce2` package includes `xtcd2` which tests for weak cross-sectional dependence. The syntax is:
 
 ```
-xtcd2 [varlist] [if] [,peasaran cdw pea cdstar rho pca(integer) reps(integer) kdensity name(string) heatplot[(absolute options_heatplot)] contour[(absolute options_contour) noadjust] seed(integer) ]
+xtcd2 [varlist] [if] [,peasaran cdw pea cdstar rho 
+pca(integer) reps(integer) seed(integer)
+kdensity name(string) heatplot[(absolute options_heatplot)] 
+contour[(absolute options_contour) noadjust] ]
 ```
 
 `varlist` is the name of residuals or variables to be tested for weak cross sectional dependence. `varlist` may contain time-series operators, see tsvarlist.  `varlist` is optional if the command is performed after     an estimation (postestimation).
@@ -905,7 +921,8 @@ xtcd2 log_rgdpo, noestimation
 The `xtdcce2` package includes `xtcse2` which estimates the exponent of cross-sectional dependence. The syntax is:
 
 ```
-xtcse2 [varlist] [if] [, pca(integer) standardize nocenter nocd RESsidual Reps(integer) size(real) tuning(real) lags(integer) ]
+xtcse2 [varlist] [if] [, pca(integer) standardize nocenter nocd 
+RESsidual Reps(integer) size(real) tuning(real) lags(integer) ]
 ```
 
 Data has to be xtset before using xtcse2; see tsset.  varlist may contain time-series operators, see tsvarlist.  If varlist if left empty, xtcse2 predicts residuals from the last estimation command, see predict.  xtcse2 uses an expectation–maximization (EM) algorithm to impute missing values if the panel is unbalanced.
