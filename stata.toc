@@ -5,9 +5,9 @@ d xtcse2 estimates exponent of cross-sectional dependence.
 d xtcd2 testing for weak cross-sectional dependence.
 d xtset2 
 
-p xtdcce2 xtdcce2 version 3.01 (current)
-p xtcse2 xtcse2 version 1.01
-p xtcd2 xtcd2 version 2.1
+p xtdcce2 xtdcce2 version 4.0 (current)
+p xtcse2 xtcse2 version 1.02
+p xtcd2 xtcd2 version 4.0
 p xtset2
 
 p xtdcce221 xtdcce2 version 2.21 (beta) - old!

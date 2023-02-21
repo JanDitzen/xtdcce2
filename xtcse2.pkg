@@ -1,6 +1,6 @@
 v 3
-d xtcse2 estimating exponent of cross-sectional dependence. Version 1.01
-d Jan Ditzen, Heriot-Watt University
-d Distribution-Date:  20191507
-f xtdcce2v3/xtcse2.ado
-f xtdcce2v3/xtcse2.sthlp
+d xtcse2 estimating exponent of cross-sectional dependence. Version 1.03
+d Jan Ditzen
+d Distribution-Date:  20230220
+f xtdcce2v4/xtcse2.ado
+f xtdcce2v4/xtcse2.sthlp

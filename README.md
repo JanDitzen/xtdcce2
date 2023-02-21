@@ -1,6 +1,17 @@
 # xtdcce2
 
-## Estimating heterogeneous coefficient models using common correlated effects in a dynamic panel with a large number of observations over groups and time periods.
+## A package for model specification and estimation for panel time series models with cross-sectional dependence
+
+![version](https://img.shields.io/github/v/release/janditzen/xtdcce2)  ![release](https://img.shields.io/github/release-date/janditzen/xtdcce2) 
+
+
+The `xtdcce2` package contains
+1. `xtdcce2` - Estimating heterogeneous coefficient models using common correlated effects in a dynamic panel with a large number of observations over groups and time periods.
+2. `xtcd2` - Testing for weak cross-sectional dependence.
+3. `xtcse2` - Estimation of the exponent of cross-sectional dependence.
+
+An introduction into the topic can be found in my slides of the 2021 Stata
+Economics Virtual Symposium [here](https://ideas.repec.org/p/boc/econ21/2.html).
 
 __Table of Contents__
 1. [Syntax](#1-syntax)
@@ -15,8 +26,12 @@ __Table of Contents__
 	6. [Error Correction Models (ECM/PMG)](#46-error-correction-models-ecmpmg)
 	7. [Cross-Section Augmented Distributed Lag (CS-DL)](#47-cross-section-augmented-distributed-lag-cs-dl)
 	8. [Cross-Section Augmented ARDL(CS-ARDL)](#48-cross-section-augmented-ardl-cs-ardl)
+	9. [Regularized CCE (rCCE)](#49-regularized-cce)
 5. [Saved Values](#5-saved-values)
 6. [Postestimation Commands](#6-postestimation-commands)
+	1. [predict](#61-predict)
+	2. [estat](#62-estat)
+	3. [Bootstrap](#63-bootstrap)
 7. [Examples](#7-examples)
 	1. [Mean Group](#71-mean-group-estimation)
 	2. [Common Correlated Effects](#72-common-correlated-effects)
@@ -24,23 +39,33 @@ __Table of Contents__
 	4. [Pooled Estimation](#74-pooled-estimations)
 	5. [Instrumental Variables](#75-instrumental-variables)
 	6. [Error Correction Model (ECM/PMG)](#76-error-correction-models-ecmpmg)
-	7. [Cross-Section Augmented Distributed Lag (CS-DL)](#78-cross-section-augmented-ardl-cs-ardl)
-	8. [Cross-Section Augmented ARDL(CS-ARDL)](#77-cross-section-augmented-distributed-lag-cs-dl)
-8. [References](#8-references)
-9. [About](#9-about)
-10. [How to install](#10-installation)
-11. [Changelog](#11-change-log)
+	7. [Cross-Section Augmented Distributed Lag (CS-DL)](#77-cross-section-augmented-ardl-cs-dl)
+	8. [Cross-Section Augmented ARDL(CS-ARDL)](#78-cross-section-augmented-distributed-lag-cs-ardl)
+	9. [Regularized CCE (rCCE)](#79-regularized-cce)
+	10. [Bootstrapping](710-bootstrapping)
+8. [Testing for Cross-sectional Dependence](#8-testing-for-cross-sectional-dependence)
+	1. [Description](#81-description)
+	2. [Options](#82-options)
+	3. [Examples](#83-examples)
+9. [Estimating the exponent of Cross-sectional Dependence](#9-estimating-the-exponent-of-cross-sectional-dependence)
+	1. [Description](#91-description)
+	2. [Options](#92-options)
+	3. [Examples](#93-examples)
+10. [References](#10-references)
+11. [About](#11-about)
+12. [How to install](#12-installation)
+13. [Changelog](#13-change-log)
 
 # 1. Syntax
 
 ```
-xtdcce2 _depvar_ [_indepvars_] [_varlist2_ = _varlist_iv_] [ifin] , crosssectional(_varlist_[,cr_lags(_numlist_)]) [clustercrosssectional(_varlist_, clustercr(_varlist_) [cr_lags(_numlist_)]) globalcrosssectional(_varlist_[,cr_lags(_numlist_)]) pooled(_varlist_) cr_lags(_numlist_) NOCRosssectional ivreg2options(_string_) e_ivreg2_ ivslow noisily lr(_varlist_) lr_options(_string_) pooledconstant reportconstant pooledvce(_string_) noconstant trend pooledtrend jackknife recursive nocd exponent xtcse2options(_string_) showindividual fullsample fast blockdiaguse nodimcheck useqr useinvsym noomitted]
+xtdcce2 _depvar_ [_indepvars_] [_varlist2_ = _varlist_iv_] [ifin] , crosssectional(_varlist_[,cr_lags(_numlist_) rcce[(criterion(er/gr) scale npc(integer))]]) [clustercrosssectional(_varlist_, clustercr(_varlist_) [cr_lags(_numlist_)]) globalcrosssectional(_varlist_[,cr_lags(_numlist_)]) pooled(_varlist_) cr_lags(_numlist_) NOCRosssectional ivreg2options(_string_) e_ivreg2_ ivslow noisily lr(_varlist_) lr_options(_string_) pooledconstant reportconstant pooledvce(_string_) noconstant trend pooledtrend jackknife recursive nocd exponent xtcse2options(_string_) showindividual fullsample fast fast2 blockdiaguse nodimcheck useqr useinvsym noomitted mgmissing]
 ```
 
 and for an optimized version for speed and large datasets:
 
 ```
-xtdcce2fast _depvar_ [_indepvars_] [ifin] , crosssectional(_varlist_[,cr_lags(_numlist_)]) [clustercrosssectional(_varlist_, clustercr(_varlist_) [cr_lags(_numlist_)]) globalcrosssectional(_varlist_[,cr_lags(_numlist_)]) cr_lags(_string_) NOCRosssectional lr(_varlist_) lr_options(_string_) reportconstant noconstant cd fullsample notable cd postframe nopost ]
+xtdcce2fast _depvar_ [_indepvars_] [ifin] , crosssectional(_varlist_[,cr_lags(_numlist_) rcce[(criterion(er/gr) scale npc(integer))]]) [clustercrosssectional(_varlist_, clustercr(_varlist_) [cr_lags(_numlist_)]) globalcrosssectional(_varlist_[,cr_lags(_numlist_)]) cr_lags(_string_) NOCRosssectional lr(_varlist_) lr_options(_string_) reportconstant noconstant cd fullsample notable cd postframe nopost ]
 ```
 
 where _varlist2_ are endogenous variables and _varlist_iv_ the instruments. Data has to be `xtset` before using `xtdcce2`; see `tssst`.
@@ -57,7 +82,9 @@ i) The Mean Group Estimator (MG, Pesaran and Smith 1995).
 
 ii) The Common Correlated Effects Estimator (CCE, Pesaran 2006),
 
-iii) The Dynamic Common Correlated Effects Estimator (DCCE, Chudik and Pesaran 2015), and
+iii) The Dynamic Common Correlated Effects Estimator (DCCE, Chudik and Pesaran 2015)
+
+iv) The regularized CCE Estimator (rCCE, Juodis 2022), and
 
 For a dynamic model, several methods to estimate long run effects are possible:
 
@@ -80,6 +107,7 @@ Additionally `xtdcce2` tests for cross sectional dependence (see `xtcd2`) and es
 Option | Description
 --- | ---
 **crosssectional(_varlist_, [cr_lags(_numlist_)])** | defines the variables which are added as cross sectional averages to the equation. Variables in **crosssectional()** may be included in **pooled()**, **exogenous_vars()**, **endogenous_vars()** and **lr()**. Variables in **crosssectional()** are partialled out, the coefficients not estimated and reported. **crosssectional(_all_)** adds all variables as cross sectional averages. No cross sectional averages are added if **crosssectional(_none_)** is used, which is equivalent to **nocrosssectional**. **crosssectional()** is a required option but can be substituted by **nocrosssectional**. If **cr(..., cr_lags())** is used, then the global option **cr_lags()** (see below) is ignored.
+**rcce[(criterion(er/gr) scale npc(integer))]** | implements the regularized CCE estimator from Juodis (2022). **criterion()** sets the er or gr criterion from Ahn and Horenstein (2023).  **scale** scales cross-section averages, see Juodis (2022). **npc(real)** specifies number of eigenvectors without estimating it. Cannot be combined with criterion.
 **globalcrosssectional(varlistcr1 [,cr_lags(_numlist_)])** define global cross-section averages. global cross-section averages are cross-section averages based on observeations which are excluded using if statements. If **cr(..., cr_lags())** is used, then the global option **cr_lags()** (see below) is ignored.
 **clusterosssectional(varlistcr1 [,cr_lags(_numlist_)] clustercr(varlist))** are clustered or local cross-section averages.  That is, the cross-section averages are the same for each realisation of the variables defined in clustercr().  For example, we have data observations regions of multiple countries, defined by variable country Now we want to add cross-section averages for each country.  We can define those by using the option clustercr(varlist , clustercr(country)). If **cr(..., cr_lags())** is used, then the global option **cr_lags()** (see below) is ignored.
 **pooled(_varlist_)** | specifies variables which estimated coefficients are constrained to be equal across all cross sectional units. Variables may occur in _indepvars_. Variables in **exogenous_vars()**, **endogenous_vars()** and **lr()** may be pooled as well.
@@ -95,8 +123,10 @@ Option | Description
 **nocd** | suppresses calculation of CD test. For details about the CD test see LINK TO XTCD2.
 **exponent** | uses `xtcse2` to estimate the exponent of the cross-sectional dependence of the residuals. A value above 0.5 indicates cross-sectional dependence, see `xtcse2`.
 **showindividual** | reports unit individual estimates in output.
+**mgmissing** | if it is not possible to estimate individual coefficient for a cross-section because of missing data or perfect collinearity, individual coefficient is excluded for MG estimation. Coefficient will still be displayed as zero in e(bi).
 **fullsample** | uses entire sample available for calculation of cross sectional averages. Any observations which are lost due to lags will be included calculating the cross sectional averages (but are not included in the estimation itself).
 **fast** | omit calculation of unit specific standard errors.
+**fast2** | use xtdcce2fast instead of xtdcce2.
 **blockdiaguse** | uses **mata blockdiag** rather than an alternative algorithm. **mata blockdiag** is slower, but might produce more stable results.
 **nodimcheck** | Does not check for dimension. Before estimating a model, `xtdcce2` automatically checks if the time dimension within each panel is long enough to run a mean group regression. Panel units with an insufficient number are automatically dropped.
 **notable** do not display output (only `xtdcce2fast`).
@@ -313,7 +343,19 @@ The disadvantage of this approach is, that py and px need to be known. The varia
 
 See [Example](#78-cross-section-augmented-ardl-cs-ardl)
 
-## 4.9 Coefficient of Determination (R2)
+## 4.9 Regularized CCE (rCCE)
+
+The CCE approach can involve a large number of cross-section averages which is larger than the number of factors and can lead to a non-trivial bias for the pooled and mean group estimator, see Karabiyik et. al.     (2017).  Juodis (2022) propose a solution for linear static panels which uses singular value decomposition to remove redundant singular values in the cross-section averages.  The so-called rCCE method involves the following steps:
+
+            1. Calculate cross-sectional averages.
+            2. Estimate number of common factors using the ER or GR criterion from Ahn and Horenstein (2013).
+            3. Replace the cross-sectional averages with eigenvectors from the cross-section averages. The eigenvectors are the eigenvectors of the largest eigenvalues and the number is obtained in step 2.
+
+The method requires bootstrapped standard errors, see bootstrapping. 
+
+See [Example](#79-regularized-cce)
+
+## 4.10 Coefficient of Determination (R2)
 `xtdcce2` calculates up to three different coefficients of determination (R2).  It calculates the standard un-adjusted R2 and the adjusted R2 as common in the literature.  If all coefficients are either pooled or heterogeneous, xtdcce2 calculates an adjusted R2 following Holly et. al (2010); Eq. 3.14 and 3.15.  The R2 and adjusted R2 are calculated even if the pooled or mean group adjusted R2 is calculated.  However the pooled or mean group adjusted R2 is displayed instead of the adjusted R2 if calculated.
 
 In the case of a pure homogenous model, the adjusted R2 is calculated as:
@@ -338,7 +380,7 @@ R2(CCEMG) = 1 - s(mg)^2 / s^2
 s(mg)^2 = 1/N sum(i=1,N) e(i)'e(i) / [T - 2k - 2].
 ```
 
-## 4.10 Collinearity Issues
+## 4.11 Collinearity Issues
 (Multi-)Collinearity in a regression models means that two or more explanatory variables are linearly dependent.  The individual effect of a collinear explanatory variable on the dependent variable cannot be differentiated from the effect of another collinear explanatory variable.  This implies it is impossible to estimate the individual coefficient of the collinear explanatory variables.  If the explanatory variables are stacked into matrix X, one or more variables (columns) in x are collinear, then X'X is rank deficient.  Therefore it cannot be inverted and the OLS estimate of beta = inverse(X'X)X'Y does not exist.
 
 In a model in which cross-sectional dependence in which dependence is approximated by cross-sectional averages, collinearity can easily occur.  The empirical model (2) can exhibit collinearity in four ways:
@@ -481,8 +523,33 @@ _rcap_ | range plot
 **combine(_string)** | passes options for combined graphs
 **nomg** | mean group point estimate and confidence interval are not included in bar and range plot graphs
 **cleargraph** | clears the option of the graph command and is best used in combination with the **combine()** and **individual()** options
+**dropzero** | does not display coefficients with zeros in bar or rcap graphs.
 
 The name of the combined graph is saved in **r(graph_name)**.
+
+## 6.3 Bootstrap
+
+`xtdcce2` can bootstrap confidence intervals and standard errors. It supports two types of bootstraps: the wild bootstrap and the cross-section bootstrap.  The syntax is:
+
+```
+estat bootstrap , [options]
+```
+
+Options | Description
+--- | ---
+reps(integer) | Number of repetitions. Default 100.
+seed(string) | Set seed, see seed.
+wild | Use wild bootstrap rather than cross-section bootstrap.
+cfresdiduals | Use residuals including common factors for wild bootstrap.
+percentile | Bootstrap confidence intervals.
+showindividual | show unit specific results.
+estat bootstrap implements two types of bootstraps, the wild bootstrap and the cross-section bootstrap.  The cross-section bootstrap is the default.
+
+The cross-section bootstrap draws with replacement from the cross-sectional dimension.  That is it draws randomly cross-sectional units with their entire time series.  It then estimates the model using xtdcce2. The cross-section bootstrap has been proposed in Westerlund et. al. (2019) or Goncalves and Perron (2014).
+
+The wild bootstrap is a slower from of the wild bootstrap implemented in boottest (Roodman et. al. 2019).  It reweighs the residuals with Rademacher weights from the initial regression, recalculates the dependent variable and then runs xtdcce2.
+
+The default is to bootstrap standard errors and then use the bootstrapped standard errors to calculate the confidence intervals.  Option percentile directly bootstraps confidence intervals.
 
 
 # 7 Examples
@@ -653,17 +720,354 @@ which is equivalent to coding without parenthesis:
 xtdcce2 d.y , lr(L(1/3).d.y L(0/3).dp L(0/3).d.gd) lr_options(ardl) cr(d.y dp d.gd) cr_lags(3) fullsample
 ```
 
-# 8. References
+## 7.9 Regularized CCE (rCCE)
+
+The regularized CCE approach is only possible for static models.  To estimate a static model of growth on human, physical captial and population growth, we can use:
+
+```
+xtdcce2 log_rgdpo log_hc log_ck log_ngd , cr(log_rgdpo log_hc log_ck log_ngd, rcce)
+```
+
+xtdcce2 selects the first and second eigenvector of the cross-section averages and adds it as a variable.  The selection criterion is the ER criterion from Ahn and Horenstein (2013).  To use the GR criterion instead, the option criterion(gr) is used:
+
+```
+xtdcce2 log_rgdpo log_hc log_ck log_ngd , cr(log_rgdpo log_hc log_ck log_ngd, rcce(criterion(gr)))
+```
+
+Three regularized cross-section averages are added. Instead of specifying the criteria to estimate the number of eigenvectors of the rcce approach, we can hard set it using the option npc():
+
+```
+xtdcce2 log_rgdpo log_hc log_ck log_ngd , cr(log_rgdpo log_hc log_ck log_ngd, rcce(npc(3)))
+```
+
+## 7.10 Bootstrapping
+
+To bootstrap standard errors with a fixed seed:
+
+```
+estat bootstrap, seed(123)
+```
+
+To run a wild bootstrap and bootstrap confidence intervals, the options wild and percentile are added:
+
+```
+estat bootstrap, seed(123) wild percentile
+```
+
+# 8. Testing for cross-sectional dependence
+
+The `xtdcce2` package includes `xtcd2` which tests for weak cross-sectional dependence. The syntax is:
+
+```
+xtcd2 [varlist] [if] [,peasaran cdw pea cdstar rho pca(integer) reps(integer) kdensity name(string) heatplot[(absolute options_heatplot)] contour[(absolute options_contour) noadjust] seed(integer) ]
+```
+
+`varlist` is the name of residuals or variables to be tested for weak cross sectional dependence. `varlist` may contain time-series operators, see tsvarlist.  `varlist` is optional if the command is performed after     an estimation (postestimation).
+
+# 8.1 Description
+
+xtcd2 tests residuals or a variables for weak cross sectional dependence in a panel data model.  It implements the tests by Pesaran (2015, 2021), the weighted CD test (CDw) by Juodis & Reese (2021) including the power enhancement (Fang et. al., 2015).  It also implements the CD* from Pesaran & Xie (2021). As a default all four test statistics are calculated and presented next to each other.  p-values are displayed in parenthesis.
+
+Cross sectional dependence in the error term occurs if dependence between cross sectional units in a regression is not accounted for.  The dependence between units violates the basic OLS assumption of an independent and identically distributed error term.  In the worst case cross sectional dependence in the error term can lead to omitted variable bias or endogeneity and therefore to inconsistent estimates. Cross sectional dependence can be measured as the correlation between units.  For example the correlation of the errors of unit i and unit j can be calculated.  Obviously, if the correlation is large, cross sectional dependence is present.
+
+### The CD Test (Pesaran 2015)
+
+Pesaran (2015) develops a test for weak cross sectional dependence based on this principle.  Weak cross sectional dependence means that the correlation between units at each point in time converges to zero as the number of cross section goes to infinity.  Under strong dependence the correlation converges to a constant.  The null hypothesis of the test is, that the error term (or variable) is weakly cross sectional dependent. This means that correlation between an observation of unit i in time t and unit j in time t is zero.  The hypothesis is:
+
+```
+H0: errors are weakly cross sectional dependent.
+```
+
+Pesaran (2015) derives a test statistic, which sums the correlation coefficients of the different units.  The test statistic for a balanced panel is:
+
+```
+CD = [2*T / (N*(N-1))]^(1/2) * sum(i=1,N-1) sum(j=i+1,N) rho(ij),
+```
+
+and for an unbalanced panel (see Chudik, Pesaran, 2015):
+
+```
+CD = [2 / (N*(N-1))]^(1/2) * sum(i=1,N-1) sum(j=i+1,N) [T(ij)^(1/2) * rho(ij)],
+```
+
+where rho(ij) is the correlation coefficient of unit i and j and T(ij) the number of common observations between i and j.  Under the null hypothesis the statistic is asymptotically 
+
+```
+CD ~ N(0,1)
+```
+distributed.
+
+
+### Weighted CD test (Juodis and Reese, 2021)
+
+xtcd2 further implements three alternatives to test for weak cross-sectional dependence.  It includes the weighted CD (CDw) test proposed by Juodis and Reese (2021).  Juodis and Reese (2021) show that the CD test diverges if the time dimension grows and the test is applied to residuals after a CCE or FE regression. The CDw test weights each observation by cross-section specific Rademacher weights.  The pair wise correlations are calculated as:
+
+```
+rho(ij) = sum(t=1,T) w(i)eps(i,t)eps(j,t)w(j)
+```
+
+where w(i) and w(j) are the Rademacher weights which take on the values 1 or -1 with equal probability.  To reduce the dependence on the random Rademacher weights, the draw can be repeated using the reps() option.
+ 
+
+### Power Enhanced CD test (Juodis and Reese, 2021 and Fan et. al., 2015)
+
+A second alternative proposed by Juodis and Reese (2021) is the Power Enhancement Approach (PEA) by Fan et. al. (2015).  The power of the CD test is improved by calculating the CD test as:
+
+```
+CD = [2*T / (N*(N-1))]^(1/2) * sum(i=1,N-1) sum(j=i+1,N) rho(ij) + sum(i=2,N)sum(j=1,N-1}|rho(ij)|*(|rho(ij)>2 log(N)^(1/2)T^(-1)
+```
+
+Fan et. al. (2015) show that the PEA works if the number of cross-sectional units (N) is very large.  Therefore it is advisable to use the PEA method only for such datasets.
+ 
+
+### CD Star (Pesaran & Xie, 2021)
+
+As forth test xtcd2 implements the bias corrected CD* test from Pesaran & Xie (2021).  The bias corrected test statistic is based on the following:
+
+```
+CD* = (CD + (T/2*Theta)^(1/2))/(1-Theta)
+```
+
+where Theta is the bias correction and a function of the estimated factor loadings.  The factor loadings are estimated using the first p principal components as factors.  Option pca() specifies the number of principal components. Default is 4.  In case of unbalanced panels an Expected Maximisation algorithm taken from xtnumfac is used.
+
+xtcd2 calculates the CD test statistic for given variables, or if run after an estimation command which supports predict and e(sample).  In the latter case xtcd2 calculates the error term using predict, residuals and then applies the CD test from above.  xtcd2 supports balanced as well as unbalanced panels.  Furthermore by specifying the kdensity option, a kernel density plot with the distribution of the cross correlations is drawn.
+
+If xtcd2 is used after xtreg, then the residuals are calculated using predict, e rather than predict, res.  That is the residuals including the fixed- or random-error component, see  xtreg postestimation.  In all other cases predict, residuals is used to calculate the residuals. xtcd2 can draw heatplots and contour plots of the cross-correlations.  To draw heatplots Ben Jann's heatplot is required.  Contour plots are drawn using Stata's twoway contour.
+
+# 8.2 Options
+
+Options | Description
+--- | ---
+**pesaran** |  calculates the original CD test by Pesaran (2015), see Description of Pesaran (2015).
+**cdw** | calculates the weighted CD test following Juodis and Reese (2019), see Description of Juodis and Reese (2021).  Results vary if seed not specified.
+**pea** | uses the Power Enhancement Approach (PEA) by Fan et. al. (2015), see Description of Fan et. al. (2015).  This method is designed for large panel panel datasets.
+**cdstar** | calculates the bias corrected CD test following Pesaran & Xie (2021), see Description of Pesaran & Xie (2021).
+**reps(integer)** | number of repetitions for the weighted CD test.  Implies option cdw. Default is 30.
+**pca(integer)** | number of Principal Components when using the bias corrected CD test.  Requires option cdstar.  Default is 4.
+**rho** | saves the matrix with the cross correlations in r(rho).
+**kdensity** | plots a kernel density plot of the cross correlations, see twoway kdensity.  The number of observations, the mean, percentiles, minimum and maximum of the cross correlations are reported.  If name(string) is set, then the histogram is saved and not drawn.
+**name(string)** | saves the kdensity.
+**heatplot[(absolute options_heatplot)]** | draws a heatplot of the cross-correlations.  options_heatplot are options to be passed to heatplot.  absolute uses the absolute values of the cross-correlations.
+**contour[(absolute options_contour)]** | draws a contour plot of the cross-correlations.  options_contour are options to be passed to twoway contour.  absolute uses the absolute values of the cross-correlations.
+**noadjust** | do not remove cross-section specific means.  This was the default in versions prior 2.3.
+**seed(integer)** | sets the seed for the weighted CD test.
+
+# 8.3 Examples
+An example dataset of the Penn World Tables 8 is available for download [here](https://github.com/JanDitzen/xtdcce2/raw/master/xtdcce2_sample_dataset.dta).  The dataset contains yearly observations from 1960 until 2007 and is already tsset.  Estimating a simple panel version of the Solow model and run the CD test afterwards:
+
+```
+reg d.log_rgdpo log_hc log_ck log_ngd
+xtcd2
+```
+
+Predicting the error terms after reg, leads to the same result:
+
+```
+reg d.log_rgdpo log_hc log_ck log_ngd
+predict res, residuals
+xtcd2 res
+```
+
+The test statistic is 36.34 and the p-value is 0, therefore rejecting the null hypothesis of weak cross sectional dependence.
+
+To draw a density plot with the cross correlations the kdensity option is used:
+
+```
+xtcd2 res, kdensity
+```
+
+The CD test statistic is known to diverge if many periodic specific parameters are used (Juodis, Reese, 2021).  Unit specific rademacher weights can be applied to prevent this behaviour by using the option cdw:
+
+```
+xtcd2 res, cdw
+```
+
+To reduce the dependence of the weighted CD test statistic, the test can be repeatedly performed with different weights using the reps() option:
+
+```
+xtcd2 res, cdw reps(20)
+```
+
+To improve the power of the weighted CD test, the Power Enhancement Approach can be applied by using the pea option:
+
+```
+xtcd2 res, pea
+```
+
+Testing the variable log_rgdpo for cross sectional dependence reads:
+
+```
+xtcd2 log_rgdpo, noestimation
+```
+
+# 9. Estimating the exponent of cross-sectional dependence
+
+The `xtdcce2` package includes `xtcse2` which estimates the exponent of cross-sectional dependence. The syntax is:
+
+```
+xtcse2 [varlist] [if] [, pca(integer) standardize nocenter nocd RESsidual Reps(integer) size(real) tuning(real) lags(integer) ]
+```
+
+Data has to be xtset before using xtcse2; see tsset.  varlist may contain time-series operators, see tsvarlist.  If varlist if left empty, xtcse2 predicts residuals from the last estimation command, see predict.  xtcse2 uses an expectation–maximization (EM) algorithm to impute missing values if the panel is unbalanced.
+
+# 9.1 Description
+
+xtcse2 estimates the exponent of cross-sectional dependence in a panel with a large number of observations over time (T) and cross-sectional units (N).  The estimation method follows Bailey, Kapetanios, Pesaran (2016,2019) (henceforth BKP). A variable or a residual is cross-sectional dependent if it inhibits an across cross-sectional units common factor.
+
+xtcse2 estimates the strength of the factor, for a residual or one or more variables.  It outputs a standard error and confidence interval in the usual estimation output fashion, however it does not show a t or z statistic and p-value. Generally speaking strong cross-sectional dependence occurs if alpha is above 0.5.  Testing this is done by a separate test of weak cross-sectional dependence.  Therefore a confidence interval is more informative when estimating alpha.
+
+xtcse2 is intend to support the decision whether to include cross-sectional averages when using xtdcce2 and accompanies xtcd2 in testing for weak cross-sectional dependence. As a default it uses xtcd2 to test for weak cross-sectional dependence.  For a discussion of xtdcce2 and xtcd2 see Ditzen (2018,2019).
+
+In case of unbalanced panels an Expected Maximisation algorithm taken from xtnumfac is used. xtcd2 imputes values independently from xtcse2 and therefore results can differ.
+
+### Econometric Model
+
+For the following assume a general factor model with m factors:
+
+```
+x(i,t) = sum(j=1,m) b(j,i) f(j,t) + u(i,t)
+i = 1,...,N and t = 1,...,T
+```
+
+where x(i,t) depends on unobserved m common factors f(j,t) with loading b(j,i) and a cross sectionally independent error term u(i,t).  The time dimension (T) and the number of cross-sectional units (N) increases to infinity; (N,T) -> infinity.
+
+Chudik et al (2011) specify the factors as weak or strong using a constant 0<=alpha<=1 such that:
+
+```
+lim N^(-alpha) sum(j=1,m) abs(b(j,i)) = K < infinity.
+```
+
+The type of dependence of the factors and thus the series then depends on the characteristics of b(j,i):
+
+alpha | dependence
+--- | ---
+alpha = 0 | weak
+0 < alpha < 0.5 | semi weak
+0.5 <= alpha < 1 | semi strong
+alpha = 1 | strong
+
+Weak cross-sectional dependence can be thought of as the following: Even if the number of cross-sectional units increases to infinity, the sum of the effect of the common factors on the dependent variable remain constant. In the case of strong cross-sectional dependence, the sum of the effect of the common factors becomes stronger with an increase in the number of cross-sectional units.
+
+In an estimation ignoring (semi-) strong dependence in the dependent or independent variables can cause an omitted variable bias and therefore lead to inconsistent estimates.  Pesaran (2015) proposes a test to test for weak cross-sectional dependence, see xtcd2.  Pesaran (2006) and Chudik, Peasaran (2015) develop a method to estimate models with cross-sectional dependence by adding time averages of the dependent and independent variables (cross-sectional averages).  This estimator is implemented in Stata by xtdcce2.
+
+xtcse2 estimates alpha in the equation above.  An alpha above 0.5 implies strong cross-sectional dependence and the appropriate when using a variable is required.
+
+### Exponent Estimation (alpha)
+
+Bailey, Kapetanios and Pesaran (2016) [BKP] propose a method for the estimation of the exponent. This section summarizes their approach, a careful reading of the assumptions and theorems is strongly encouraged.
+
+BKP derive a bias-adjusted estimator for alpha in a panel with N_g cross-sectional units (see Eq. 13):
+
+```
+alpha = 1 + 1/2 ln(sigma_x^2)/ln(N_g) - 1/2 ln(mu^2)/ln(N_g) - 1/2 cn / [N_g * ln(N_g) * sigma_x^2]  
+```
+
+where sigma_x^2 is the variance of the cross-sectional averages.  mu^2 is average variance of significant regression coefficients of x(i,t) on standardized cross-sectional averages with a pre specified size of the test.  cn is the variance of scaled errors from a regression of the x(i,t) on its first K(PC) principle components.  The number of principle components can be set using the option pca(integer). The default is to use the first 4 principle components.
+
+xtcse2 outputs a standard error for alpha and a confidence interval in the usual Stata estimation fashion.  A t- or z-test statistic with p-value is however omitted, because the test is done by the test for weak cross-sectional dependence (CD-test), see xtcd2.  xtcse2 automatically calculates the CD-test statistic and posts its results.  For the estimation of alpha a confidence interval is therefore more informative.
+
+The calculation of the standard error of alpha follows the equation B47, Section VI of the online appendix of BKP, available here:
+
+```
+sigma(alpha) = [1/T V(q) + 4/N^(alpha) S]^(1/2) * 1/2 * 1/ln(N)
+```
+
+V(q) is the regression standard error over the square of the sum of q coefficients of an AR(q) process of the square of the deviation of standardized cross-sectional averages. q is the third root of T. S is the squared sum divided by N^(alpha-1) of OLS coefficients of x(it) on standardized cross-sectional averages sorted according to their absolute value.
+
+In the case of estimating the exponent of cross-sectional dependence in residuals Bailey, Kapetanios and Pesaran (2019) propose to use pair-wise correlations to estimate the exponent. For the calculation, only significant correlations are taken into account.  The exponent is estimated according to (Eq 25 in BKP 2019):
+
+```
+alpha = ln(tau' delta tau) / [2 ln(N)]
+```
+
+where tau is a Nx1 vector of ones and delta is a matrix which contains the significant pair-wise correlations.  For the significance, the size of the test and a tuning parameter need to be set a priori.  xtcse2 uses a size of 10% and a tuning parameter of 0.5 as a default.  Both can be changed with the options size() and tuning().
+
+In the case of a panel with weakly exogenous regressors, the pair-wise correlations are based on recursive residuals, see BKP 2019, section 5.2.  xtcse2 allows for this if the option lags() is used.
+
+BKP 2019 do not derive a closed form solution for standard errors.  Therefore standard errors and confidence intervals are calculated using a simple bootstrap, where the cross-sectional units are replaced with replacement. This approach is outlined in BKP 2019 section 5.3.
+
+# 9.2 Options
+
+Options | Description
+--- | ---
+**pca(integer)** | sets the number of principle components for the calculation of cn. Default is to use the first 4 components.
+**standardize** | standardizes variables.
+**nocenter** | do not center variables.
+**nocd** | suppresses test for cross-sectional dependence using xtcd2.
+**size(real)** | size of the test. Default is 10% (0.1).
+**ressidual** | estimates the exponent of cross-sectional depdendence in residuals, following BKP 2019.
+**tuning(real)** | tuning parameter for estimation of the exponent in residuals.  Default is 0.5.
+**reps(integer)** | number of repetitions for bootstrap for calculation of standard error and confidence interval for exponent in residuals. Default is 0.
+**lags(integer)** | number of lags (or training period) for calculation of recursive residuals when estimating the exponent after a regression with weakly exogenous regressors.
+
+# 9.3 Examples
+
+An example dataset of the Penn World Tables 8 is available for download [here](https://github.com/JanDitzen/xtdcce2/raw/master/xtdcce2_sample_dataset.dta).  The dataset contains yearly observations from 1960 until 2007 and is already tsset.  To estimate a growth equation the following variables are used:  log_rgdpo (real GDP), log_hc (human capital), log_ck (physical capital) and log_ngd (population growth + break even investments of 5%).
+
+Before running the growth regression the exponent of the cross-sectional dependence for the variables is estimated:
+
+```
+xtcse2 d.log_rgdpo L.log_rgdpo log_hc log_ck log_ngd.
+```
+
+All variables are highly cross-sectional dependent with alphas close or even above 1. Therefore an estimation method taking cross-sectional dependence is required.  xtdcce2 is uses such an estimation method by adding cross-sectional averages to the model. After running xtdcce2 it is possible to use xtcse2 to estimate the strength of the exponent of the residual using the option residuals.
+
+```
+xtdcce2 log_rgdpo L.log_rgdpo log_ck log_ngd log_hc , cr(log_rgdpo log_ck log_ngd log_hc) .
+xtcse2, res
+```
+
+xtcse2 automatically predicts the residuals using predict (predict after xtdcce2).  The CD statistic is still in a rejection region, therefore the residuals exhibit strong cross-sectional dependence.
+
+The estimated model above is mis-specified as it is a dynamic model, but no lags of the cross-sectional averages are added. The number of lags should be in the region of T^(1/3), so with 47 periods 3 lags are added. Then xtcse2 is used to estimate alpha again, this time the CD test is omitted:
+
+```
+xtdcce2 log_rgdpo L.log_rgdpo log_ck log_ngd log_hc , cr(log_rgdpo log_ck log_ngd log_hc) cr_lags(3) .
+xtcse2 ,nocd residual lags(3) reps(200)
+```
+
+The value of the CD test statistic is 1.32 and in a non-rejection region.  The estimate of alpha is considerably small the confidence interval does not overlap with 0.5
+
+As a second exercise the first row of Table 1. in BKP is reproduced.  The data is available on Pesaran's [webpage](https://www.econ.cam.ac.uk/people/emeritus/mhp1/published-articles#2016) and for download [here](www.econ.cam.ac.uk/people-files/emeritus/mhp1/fp15/BKP_GAUSS_procedures.zip) .
+
+After the data is loaded, reshaped (it comes in a matrix) and renamed as variable gdp, the option standardize is used to standardize the variable as done in BKP:
+
+```
+xtcse2 gdp , standardize.
+```
+
+
+# 10. References
+
+Ahn, S. C., & Horenstein, A. R. 2013. 
+Eigenvalue ratio test for the number of factors. 
+Econometrica, 81(3), 1203–1227.
+
+
+Bailey, N., G. Kapetanios and M. H. Pesaran. 2016.
+Exponent of cross-sectional dependence: estimation and inference.
+Journal of Applied Econometrics 31: 929-960.
+
+Bailey, N., G. Kapetanios and M. H. Pesaran. 2019.
+Exponent of Cross-sectional Dependence for Residuals.
+Sankhya B. The Indian Journal of Statistics: 81(4) p. 46-102.
 
 Baum, C. F., M. E. Schaffer, and S. Stillman 2007.
 Enhanced routines for instrumental variables/generalized method of moments estimation and testing.
 Stata Journal 7(4): 465-506
 
+Blackburne, E. F., and M. W. Frank. 2007.
+Estimation of nonstationary heterogeneous panels.
+Stata Journal 7(2): 197-208.
+
+Chudik, A., M. H. Pesaran and E. Tosetti. 2011. 
+Weak and strong cross-section dependence and estimation of large panels.
+The Econometrics Journal 14(1):C45–C90.
+
 Chudik, A., K. Mohaddes, M. H. Pesaran, and M. Raissi. 2013.
 Debt, Inflation and Growth: Robust Estimation of Long-Run Effects in Dynamic Panel Data Model.
-Chudik, A., and M. H. Pesaran. 2015.
 
-Common correlated effects estimation of heterogeneous dynamic panel data models with weakly exogenous regressors.
+Chudik, A., and M. H. Pesaran. 2015. Common correlated effects estimation of heterogeneous dynamic panel data models with weakly exogenous regressors.
 Journal of Econometrics 188(2): 393-420.
 
 Chudik, A., K. Mohaddes, M. H. Pesaran, and M. Raissi. 2016.
@@ -674,34 +1078,69 @@ Ditzen, J. 2018. Estimating Dynamic Common Correlated Effcts in Stata. The Stata
 
 Ditzen, J. 2021. Estimating long run effects and the exponent of cross-sectional dependence: an update to xtdcce2. The Stata Journal 21:3.
 
-Blackburne, E. F., and M. W. Frank. 2007.
-Estimation of nonstationary heterogeneous panels.
-Stata Journal 7(2): 197-208.
+Ditzen, J. 2021. Panel-data models with large N and large T: An overview. Economics Virtual Symposium 2021 2, Stata Users Group. [Slides](https://ideas.repec.org/p/boc/econ21/2.html).
 
 Eberhardt, M. 2012.
 Estimating panel time series models with heterogeneous slopes.
 Stata Journal 12(1): 61-71.
 
+Holly, S., Pesaran, M. H., Yamagata, T. 2010.
+A spatio-temporal model of house prices in the USA. 
+Journal of Econometrics 158: 160 - 172.
+
+Fan, J., Y. Liao & J. Yao. 2015. Power Enhancement in High-Dimensional Cross-Sectional Tests. Econometrica(83): 1497–1541.
+
 Feenstra, R. C., R. Inklaar, and M. Timmer. 2015.
 The Next Generation of the Penn World Table. American Economic Review. www.ggdc.net/pwt
+
+Goncalves, S., & Perron, B. 2014. 
+Bootstrapping factor-augmented regression models. 
+Journal of Econometrics, 182(1), 156–173.
 
 Jann, B. 2005.
 moremata: Stata module (Mata) to provide various functions.
 Available from http://ideas.repec.org/c/boc/bocode/s455001.html.
 
+Juodis, A. 2022. 
+A regularization approach to common correlated effects estimation.
+Journal of Applied Econometrics, 37(4), 788– 810.
+
+Juodis, A., & Reese, S. 2022. The Incidental Parameters Problem in Testing for Remaining Cross-section Correlation. Journal of Business Economics and Statistics. 40(3).
+
+Karabıyık, H., Reese, S., & Westerlund, J. 2017. 
+On the role of the rank condition in cce estimation of factor-augmented panel regressions.
+Journal of Econometrics, 197(1), 60–64.
+
 Pesaran, M. 2006.
 Estimation and inference in large heterogeneous panels with a multifactor error structure.
 Econometrica 74(4): 967-1012.
+
+Pesaran, M. H. 2021. 
+General diagnostic tests for cross-sectional dependence in panels.
+Empirical Economics 60: 13-50.
 
 Pesaran, M. H., and R. Smith. 1995.
 Econometrics Estimating long-run relationships from dynamic heterogeneous panels.
 Journal of Econometrics 68: 79-113.
 
+Pesaran, M. H. & Xie, Y. 2021. 
+A Bias-Corrected CD Test for Error Cross-
+Sectional Dependence in Panel Data Models
+with Latent Factors.
+Cambridge Working Papers in Economics 2158.
+
+Roodman, D., Nielsen, M. Ø., MacKinnon, J. G., & Webb, M. D. 2019. 
+Fast and wild: Bootstrap inference in Stata using boottest. 
+The Stata Journal, 19(1), 4–60.
+
 Shin, Y., M. H. Pesaran, and R. P. Smith. 1999.
 Pooled Mean Group Estimation of Dynamic Heterogeneous Panels.
 Journal of the American Statistical Association 94(446): 621-634.
 
-# 9. About
+Westerlund, J., Perova, Y., Norkute, M. 2019. CCE in fixed-T panels. 
+Journal of Applied Econometrics: 1-6.
+
+# 11. About
 
 ### Author
 Jan Ditzen (Free University of Bolzano-Bozen)
@@ -712,8 +1151,8 @@ Web: [www.jan.ditzen.net](http://www.jan.ditzen.net)
 
 ### Acknowledgments
 
-I am grateful to Achim Ahrens, Arnab Bhattacharjee, David M. Drukker, Markus Eberhardt, Tullio Gregori, Sebastian Kripfganz, Erich Gundlach and Mark Schaffer, to the participants of the
-2016 and 2018 Stata Users Group meeting in London and Zuerich, and two anonymous referees of The Stata Journal for many valuable comments and suggestions.
+I am grateful to Achim Ahrens, Arnab Bhattacharjee, David M. Drukker, Markus Eberhardt, Tullio Gregori, Sebastian Kripfganz, Erich Gundlach, Sean Holly, Kyle McNabb and Mark Schaffer, to the participants of the
+2016 and 2018 Stata Users Group meeting in London and Zuerich, and two anonymous referees of The Stata Journal for many valuable comments and suggestions. All remaining errors are my own.
 
 The routine to check for  positive definite or singular matrices was provided by Mark Schaffer, Heriot-Watt University, Edinburgh, UK.
 
@@ -729,7 +1168,7 @@ or
 
 Ditzen, J. 2021. Estimating long run effects and the exponent of cross-sectional dependence: an update to xtdcce2. The Stata Journal 21:3.
 
-# 10. Installation
+# 12. Installation
 The latest versions can be obtained via
 ```
 net install xtdcce2 , from("https://janditzen.github.io/xtdcce2/")
@@ -751,8 +1190,15 @@ net from http://www.ditzen.net/Stata/xtdcce2_beta
 ssc install xtdcce2
 ```
 
-# 11. Change log
-This version 3.0 - August 2021
+# 13. Change log
+Version 4.0 - February 2023
+- bootstrap support
+- added option mgmissing
+- added option rcce
+- added option fast2
+- fixed error when pooled and ardl used.
+
+Version 3.0 - August 2021
 - several small bug fixes
 - improved support for factor variables
 - fix for mm_which2
