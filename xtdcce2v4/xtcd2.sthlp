@@ -38,7 +38,7 @@
 {p 4 4}{cmd:xtcd2} tests residuals or a variables for weak cross sectional dependence in a panel data model. 
 It implements the tests by Pesaran ({help xtcd2##Pesaran2015:2015}, {help xtcd2##Pesaran2021:2021}),
 the weighted CD test (CDw) by
-Juodis & Reese ({help xtcd2##JR2021:2021}) including the power enhancement (Fang et. al., {help xtcd2##Fang2015:2015}).
+Juodis & Reese ({help xtcd2##JR2021:2022}) including the power enhancement (Fang et. al., {help xtcd2##Fang2015:2015}).
 It also implements the CD* from Pesaran & Xie ({help xtcd2##PesaranXie2021:2021}).
 As a default all four test statistics are calculated and presented next to each other.
 p-values are displayed in parenthesis.{p_end}
@@ -77,10 +77,10 @@ Under the null hypothesis the statistic is asymptotically{p_end}
 
 {p 4 4}distributed.{p_end}
 
-{marker CDw}{p 4 4}{ul:{bf:Weighted CD test (Juodis and Reese, {help xtcd2##JR2021:2021})}}{break}
+{marker CDw}{p 4 4}{ul:{bf:Weighted CD test (Juodis and Reese, {help xtcd2##JR2021:2022})}}{break}
 {cmd:xtcd2} further implements three alternatives to test for weak cross-sectional dependence.
-It includes the weighted CD (CDw) test proposed by Juodis and Reese ({help xtcd2##JR2021:2021}).
-Juodis and Reese ({help xtcd2##JR2021:2021}) show that the CD test diverges if the time dimension grows and 
+It includes the weighted CD (CDw) test proposed by Juodis and Reese ({help xtcd2##JR2021:2022}).
+Juodis and Reese ({help xtcd2##JR2021:2022}) show that the CD test diverges if the time dimension grows and 
 the test is applied to residuals after a CCE or FE regression. The CDw test weights each observation by cross-section specific Rademacher weights. 
 The pair wise correlations are calculated as:{p_end}
 
@@ -91,8 +91,8 @@ which take on the values 1 or -1 with equal probability.
 To reduce the dependence on the random Rademacher weights,
 the draw can be repeated using the {cmd:reps()} option.{p_end} 
 
-{marker pea}{p 4 4}{ul:{bf:Power Enhanced CD test }}{ul:{bf:(Juodis and Reese, {help xtcd2##JR2021:2021} and }}{ul:{bf:Fan et. al., {help xtcd2##Fan2015:2015})}}{break}
-A second alternative proposed by Juodis and Reese ({help xtcd2##JR2021:2021}) is the 
+{marker pea}{p 4 4}{ul:{bf:Power Enhanced CD test }}{ul:{bf:(Juodis and Reese, {help xtcd2##JR2021:2022} and }}{ul:{bf:Fan et. al., {help xtcd2##Fan2015:2015})}}{break}
+A second alternative proposed by Juodis and Reese ({help xtcd2##JR2021:2022}) is the 
 Power Enhancement Approach (PEA) by Fan et. al. ({help xtcd2##Fan2015:2015}). 
 The power of the CD test is improved by calculating the CD test as:{p_end}
 

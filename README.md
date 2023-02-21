@@ -855,7 +855,7 @@ If xtcd2 is used after xtreg, then the residuals are calculated using predict, e
 Options | Description
 --- | ---
 **pesaran** |  calculates the original CD test by Pesaran (2015), see Description of Pesaran (2015).
-**cdw** | calculates the weighted CD test following Juodis and Reese (2019), see Description of Juodis and Reese (2021).  Results vary if seed not specified.
+**cdw** | calculates the weighted CD test following Juodis and Reese (2022), see Description of Juodis and Reese (2022).  Results vary if seed not specified.
 **pea** | uses the Power Enhancement Approach (PEA) by Fan et. al. (2015), see Description of Fan et. al. (2015).  This method is designed for large panel panel datasets.
 **cdstar** | calculates the bias corrected CD test following Pesaran & Xie (2021), see Description of Pesaran & Xie (2021).
 **reps(integer)** | number of repetitions for the weighted CD test.  Implies option cdw. Default is 30.
