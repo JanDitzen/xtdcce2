@@ -772,7 +772,7 @@ estat bootstrap, seed(123) wild percentile
 The `xtdcce2` package includes `xtcd2` which tests for weak cross-sectional dependence. The syntax is:
 
 ```
-xtcd2 [varlist] [if] [,peasaran cdw pea cdstar rho 
+xtcd2 [varlist] [if] [,pesaran cdw pea cdstar rho 
 pca(integer) reps(integer) seed(integer)
 kdensity name(string) heatplot[(absolute options_heatplot)] 
 contour[(absolute options_contour) noadjust] ]

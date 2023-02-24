@@ -9,7 +9,7 @@
 
 {title:Syntax}
 
-{p 4 13}{cmd:xtcd2} [{varlist}] [if] [{cmd:,}{cmd:peasaran}  {cmd:cdw} {cmd:pea} {cmd:cdstar}
+{p 4 13}{cmd:xtcd2} [{varlist}] [if] [{cmd:,}{cmd:pesaran}  {cmd:cdw} {cmd:pea} {cmd:cdstar}
 {cmd:rho}
 {cmd:pca(integer)}
 {cmd:reps(integer)} 
