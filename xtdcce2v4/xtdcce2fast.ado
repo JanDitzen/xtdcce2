@@ -124,7 +124,7 @@ program define xtdcce2fast, eclass sortpreserve
 					local checkscsa "`varlist'"
 					local cropt `options'
 					if "`cr_lags'" == "" local cr_lags = 0
-					if `cr_lags' > 0 & "`rcceindex'`rcce'" != "" {
+					if "`cr_lags'" > "0" & "`rcceindex'`rcce'" != "" {
 						noi disp "Option rcce() cannot be combined with cr_lags(). Ignore rcce()."
 						local rcceindex ""
 						local rcce ""

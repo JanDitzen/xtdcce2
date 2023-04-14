@@ -459,7 +459,7 @@ program define xtdcce2int, eclass
 							else if "`init_lags'" != "" & "`cr_lags'" != "" local scr_lags `init_lags'
 							else if "`init_lags'" == "" & "`cr_lags'" != "" local scr_lags `cr_lags'
 							
-							if `scr_lags' > 0 & "`rcceindex'`rcce'" != "" {
+							if "`scr_lags'" > "0" & "`rcceindex'`rcce'" != "" {
 								noi disp "Option rcce() cannot be combined with cr_lags(). Ignore rcce()."
 								local rcceindex ""
 								local rcce ""
