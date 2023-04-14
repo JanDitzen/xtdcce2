@@ -1,4 +1,4 @@
-*! xtdcce2 4 - 08.02.2023
+*! xtdcce2 4.01 - 08.02.2023
 *! author Jan Ditzen
 *! www.jan.ditzen.net - jan.ditzen@unibz.it
 *! see viewsource xtdcce2.ado for more info.
@@ -142,6 +142,8 @@ fixed. was before assuming same s2 for all csu
 		   - added option fast2 for use of xtdcce2fast
 18.03.2022 - added option mgmissing
 20.02.2023 - added option rcce and bootstrap support
+----------------------------------------xtdcce2 4.1
+14.04.2023 - fixed bug when using different lag lengths for CSA
 */
 
 program define xtdcce2 , eclass sortpreserve
@@ -151,7 +153,7 @@ program define xtdcce2 , eclass sortpreserve
 		exit
 	}
 	version 11.1
-	local xtdcce2_version = 4
+	local xtdcce2_version = 4.01
 	if replay() {
 		syntax [, VERsion replay * ] 
 		if "`version'" != "" {
