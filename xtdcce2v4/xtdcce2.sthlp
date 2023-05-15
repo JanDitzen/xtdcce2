@@ -1,6 +1,6 @@
 {smcl}
 {hline}
-{hi:help xtdcce2}{right: v. 4.0 - xxx. xxx 202x}
+{hi:help xtdcce2}{right: v. 4.2 - 15. May 2023}
 {right:SJ18-3: st0536}
 {right:SJ21-3: st0536_1}
 {hline}
@@ -1090,7 +1090,11 @@ and beta versions including a full history of
 xtdcce2 from {stata "net from http://www.ditzen.net/Stata/xtdcce2_beta"}.{p_end}
 
 {marker ChangLog}{title:Version History}
-{p 4 8}This version: 4.0 -Feb 2022{p_end}
+{p 4 8}This version: 4.2 - May 2023{p_end}
+{p 8 10} - fixed bug in xtcd2 and xtcse2{p_end}
+{p 4 8}Version 4. to 4.1 - March 2023{p_end}
+{p 8 10} - fixed bug when using different lag lengths for CSA{p_end}
+{p 4 8}Version 3.01 to 4 - Feb 2023{p_end}
 {p 8 10} - bootstrap support{p_end}
 {p 8 10} - added option {cmd:mgmissing}{p_end}
 {p 8 10} - added option rcce{p_end}

@@ -1,26 +1,9 @@
-*! xtcd2 4.0 Feb 2023
+*! xtcd2 4.1 May 2023
 *! author Jan Ditzen
 *! see viewsource xtcd2.ado for more info.
 
 /* 
 Jan Ditzen - jan.ditzen@unibz.it
-
-xtcd2 performs the CD test as poposed by Chudik and Pesaran (2013). Balanced as well as unbalanced panels are supported.
-xtcd2 is a postestimation command, a sample has to be marked by e(sample) in advance. 
-Syntax:
-xtcd2 residuals [,KDENsity name(string) rho NOESTimation]
-, where residuals are saved residuals from an estimation which are tested to be cross sectional independent. 
-H0: cross sectional independence / weak cross sectional dependence (E(u_it u_jt) = 0)
-The value of the CD statistic is saved in r(CD) and it's p-value in r(p).
-Options:
-	KDENsity: plots a kernal density graph of the cross correlations together with some descriptive statistics.
-	name(name): if specified kernal density graph is saved under "name", histogram not drawn.
-	rho: saves the matrix with the cross correlations in r(rho).
-	NOESTimation: If command performed on residuals not after estimation.
-	
-Literature References: 
-					Pesaran, M. H. 2015. Testing Weak Cross-Sectional Dependence in Large Panels.
-						Econometric Reviews 34(6-10): 1089-1117.
 							
 Changelog:
 	05.03.2015 Option NOESTimation added
@@ -41,6 +24,7 @@ Changelog:
 	23.02.2021 Added option noadjust; do not remove means from vars; now standard to remove means!
 	23.09.2022 Improved calculation for unbalanced panels, fixed bug that CD test statistic becomes 1, added EM algorithm from xtnumfac for CDstar test
 	04.11.2022 Added seed() option to control seed for CDW test.
+	15.05.2023 Added trace option; bug fixed when using noadjust option
 	*/
 cap program drop xtcd2
 program define xtcd2, rclass
@@ -75,10 +59,15 @@ program define xtcd2_int, rclass
 			pea  pesaran cdw cdstar pca(real 4)) ///
 			///
 			seed(string) ///
-			/// loop method for unbalanced panels
-			loop ]
+			/// loop method for unbalanced panels and if noadjust option used
+			loop ///
+			/// force using unbalanced algorithm
+			FORCEUnbalanced ///
+			trace ]
 	
-
+	
+	if "`trace'" != "" local trace noi
+	else local trace qui
 	
 	if "`repeatoutput'" != "" {
 		xtcd2_output
@@ -122,7 +111,7 @@ program define xtcd2_int, rclass
 	
 	preserve
 		if "`if'" != "" {
-			qui keep `if'
+			`trace' keep `if'
 		}
 		
 		** Check which estimation command
@@ -148,6 +137,7 @@ program define xtcd2_int, rclass
 		}
 		else {
 			local noadjust = 1
+			local loop loop
 		}
 		tsunab varlist :  `varlist', min(0)
 	
@@ -155,13 +145,13 @@ program define xtcd2_int, rclass
 			tempname varlist
 				
 			predict `varlist'  , `restype'
-			qui keep if e(sample)
+			`trace' keep if e(sample)
 				
 		}
 		
 		*}
 		**Test if sample exists
-		qui sum `varlist'
+		`trace' sum `varlist'
 		if "`r(N)'" == "0" {
 			display in red "Error: no sample set"
 			exit
@@ -187,6 +177,7 @@ program define xtcd2_int, rclass
 		if "`balanced'" == "strongly balanced" {
 			local balanced = 1
 		}
+		if "`forceunbalanced'" != "" local balanced = 0
 		cap qui xtset2 
 		if _rc != 0 {
 			noi disp "Please install xtset2 from xtdcce2 package."
@@ -206,7 +197,8 @@ program define xtcd2_int, rclass
 		mata `RhoID' = uniqrows(`RhoID')
 		
 		tempname CD CDp rhoMat
-		noi mata xtcd2_CD("`varlist'",`N',`T',`balanced',`noadjust',`pca',"`methods'",("`defactor'"!=""),`reps',"`CD'","`CDp'",("`rho'`heatplot'`heatplotmap'`kdensity'`contour'"!= ""),`rhoMat'=.,("`loop'"!=""))
+		`trace' sum `varlist'
+		`trace' mata xtcd2_CD("`varlist'",`N',`T',`balanced',`noadjust',`pca',"`methods'",("`defactor'"!=""),`reps',"`CD'","`CDp'",("`rho'`heatplot'`heatplotmap'`kdensity'`contour'"!= ""),`rhoMat'=.,("`loop'"!=""))
 
 
 
@@ -225,6 +217,7 @@ program define xtcd2_int, rclass
 		return hidden local npca "`pca'"
 		return hidden local CDN_g "`N'"
 		return hidden local CDT "`T'"
+		return hidden local noadjust = `noadjust'
 
 		*** here order program
 		if "`order'" != "" {
@@ -432,6 +425,7 @@ program define xtcd2_output
 	if "`r(cdw)'" != "" disp as smcl "  CDw: {col 13} Juodis, Reese ({help xtcd2##JR2021:2021})"
 	if "`r(pea)'" != "" disp as smcl "  CDw+: {col 13} CDw with power enhancement from Fan et. al. ({help xtcd2##Fan2015:2015})"
 	if "`r(cdstar)'" != "" disp as smcl "  CD*: {col 13} Pesaran, Xie ({help xtcd2##PesaranXie2021:2021}) with `r(npca)' PC(s)"
+	if `r(noadjust)' == 1 disp as smcl "Cross-sectional units not demeaned for calculation of cross-correlations."
 end
 
 /// program to calculate CD tests
@@ -623,31 +617,44 @@ mata:
 	{
 		
 		
-		if (stand == 0) {
-			meanM = mean(r)
-		}
-		else {
-			meanM = J(1,N,0)
-		}
 		
-		if ((balanced == 0 & hasmissing(meanM) == 0 & loop == 0) | (nonmissing(r)==0)) {
+		
+		if ((balanced == 1 & hasmissing(meanM) == 0 & loop == 0) | (nonmissing(r)==0)) {
+			"balanced"
+			if (stand == 0) {
+				meanM = mean(r)
+			}
+			else {
+				meanM = J(1,N,0)
+			}
+			"mean"
+			meanM
 			RHO = quadcorrelation(r :- meanM)*sqrt(T)
 			RHO = sublowertriangle(RHO)'
 			_diag(RHO, 0)
 		}
 		else {
-			meanM = quadcolsum(r) :/quadcolsum(r:!=.)
+			"unbalanced"
+			if (stand == 0) {
+				meanM = quadcolsum(r) :/quadcolsum(r:!=.)
+			}
+			else {
+				meanM = J(1,N,0) 
+			}
+			"mean"
+			meanM
+		
+			mean(r :- meanM)
 			RHO = quadcorrelation(r :- meanM)*sqrt(T)
 			RHO = sublowertriangle(RHO)'
 			_diag(RHO, 0)
 
 			if (hasmissing(RHO) | loop == 1) {
-				if (hasmissing(RHO))  {
-					
+				if (hasmissing(RHO) | loop == 1)  {
 					maxi = N - 1
 					RHO = J(N,N,.)
 					r2 = editmissing(r,0)
-					
+					"do loop"
 					for (i=1; i<=maxi; i++) {
 						minj = i + 1
 						for (j = minj; j<=N; j++) {
@@ -656,14 +663,9 @@ mata:
 								nonmissing = rownonmissing(r[,i]):*rownonmissing(r[,j])
 								T_nonmissing = sum(nonmissing)
 								// Clean Data, i.e. correct missing values into zeros
-								///ri = editmissing(r[,i],0) :- meanM[i]
-								///rj = editmissing(r[,j],0) :- meanM[j]
-								ri = r2[,i] :- meanM[i]
-								rj = r2[,j] :- meanM[j]
-								ub_i = ri'*nonmissing / T_nonmissing
-								ub_j = rj'*nonmissing / T_nonmissing
-								u_i = ri :- ub_i
-								u_j = rj :- ub_j
+								
+								u_i = r2[,i] :- meanM[i]
+								u_j = r2[,j] :- meanM[j]
 								// from p. 42 of Chudik, Pesaran (2013) - note: sqrt(T) is added here!
 								RHO[i,j] =u_i'*u_j /(sqrt(u_i'*u_i)*sqrt(u_j'*u_j))*sqrt(T_nonmissing) 
 								
@@ -673,7 +675,6 @@ mata:
 				}
 			}
 		}
-		
 		return(RHO)	
 	}
 end

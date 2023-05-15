@@ -323,7 +323,9 @@ Ditzen, J. 2019. xtcse2: Estimating Exponent of Cross-Sectional Dependence in la
 .{p_end}
 
 {marker ChangLog}{title:Changelog}
-{p 4 8}This version: 1.2 - 11. January 2021{p_end}
+{p 8 8}Version 1.3 - May 2023{p_end}
+{p 8 8}- nocenter affects xtcd2 as well{p_end}
+{p 4 8}Version 1.2 - 11. January 2021{p_end}
 {p 8 8}- added support for residuals{p_end}
 {p 8 8}- bug fixed{p_end}
 {p 8 8}- added option {cmd:nocenter}{p_end}

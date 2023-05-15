@@ -1,4 +1,4 @@
-*! xtcse2, version 1.03, Feb 2023
+*! xtcse2, version 1.04, May 2023
 *! author Jan Ditzen
 *! www.jan.ditzen.net - jan.ditzen@unibz.it
 /*
@@ -13,6 +13,8 @@ Changelog
 **********1.03*****************************
 - unbalanced panels are now imputed rather than using xtbalance2.
 - removed option samesample. xtcd2 and xtcse2 impute panel independently.
+**********1.04*****************************
+- option nocenter affects xtcd2 as well
 */
 program define xtcse2, rclass
 	syntax [varlist(default=none ts)] [if], [pca(integer 4) STANDardize nocd inprog size(real 0.1) tuning(real 0.5) Reps(integer 0) RESidual lags(integer 0) NOCENTER  ]
@@ -335,7 +337,8 @@ program define xtcse2, rclass
 
 	if "`cd'" == "" {
 		if "`cd'" == "" & "`inprog'" == "" {	
-			xtcd2 `varlisto'
+			if "`nocenter'" != "" local xtcd2_noadjust noadjust
+			xtcd2 `varlisto' , `xtcd2_noadjust'
 			tempname cdres cdpres
 			matrix `cdres' = r(CD)
 			matrix `cdpres' = r(p)

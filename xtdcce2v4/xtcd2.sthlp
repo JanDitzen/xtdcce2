@@ -1,6 +1,6 @@
 {smcl}
 {hline}
-{hi:help xtcd2}{right: v. 4.0 - Feb 2023}
+{hi:help xtcd2}{right: v. 4.2 - May 2023}
 {right:SJ18-3: st0536}
 {hline}
 {title:Title}
@@ -165,7 +165,7 @@ If {cmd:name({it:string})} is set, then the histogram is saved and not drawn.{p_
 {it: options_contour} are options to be passed to {help twoway contour.}
 {cmdab:abs:olute} uses the absolute values of the cross-correlations.{p_end}
 
-{p 4 4}{cmdab:noadj:ust} do not remove cross-section specific means. 
+{p 4 4}{cmdab:noadj:ust} do not remove cross-section specific means for calculation of cross-correlations. 
 This was the default in versions prior 2.3.{p_end}
 
 {p 4 4}{cmd:seed(integer)} sets the {help set seed:seed} for the weighted CD test.{p_end}

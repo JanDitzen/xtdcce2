@@ -1208,6 +1208,12 @@ ssc install xtdcce2
 ```
 
 # 13. Change log
+Version 4.2 - May 2023
+- fixed bug in xtcd2 and xtcse2
+
+Version 4.1 - March 2023
+- fixed bug when using different lag lengths for CSA
+
 Version 4.0 - February 2023
 - bootstrap support
 - added option mgmissing

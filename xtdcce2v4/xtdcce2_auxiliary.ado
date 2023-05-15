@@ -1134,3 +1134,68 @@ mata:
 		return(X0)
 	}	
 end
+
+cap program drop xtdcce2_absorb_prog
+program define xtdcce2_absorb_prog, rclass
+	syntax anything(name=absorb) , [KEEPsingeltons TRACEhdfeopt partialonly] touse(string) vars(string) [donotoverwrite]
+
+	local singeltons = 0
+	if "`keepsingeltons'" == "" local singeltons = 1
+
+	local tracehdfe = -1
+	if "`tracehdfeopt'" != "" local tracehdfe = 1
+
+	if "`tracehdfeopt'" != "" local noii noi
+
+	*** tempnames for mata objects
+	tempname nwxtreg_absorb nwxtreg_absorb_partial
+
+	cap which reghdfe
+	loc rc = _rc
+	cap which ftools
+	if _rc | `rc' {                			
+		di as err "option {it: absorb()} requires {help:reghdfe} and {help ftools}:"
+		di as err "  click {stata ssc install reghdfe} to install from SSC"
+		di as err "  click {stata ssc install ftools} to install from SSC"
+		exit 199
+	}
+	*noi disp "absorb: `absorb' -- `singeltons'"
+	cap `noii' mata: `nwxtreg_absorb' = fixed_effects("`absorb'", "`touse'", "", "", `singeltons', `tracehdfe')
+	if _rc {
+		cap reghdfe, check
+		cap mata: `nwxtreg_absorb' = fixed_effects("`absorb'", "`touse'", "", "", `singeltons', `tracehdfe')
+		if _rc {
+			di as err "{bf:reghdfe} Mata library not found or error in {cmd:reghdfe}."
+			exit 199
+		}
+	}
+	if "`noii'" != "" {
+		noi disp "Before partial out"
+		noi sum `vars'
+	}
+	
+	mata: `nwxtreg_absorb_partial' = `nwxtreg_absorb'.partial_out("`vars' ")	
+	///mata st_local("var_partial",invtokens("abs":+st_tempname(cols(tokens("`vars'")))))	
+	mata st_local("var_partial",invtokens("abs":+strofreal(1..cols(tokens("`vars'")))))	
+	mata st_store(`nwxtreg_absorb'.sample, st_addvar("double",tokens("`var_partial'")),"`touse'", `nwxtreg_absorb_partial')
+	if "`noii'" != "" {
+		noi disp "After partial out"
+		noi mata mean(`nwxtreg_absorb_partial')
+		noi sum `var_partial'
+	}
+	if "`partialonly'" != "" {
+		error 199
+	}
+	mata mata drop `nwxtreg_absorb_partial' `nwxtreg_absorb'
+	
+	if "`donotoverwrite'" == "" {
+		local i = 1
+		foreach source in `var_partial' {
+			local aim = word("`vars'",`i')
+			replace `aim' = `source'
+			local i = 1 + `i'
+		}
+	}
+
+	return local absorb_vars "`var_partial'"
+end

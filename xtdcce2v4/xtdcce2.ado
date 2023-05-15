@@ -1,4 +1,4 @@
-*! xtdcce2 4.01 - 08.02.2023
+*! xtdcce2 4.2 - 15.05.2023
 *! author Jan Ditzen
 *! www.jan.ditzen.net - jan.ditzen@unibz.it
 *! see viewsource xtdcce2.ado for more info.
@@ -144,6 +144,8 @@ fixed. was before assuming same s2 for all csu
 20.02.2023 - added option rcce and bootstrap support
 ----------------------------------------xtdcce2 4.1
 14.04.2023 - fixed bug when using different lag lengths for CSA
+----------------------------------------xtdcce2 4.2
+15.05.2023 - fixed bug in xtcd2
 */
 
 program define xtdcce2 , eclass sortpreserve
@@ -153,7 +155,7 @@ program define xtdcce2 , eclass sortpreserve
 		exit
 	}
 	version 11.1
-	local xtdcce2_version = 4.01
+	local xtdcce2_version = 4.2
 	if replay() {
 		syntax [, VERsion replay * ] 
 		if "`version'" != "" {
@@ -208,6 +210,7 @@ program define xtdcce2int, eclass
 			*/ JACKknife RECursive fullsample /*
 			*/ ivslow  /*
 			*/ fast /*
+			*/ absorb(string)	/*
 			*/ BLOCKDIAGuse /* Use block diagonal rather than own routine. Much slower!
 			*/ NODIMcheck /* time dimension check
 			*/ NOOMITted  /* option included again for omitting omitted variable tests.
@@ -273,6 +276,10 @@ program define xtdcce2int, eclass
 			local exponent "exponent"
 		}
 		
+		if "`absorb'" != "" {
+			local noconstant noconstant
+		}
+
 		* fast option
 		if "`fast'" == "fast" {
 			local fast = 1
@@ -788,7 +795,7 @@ program define xtdcce2int, eclass
 				if "`pooledtrend'" != "" | "`trend'" != "" {
 					tempvar trendv
 					sum `d_tvar'
-					gen double `trendv' = `tvar'
+					gen double `trendv' = `tvar' \ `r(max)'
 					
 					mata `mata_varlist'  = (`mata_varlist'  \ ("trend" , "`trendv'", J(1,10,"0")))
 					
@@ -904,7 +911,26 @@ program define xtdcce2int, eclass
 						}
 					}
 
-				}			
+				}
+
+
+				if "`absorb'" != "" {
+					local indepdepvars `lhs' `rhs' `pooled' `crosssectional' `endogenous_vars' `exogenous_vars' `endo_pooled' `exo_pooled'
+					local indepdepvars : list uniq indepdepvars
+					///local noconstant noconstant]
+					gettoken 1 2: absorb, parse(",")
+					gettoken 3 4: 2					
+					`trace' xtdcce2_absorb_prog `1' , `4' touse(`touse') vars(`indepdepvars') 
+
+					///local indepdepvars `r(absorb_vars)'
+					///local spatial =word("`indepdepvars'",1)
+
+	            			*** adjust touse
+					*markout `lhs' `rhs' `pooled' `crosssectional' `endogenous_vars' `exogenous_vars' `endo_pooled' `exo_pooled'
+									
+				}
+
+
 				
 				**add lags to var matrix		
 				if "`crosssectional'" != "" {
