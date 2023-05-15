@@ -615,26 +615,14 @@ capture mata mata drop xtcd2_rho()
 mata:
 	function xtcd2_rho (real matrix r, real scalar N, real scalar T, real scalar stand,balanced,real scalar loop)	
 	{
-		
-		
-		
-		
 		if ((balanced == 1 & hasmissing(meanM) == 0 & loop == 0) | (nonmissing(r)==0)) {
 			"balanced"
-			if (stand == 0) {
-				meanM = mean(r)
-			}
-			else {
-				meanM = J(1,N,0)
-			}
-			"mean"
-			meanM
-			RHO = quadcorrelation(r :- meanM)*sqrt(T)
+			RHO = quadcorrelation(r)*sqrt(T)
 			RHO = sublowertriangle(RHO)'
 			_diag(RHO, 0)
 		}
 		else {
-			"unbalanced"
+			"unbalanced - or no demeaning"
 			if (stand == 0) {
 				meanM = quadcolsum(r) :/quadcolsum(r:!=.)
 			}
@@ -643,8 +631,6 @@ mata:
 			}
 			"mean"
 			meanM
-		
-			mean(r :- meanM)
 			RHO = quadcorrelation(r :- meanM)*sqrt(T)
 			RHO = sublowertriangle(RHO)'
 			_diag(RHO, 0)
