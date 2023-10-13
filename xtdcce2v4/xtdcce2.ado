@@ -795,7 +795,7 @@ program define xtdcce2int, eclass
 				if "`pooledtrend'" != "" | "`trend'" != "" {
 					tempvar trendv
 					sum `d_tvar'
-					gen double `trendv' = `tvar' \ `r(max)'
+					gen double `trendv' = `tvar' / `r(max)'
 					
 					mata `mata_varlist'  = (`mata_varlist'  \ ("trend" , "`trendv'", J(1,10,"0")))
 					
