@@ -1,4 +1,4 @@
-*! xtdcce2 4.2 - 15.05.2023
+*! xtdcce2 4.5 - 13.11.2023
 *! author Jan Ditzen
 *! www.jan.ditzen.net - jan.ditzen@unibz.it
 *! see viewsource xtdcce2.ado for more info.
@@ -146,6 +146,12 @@ fixed. was before assuming same s2 for all csu
 14.04.2023 - fixed bug when using different lag lengths for CSA
 ----------------------------------------xtdcce2 4.2
 15.05.2023 - fixed bug in xtcd2
+----------------------------------------xtdcce2 4.3
+21.05.2023 - fixed bug in var/cov estimation when using pooled coefficients and R matrix is zero
+----------------------------------------xtdcce2 4.4
+13.10.2023 - fixed bug in trend option
+----------------------------------------xtdcce2 4.5
+13.10.2023 - supports new reghdfe version
 */
 
 program define xtdcce2 , eclass sortpreserve
@@ -155,7 +161,7 @@ program define xtdcce2 , eclass sortpreserve
 		exit
 	}
 	version 11.1
-	local xtdcce2_version = 4.2
+	local xtdcce2_version = 4.5
 	if replay() {
 		syntax [, VERsion replay * ] 
 		if "`version'" != "" {
@@ -795,7 +801,7 @@ program define xtdcce2int, eclass
 				if "`pooledtrend'" != "" | "`trend'" != "" {
 					tempvar trendv
 					sum `d_tvar'
-					gen double `trendv' = `tvar' \ `r(max)'
+					gen double `trendv' = `tvar' / `r(max)'
 					
 					mata `mata_varlist'  = (`mata_varlist'  \ ("trend" , "`trendv'", J(1,10,"0")))
 					
@@ -920,7 +926,7 @@ program define xtdcce2int, eclass
 					///local noconstant noconstant]
 					gettoken 1 2: absorb, parse(",")
 					gettoken 3 4: 2					
-					`trace' xtdcce2_absorb_prog `1' , `4' touse(`touse') vars(`indepdepvars') 
+					`tracenoi' xtdcce2_absorb_prog `1' , `4' touse(`touse') vars(`indepdepvars') 
 
 					///local indepdepvars `r(absorb_vars)'
 					///local spatial =word("`indepdepvars'",1)
@@ -1843,14 +1849,22 @@ program define xtdcce2int, eclass
 					*/ N_clust1 N_clust2 bw lambda kclass full sargan sarganp sargandf j jp arubin /*
 					*/ arubinp arubin_lin arubin_linp arubindf idstat idp iddf widstat arf arfp archi2 /*
 					*/ archi2p ardf ardf_r redstat redp reddf cstat cstatp cstatdf cons center partialcons partial_ct {
-						if "`ivreg2_`scal''" != "" ereturn scalar ivreg2_`scal' = `ivreg2_`scal''
+						
+						cap confirm  scalar  ivreg2_`scal'
+						
+						if _rc == 0 ereturn scalar ivreg2_`scal' = ivreg2_`scal'
 				}
 				foreach macr in cmd cmdline ivreg2cmd version model depvar instd insts inexog exexog collin dups ecollin clist redlist partial small wtype /*	
-					*/ wexp clustvar vcetype kernel firsteqs rfeq sfirsteq predict{
-					if "`ivreg2_`macr''" != "" 	ereturn local  ivreg2_`macr'  "`ivreg2_`macr''"
+					*/ wexp clustvar vcetype kernel firsteqs rfeq sfirsteq predict {
+						
+						cap confirm  scalar  ivreg2_`macr'
+						if _rc == 0 ereturn scalar ivreg2_`macr' = ivreg2_`macr'
+					
 				}
 				foreach matr in b V S W first ccev dcef {
-					if "`ivreg2_`matr''" != "" matrix  ivreg2_`matr' = `ivreg2_`matr''
+					cap confirm  scalar  ivreg2_`matr'
+					if _rc == 0 ereturn scalar ivreg2_`matr' = ivreg2_`matr'
+					
 				}
 			} 			
 		}
@@ -2462,7 +2476,7 @@ program define xtdcce2int, eclass
 			if "`mgmissing'" != "" display as text "Collinearities detected. One or more individual coefficients are excluded from MG regression."
 			display as text in smcl "Use {stata estat ebistructure} to display more details." 
 				
-			matrix colnames `UsedCols' = `rhs_vars' `pooled_vars'
+			cap matrix colnames `UsedCols' = `rhs_vars' `pooled_vars'
 			ereturn matrix omitted_var_i = `UsedCols'
 			ereturn hidden matrix rankreg = `RankReg'			
 		}
@@ -2742,7 +2756,7 @@ mata:
 						tmp_y = select(Y,indic)
 						tmp_xx = quadcross(tmp_x,tmp_x)
 						tmp_xy = quadcross(tmp_x,tmp_y)
-						"start calculating b"
+						"start calculating bi"
 						bii = m_xtdcce_solver(tmp_xx,tmp_xy,useqr,ranki=.,colni=0,method="")
 						b_output = (b_output \ bii)
 						"cols"
@@ -3215,6 +3229,7 @@ mata:
 		}
 		"mg done"
 		"calculate MG"
+		useweights
 		if (useweights == 0) {
 			b_mg = mean(b_mg_w')		
 		}
@@ -3227,6 +3242,7 @@ mata:
 				weight_mat_sum = weight_mat_sum:*weight_mat[,vi]
 			}
 		}
+		"weighting done"
 		/// if pooled only then b_mg used for pooled
 		b_1 = b_mg_w :- b_mg'
 		b_1p = b_1
@@ -3290,6 +3306,8 @@ mata:
 			}			
 "herexx"
 input_pooled_vnames
+"b_pooled"
+b_pooled
 			if (FixedTVCE == 0) {
 				"standard vce"
 				/// Standard VarianceCovarianceEstimator from Pesaran 2006, Eq 67 - 69.
@@ -3314,7 +3332,7 @@ input_pooled_vnames
 						/// eq. 26 from Pesaran, Tosetti (2011); no difference as long as weights 1/N then w_tilde = 1
 						/// eq. 67 Pesaran 2006
 						///tmp_R = w_tilde:^2 :* tmptmp*b_i1*b_i1'*tmptmp
-						if (sum(b_i1:==0) == 0 & hasmissing(tmptmp*b_i1*b_i1'*tmptmp) == 0) {
+						if (allof(b_i1,0)==0 & hasmissing(tmptmp*b_i1*b_i1'*tmptmp) == 0) {
 							R = R :+ w_tilde:^2 :* tmptmp*b_i1*b_i1'*tmptmp
 						}
 						else {
@@ -3325,12 +3343,17 @@ input_pooled_vnames
 				}
 				///divide by N-1
 				R = R / (N - 1)
+				if (allof(R,0)) {
+					"R matrix for COV calculation of pooled coefficients is zero!"
+					R = J(rows(PSI),cols(PSI),0)
+				}
 				PSI1 = m_xtdcce_inverter(PSI,useqr)
 				"psi"
 				PSI1
 				"R"
 				R
 				//// eq. 69 Pesaran 2006
+				
 				cov_p =  w_s :* PSI1 * R * PSI1 
 			}
 			if (FixedTVCE == 1)  {

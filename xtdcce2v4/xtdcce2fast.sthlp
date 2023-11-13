@@ -415,9 +415,7 @@ Ditzen, J. 2018. xtdcce2: Estimating dynamic common correlated effects in Stata.
 or{break}
 Ditzen, J. 2021. Estimating long run effects and the exponent of cross-sectional dependence: an update to xtdcce2. The Stata Journal 21:3{p_end}
 
-{p 4 8}The latest versions can be obtained via {stata "net from https://github.com/JanDitzen/xtdcce2"} 
-and beta versions including a full history of 
-xtdcce2 from {stata "net from http://www.ditzen.net/Stata/xtdcce2_beta"}.{p_end}
+{p 4 8}The latest versions can be obtained via {stata "net from https://github.com/JanDitzen/xtdcce2"}.{p_end}
 
 {marker ChangLog}{title:Version History}
 {p 4 8}This version: 1.0 - 16. August 2021{p_end}

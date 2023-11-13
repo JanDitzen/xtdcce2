@@ -1208,6 +1208,16 @@ ssc install xtdcce2
 ```
 
 # 13. Change log
+
+Version 4.5 - November 2023
+- supports reghdfe v.6.12
+
+Version 4.4 - May 2023
+- fixed bug in trend option
+
+Version 4.3 - May 2023
+- fixed bug in var/cov when using pooled coefficients
+
 Version 4.2 - May 2023
 - fixed bug in xtcd2 and xtcse2
 

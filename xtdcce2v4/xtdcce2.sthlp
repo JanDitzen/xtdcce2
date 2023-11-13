@@ -1,6 +1,6 @@
 {smcl}
 {hline}
-{hi:help xtdcce2}{right: v. 4.2 - 15. May 2023}
+{hi:help xtdcce2}{right: v. 4.5 - 13. November 2023}
 {right:SJ18-3: st0536}
 {right:SJ21-3: st0536_1}
 {hline}
@@ -1085,12 +1085,16 @@ Sean Holly and Mark Schaffer, to the participants of the
 Ditzen, J. 2018. xtdcce2: Estimating dynamic common correlated effects in Stata. The Stata Journal. 18:3, 585 - 617.
 {p_end}
 
-{p 4 8}The latest versions can be obtained via {stata "net from https://github.com/JanDitzen/xtdcce2"} 
-and beta versions including a full history of 
-xtdcce2 from {stata "net from http://www.ditzen.net/Stata/xtdcce2_beta"}.{p_end}
+{p 4 8}The latest versions can be obtained via {stata "net from https://github.com/JanDitzen/xtdcce2"}.{p_end}
 
 {marker ChangLog}{title:Version History}
-{p 4 8}This version: 4.2 - May 2023{p_end}
+{p 4 8}Version 4.4 to 4.5 - May 2023{p_end}
+{p 8 10} - supports new reghdfe version{p_end}
+{p 4 8}Version 4.3 to 4.4 - May 2023{p_end}
+{p 8 10} - fixed bug in trend option{p_end}
+{p 4 8}Version 4.2 to 4.3 - May 2023{p_end}
+{p 8 10} - fixed bug in var/cov estimation when using pooled coefficients and R matrix is zero{p_end}
+{p 4 8}Version 4.1 to 4.2 - April 2023{p_end}
 {p 8 10} - fixed bug in xtcd2 and xtcse2{p_end}
 {p 4 8}Version 4. to 4.1 - March 2023{p_end}
 {p 8 10} - fixed bug when using different lag lengths for CSA{p_end}

@@ -179,12 +179,12 @@ mata:
 				/// 1..cols(A) makes sure variables from left are not dropped
 				A1 = invsym(A,(1..cols(A)))
 				rank = rows(A1)-diag0cnt(A1)
-				
 				if (rank < rows(A)) {	
 					/// not full rank, solve by hand
 					C = A1 * B
-					method = "invsym"
-					coln = xtdcce_selectindex(colsum(A1:==0):==rows(A1):==0)			
+					method = "invsym (not full rank)"					
+					if (A1[1,1] != 0 & rows(A1)==1 & cols(A1)==1) coln = xtdcce_selectindex(colsum(A1:==0):==rows(A1):==0)	
+									
 				}
 				else {
 					/// full rank use cholsolve
@@ -1137,18 +1137,16 @@ end
 
 cap program drop xtdcce2_absorb_prog
 program define xtdcce2_absorb_prog, rclass
-	syntax anything(name=absorb) , [KEEPsingeltons TRACEhdfeopt partialonly] touse(string) vars(string) [donotoverwrite]
+	syntax anything(name=absorb) , [ TRACEhdfeopt partialonly] touse(string) vars(string) [donotoverwrite]
 
 	local singeltons = 0
 	if "`keepsingeltons'" == "" local singeltons = 1
 
-	local tracehdfe = -1
-	if "`tracehdfeopt'" != "" local tracehdfe = 1
-
-	if "`tracehdfeopt'" != "" local noii noi
+	local tracehdfe = 0
+		if "`tracehdfeopt'" != "" local noii noi
 
 	*** tempnames for mata objects
-	tempname nwxtreg_absorb nwxtreg_absorb_partial
+	tempname xtdcce2_absorb 
 
 	cap which reghdfe
 	loc rc = _rc
@@ -1159,34 +1157,35 @@ program define xtdcce2_absorb_prog, rclass
 		di as err "  click {stata ssc install ftools} to install from SSC"
 		exit 199
 	}
-	*noi disp "absorb: `absorb' -- `singeltons'"
-	cap `noii' mata: `nwxtreg_absorb' = fixed_effects("`absorb'", "`touse'", "", "", `singeltons', `tracehdfe')
-	if _rc {
-		cap reghdfe, check
-		cap mata: `nwxtreg_absorb' = fixed_effects("`absorb'", "`touse'", "", "", `singeltons', `tracehdfe')
-		if _rc {
-			di as err "{bf:reghdfe} Mata library not found or error in {cmd:reghdfe}."
-			exit 199
-		}
+	cap include "reghdfe.mata", adopath
+	cap {
+		mata: `xtdcce2_absorb' = FixedEffects()
+		mata: `xtdcce2_absorb'.absvars = "`absorb'"
+		mata: `xtdcce2_absorb'.tousevar = "`touse'"
+		mata: `xtdcce2_absorb'.init()
+		mata: `xtdcce2_absorb'.partial_out("`vars' ",0, 0)	
 	}
-	if "`noii'" != "" {
-		noi disp "Before partial out"
-		noi sum `vars'
+	if _rc {
+		di as err "{bf:reghdfe} Mata library not found or error in {cmd:reghdfe}."
+		exit 199
 	}
 	
-	mata: `nwxtreg_absorb_partial' = `nwxtreg_absorb'.partial_out("`vars' ")	
-	///mata st_local("var_partial",invtokens("abs":+st_tempname(cols(tokens("`vars'")))))	
-	mata st_local("var_partial",invtokens("abs":+strofreal(1..cols(tokens("`vars'")))))	
-	mata st_store(`nwxtreg_absorb'.sample, st_addvar("double",tokens("`var_partial'")),"`touse'", `nwxtreg_absorb_partial')
 	if "`noii'" != "" {
-		noi disp "After partial out"
-		noi mata mean(`nwxtreg_absorb_partial')
+		noi disp "Before reghdfe partial out"
+		noi sum `vars'
+	}	
+	
+	mata st_local("var_partial",invtokens("abs":+strofreal(1..cols(tokens("`vars'")))))	
+	mata st_store(`xtdcce2_absorb'.sample, st_addvar("double",tokens("`var_partial'")),"`touse'", `xtdcce2_absorb'.solution.data)
+	if "`noii'" != "" {
+		noi disp "After reghdfe partial out"
+		noi mata mean(`xtdcce2_absorb'.solution.data)
 		noi sum `var_partial'
 	}
 	if "`partialonly'" != "" {
 		error 199
 	}
-	mata mata drop `nwxtreg_absorb_partial' `nwxtreg_absorb'
+	mata mata drop  `xtdcce2_absorb'
 	
 	if "`donotoverwrite'" == "" {
 		local i = 1
