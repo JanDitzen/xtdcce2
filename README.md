@@ -1209,6 +1209,10 @@ ssc install xtdcce2
 
 # 13. Change log
 
+Version 4.6 - January 204
+- fixed bug when using cr() and absorb()
+- fixed bug in rcce and unbalanced panels
+
 Version 4.5 - November 2023
 - supports reghdfe v.6.12
 
