@@ -1,18 +1,18 @@
 v 3
-d xtdcce2 estimating heterogeneous coefficient models using common correlated effects in a dynamic panel. Version 4.02
+d xtdcce2 estimating heterogeneous coefficient models using common correlated effects in a dynamic panel. Version 4.6
 d Jan Ditzen, Free University of Bozen-Bolzano, Italy
-d Distribution-Date:  20231113
-f xtdcce2v4/xtdcce2.ado
-f xtdcce2v4/xtdcce2_estat.ado
-f xtdcce2v4/xtdcce2_p.ado
-f xtdcce2v4/xtdcce2.sthlp
-f xtdcce2v4/xtset2.ado
-f xtdcce2v4/xtset2.sthlp
-f xtdcce2v4/xtcd2.ado
-f xtdcce2v4/xtcd2.sthlp
-f xtdcce2v4/xtcse2.ado
-f xtdcce2v4/xtcse2.sthlp
-f xtdcce2v4/xtdcce2_auxiliary.ado
-f xtdcce2v4/xtdcce2fast.ado
-f xtdcce2v4/xtdcce2fast.sthlp
-f xtdcce2v4/bootstrap_xtdcce2.ado
+d Distribution-Date:  20240109
+f main/xtdcce2.ado
+f main/xtdcce2_estat.ado
+f main/xtdcce2_p.ado
+f main/xtdcce2.sthlp
+f main/xtset2.ado
+f main/xtset2.sthlp
+f main/xtcd2.ado
+f main/xtcd2.sthlp
+f main/xtcse2.ado
+f main/xtcse2.sthlp
+f main/xtdcce2_auxiliary.ado
+f main/xtdcce2fast.ado
+f main/xtdcce2fast.sthlp
+f main/bootstrap_xtdcce2.ado
