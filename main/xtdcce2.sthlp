@@ -248,7 +248,7 @@ For a further discussion see {help xtdcce2##collinearity: collinearity issues}.{
 The following options are available to alter the behaviour of {cmd:xtdcce2}
 with respect to matrices of not full rank:{p_end}
 {col 12}{cmd:useqr} calculates the generalized inverse via QR decomposition. This was the default for rank-deficient matrices for {cmd:xtdcce2} pre version 1.35.
-{col 12}{cmd:useinvsym} calculates the generalized invers via {help mata invsym}.
+{col 12}{cmd:useinvsym} calculates the generalized inverse via {help mata invsym}.
 {col 12}{cmdab:noomit:ted} no omitted variable checks on the entire model.
 
 
@@ -265,7 +265,7 @@ with respect to matrices of not full rank:{p_end}
 and b2(i) and b3(i) the coefficient vectors.
 The error e(i,t) is iid and the heterogeneous coefficients b1(i), b2(i) and b3(i) are randomly distributed around a common mean. 
 It is assumed that x(i,t) is strictly exogenous.
-In the case of a static panel model (b1(i) = 0) Pesaran (2006) shows that mean of the coefficients 0, b2 and b3 
+In the case of a static panel model (b1(i) = 0) Pesaran (2006) shows that average of the coefficients b0, b2 and b3 
 (for example for b2(mg) = 1/N sum(b2(i))) 
 can be consistently estimated by adding cross sectional means of the dependent and all independent variables.
 The cross sectional means approximate the unobserved factors. 
@@ -934,7 +934,7 @@ number refers to the first variable defined in {cmd:cr()}, the second to the sec
 
 {p 4 4}Chudik et. al (2013) estimate besides the CS-DL model a CS-ARDL model. 
 To estimate this model all variables are treated as long run coefficients and thus added to {varlist} in {cmd:lr({varlist})}.
-{cmd:xtdcce2} first estimates the short run coefficients and the calculates then long run coefficients, 
+{cmd:xtdcce2} first estimates the short run coefficients and then calculates the long run coefficients, 
 following {help xtdcce2##eq_10:Equation 10}.
 The option {cmd:lr_options(ardl)} is used to invoke the estimation of the long run coefficients.
 Variables with the same base (i.e. forming the same long run coefficient) need to be either 
@@ -1088,7 +1088,7 @@ Ditzen, J. 2018. xtdcce2: Estimating dynamic common correlated effects in Stata.
 {p 4 8}The latest versions can be obtained via {stata "net from https://github.com/JanDitzen/xtdcce2"}.{p_end}
 
 {marker ChangLog}{title:Version History}
-{p 4 8}Version 4.5 to 4.6 - May 2023{p_end}
+{p 4 8}Version 4.5 to 4.6 - January 2024{p_end}
 {p 8 10} - bug fix in rcce option when using unbalanced panels{p_end}
 {p 8 10} - bug fix when combining absorb() with csa (thanks to Vasilis Sarafidis for pointing it out){p_end}
 {p 4 8}Version 4.4 to 4.5 - May 2023{p_end}

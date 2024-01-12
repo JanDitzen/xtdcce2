@@ -152,7 +152,7 @@ The following options are available to alter the behaviour of xtdcce2 with respe
 Option | Description
 --- | ---
 **useqr** | calculates the generalized inverse via QR decomposition. This was the default for rank-deficient matrices for xtdcce2 pre version 1.35.
-**useinvsym** |  calculates the generalized invers via mata invsym.
+**useinvsym** |  calculates the generalized inverse via mata invsym.
 **showomitted** |  displays a cross-sectional unit - variable breakdown of omitted coefficients.
 **noomitted** | no omitted variable checks on the entire model.
 
@@ -188,7 +188,7 @@ Assume the following dynamic panel data model with heterogeneous coefficients:
 (1) y(i,t) = b0(i) + b1(i)*y(i,t-1) + x(i,t)*b2(i) + x(i,t-1)*b3(i) + u(i,t) u(i,t) = g(i)*f(t) + e(i,t)
 ```
 
-where f(t) is an unobserved common factor loading, g(i) a heterogeneous factor loading, x(i,t) is a (1 x K) vector and b2(i) and b3(i) the coefficient vectors. The error e(i,t) is iid and the heterogeneous coefficients b1(i), b2(i) and b3(i) are randomly distributed around a common mean. It is assumed that x(i,t) is strictly exogenous. In the case of a static panel model (b1(i) = 0) Pesaran (2006) shows that mean of the coefficients 0, b2 and b3 (for example for b2(mg) = 1/N sum(b2(i))) can be consistently estimated by adding cross sectional means of the dependent and all independent variables. The cross sectional means approximate the unobserved factors. In a dynamic panel data model (b1(i) <> 0) pT lags of the cross sectional means are added to achieve consistency (Chudik and Pesaran 2015). The mean group estimates for b1, b2 and b3 are consistently estimated as long as N,T and pT go to infinity. This implies that the number of cross sectional units and time periods is assumed to grow with the same rate.
+where f(t) is an unobserved common factor loading, g(i) a heterogeneous factor loading, x(i,t) is a (1 x K) vector and b2(i) and b3(i) the coefficient vectors. The error e(i,t) is iid and the heterogeneous coefficients b1(i), b2(i) and b3(i) are randomly distributed around a common mean. It is assumed that x(i,t) is strictly exogenous. In the case of a static panel model (b1(i) = 0) Pesaran (2006) shows that the averages of the coefficients b0, b2 and b3 (for example for b2(mg) = 1/N sum(b2(i))) can be consistently estimated by adding cross sectional means of the dependent and all independent variables. The cross sectional means approximate the unobserved factors. In a dynamic panel data model (b1(i) <> 0) pT lags of the cross sectional means are added to achieve consistency (Chudik and Pesaran 2015). The mean group estimates for b1, b2 and b3 are consistently estimated as long as N,T and pT go to infinity. This implies that the number of cross sectional units and time periods is assumed to grow with the same rate.
 
 In an empirical setting this can be interpreted as N/T being constant. A dataset with one dimension being large in comparison to the other would lead to inconsistent estimates, even if both dimension are large in numbers. For example a financial dataset on stock markets returns on a monthly basis over 30 years (T=360) of 10,000 firms would not be sufficient. While individually both dimension can be interpreted as large, they do not grow with the same rate and the ratio would not be constant. Therefore an estimator relying on fixed T asymptotics and large N would be appropriate. On the other hand a dataset with lets say N = 30 and T = 34 would qualify as appropriate, if N and T grow with the same rate.
 
@@ -648,7 +648,7 @@ The partialled out variables can be obtained using
 predict partial, partial
 ```
 
-Then a regression on the variables would lead to the same results as above.{break}
+Then a regression on the variables would lead to the same results as above.
 If the option **replace** is used, then the _newvar_ is replaced if it exists.
 
 
@@ -713,7 +713,7 @@ Note, the **fullsample** option is used to reproduce the results in Chudik et. a
 
 ## 7.8 Cross-Section Augmented ARDL (CS-ARDL)
 
-Chudik et. al (2013) estimate besides the CS-DL model a CS-ARDL model. To estimate this model all variables are treated as long run coefficients and thus added to _varlist_ in **lr(_varlist_)**. `xtdcce2` first estimates the short run coefficients and the calculates then long run coefficients, following Equation 10. The option **lr_options(ardl)** is used to invoke the estimation of the long run coefficients. Variables with the same base (i.e. forming the same long run coefficient) need to be either enclosed in parenthesis or _tsvarlist_ operators need to be used. In Table 17 an ARDL(1,1,1) model is estimated with three lags of the cross-sectional averages:
+Chudik et. al (2013) estimate besides the CS-DL model a CS-ARDL model. To estimate this model all variables are treated as long run coefficients and thus added to _varlist_ in **lr(_varlist_)**. `xtdcce2` first estimates the short run coefficients and then calculates the long run coefficients, following Equation 10. The option **lr_options(ardl)** is used to invoke the estimation of the long run coefficients. Variables with the same base (i.e. forming the same long run coefficient) need to be either enclosed in parenthesis or _tsvarlist_ operators need to be used. In Table 17 an ARDL(1,1,1) model is estimated with three lags of the cross-sectional averages:
 
 ```
 xtdcce2 d.y , lr(L.d.y dp L.dp d.gd L.d.gd) lr_options(ardl) cr(d.y dp d.gd) cr_lags(3) fullsample
@@ -1209,7 +1209,7 @@ ssc install xtdcce2
 
 # 13. Change log
 
-Version 4.6 - January 204
+Version 4.6 - January 2024
 - fixed bug when using cr() and absorb()
 - fixed bug in rcce and unbalanced panels
 
