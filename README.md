@@ -47,7 +47,7 @@ __Table of Contents__
 	8. [Cross-Section Augmented ARDL(CS-ARDL)](#78-cross-section-augmented-distributed-lag-cs-ardl)
 	9. [Regularized CCE (rCCE)](#79-regularized-cce)
 	10. [Bootstrapping](#710-bootstrapping)
-	11. [Rank Classifier](#711-rank-classifier)]
+	11. [Rank Classifier](#711-rank-classifier)
 8. [Testing for Cross-sectional Dependence](#8-testing-for-cross-sectional-dependence)
 	1. [Description](#81-description)
 	2. [Options](#82-options)
@@ -433,7 +433,7 @@ IC1 and IC2 are calculated based only on the current (m-set) of cross-section av
 
 IC1 and IC2 are automatically calculated when running xtdcce2.  PC1 and PC2 can be calculated using `estat ic`, see [estat ic](#64-information-criteria).
 
-Notes: The IC and PC are only valid for static panel models.  The IC and PC are intended to identify the optimal set of cross-section averages.  *DO NOT* use the criteria to select the number of lags in a dynamic model.
+Notes: The IC and PC are only valid for static panel models.  The IC and PC are intended to identify the optimal set of cross-section averages.  **DO NOT use the criteria to select the number of lags in a dynamic model.**
 
 See [Example](#712-information-criteria)
 
