@@ -415,23 +415,15 @@ mata:
 	{		
 		real matrix output
 		
-		if (args() == 2 ) exact = 0
-
-		searchi = search
-		sourcei = source
-
-		search_N = rows(searchi)
+		search_N = rows(search)
 		output = J(search_N,1,0)
-		source_N = rows(sourcei)
+		source_N = rows(source)
 
-		if (eltype(sourcei) == "real") sourcei = strofreal(sourcei)
-		if (eltype(searchi) == "real") searchi = strofreal(searchi)
-		
 
 		i = 1
 		
 		while (i<=search_N) {
-			new_elvec = strlower(sourcei):==strlower(searchi[i])	
+			new_elvec = strlower(source):==strlower(search[i])	
 			if (anyof(new_elvec,1)) {
 				output[i]= xtdcce_selectindex(new_elvec)
 			}
@@ -495,12 +487,11 @@ end
 ** option numberonly gives only lag number in cross_structure
 capture program drop xtdcce2_csa
 program define xtdcce2_csa, rclass
-	syntax varlist(ts fv) , idvar(varlist) tvar(varlist) cr_lags(numlist) touse(varlist) csa(string) [cluster(varlist) numberonly tousets(varlist) rcceindex rcce(string) hasconstant ///
+	syntax varlist(ts) , idvar(varlist) tvar(varlist) cr_lags(numlist) touse(varlist) csa(string) [cluster(varlist) numberonly tousets(varlist) rcceindex rcce(string) hasconstant ///
 		trace 	///
 		/// rank condition test
-		rcclassifier		///
-		rcclassifieropt(string) 	///
-		mainvar(string)	///
+		rctest		///
+		rctestopt(string) 	///
 		]
 		
 
@@ -511,8 +502,7 @@ program define xtdcce2_csa, rclass
 		if "`tousets'" == "" {
 			local tousets "`touse'"
 		}
-		*tsrevar `varlist'
-		fvrevar `varlist'
+		tsrevar `varlist'
 		local cvarlist `r(varlist)'
 		
 		local c_i = 1
@@ -543,11 +533,12 @@ program define xtdcce2_csa, rclass
 			/// get list with correct variables
 			
 		}
+		
 		/// here rc test
-		if "`rcclassifier'" != "" {
+		if "`rctest'" != "" {
 			*noi disp "DO RC TEST"
-			local 0 , `rcclassifieropt'
-			syntax [anything], [er gr REPlications(real 1000) STANDardize(real 5) RANDOMshrinkage NOSHRINKage  ]
+			local 0 , `rctestopt'
+			syntax [anything], [er gr REPlications(real 1000) STANDardize(real 5)]
 			local criterion `er' `gr' 
 			if "`criterion'" != "" & strlower("`criterion'") != "er" & strlower("`criterion'") != "gr" {
 				noi disp "Criterion invalid. Set to GR."
@@ -560,15 +551,13 @@ program define xtdcce2_csa, rclass
 			if strlower("`criterion'") == "er" local criterion 1
 			else local criterion 2
 			
-			if 		"`noshrinkage'" != "" local shrinkagei = 0
-			else if "`randomshrinkage'" != "" local shrinkagei = 1 
-			else local shrinkagei = 2 
-
+			tempvar W
+			gen `W' = rnormal(0,1)
+			by `tvar', sort: replace `W' = `W'[1]
 			sort `idvar' `tvar'
 			tempname rctest_results
-			mata xtdcce2_rctest("`mainvar'","`cvarlist'","`clist'","`touse'","`idvar' `tvar'",`criterion',`replications',`standardize',("`trace'"!=""),`shrinkagei',"`rctest_results'")		
+			mata xtdcce2_rctest("`cvarlist'","`clist'","`W'","`touse'","`idvar' `tvar'",`criterion',`replications',`standardize',("`trace'"!=""),"`rctest_results'")		
 		}
-
 		local i = 1
 		local lagidef = 0
 		foreach var in `clist' {
@@ -670,9 +659,6 @@ program define xtdcce2_csa, rclass
 				local crit = 8
 			}
 			if "`scale'" != "" local scale "`cvarlist'"
-
-			noi disp "`scale'"
-
 			noi mata xtdcce2_rcce("`clistn'","`scale'","`touse'","`idvar' `tvar'",`crit',`npc',"`csa'","`numfac'")
 			drop `clistn'
 			unab clistn: `csa'*
@@ -680,11 +666,9 @@ program define xtdcce2_csa, rclass
 			return local Type "`criterion'"
 			local cross_structure 0
 		}
-
-		
-	if "`rcclassifier'"!= "" {
-		return matrix rcclassifier = `rctest_results'	
-		return matrix rcindic_det = `rctest_results'_det		
+	if "`rctest'"!= "" {
+		return matrix rctest = `rctest_results'	
+		return matrix rctest_det = `rctest_results'_det		
 	}
 	return local varlist "`clistn'"
 	return local cross_structure "`cross_structure'"
@@ -762,9 +746,7 @@ mata:
 		}
 		else {
 			Sigma = Sigma / (N*T_max)
-			Sigma
-			Sigma1 = m_xtdcce_inverter(sqrt(abs(Sigma)))	
-			Sigma1		
+			Sigma1 = invsym(sqrt(Sigma))			
 			F = Zbar*Sigma1'
 		}
 		"F is"
@@ -785,8 +767,6 @@ mata:
     		best_numfac0 = bestnum_ic_int(allICs0)
 			///best_numfac = (best_numfac0, allICs0[10,1])
 			NumPC = best_numfac0[criterion]
-
-			if (NumPC == cols(ZbarL)) NumPC = NumPC - 1
 
     	}   	
     	if (npc > 0) NumPC = npc
@@ -870,7 +850,7 @@ function numfac_int(X0n, kmax0, stan)  {
 	missind = X0 :== .
 	missnum = sum(sum(missind)')
 	st_numscalar("e(missnum)", missnum)
-"here"
+
 	if ( missnum == 0) {
 		if (T > N) {
 				xx         = cross(X0,X0)
@@ -880,7 +860,6 @@ function numfac_int(X0n, kmax0, stan)  {
 				xx         = cross(X0',X0')
 				fullsvd(xx:/(N*T), junk1, mus ,junk2) // T x T	 
 		}	
-		"balanced panel"
 	}
 	else {
 		
@@ -1165,24 +1144,17 @@ mata:
 				else  {
 					
 					idim_pos = xtdcce_selectindex(Nim:==idi)			
-					if (rows(idim_pos)>0 & cols(idim_pos) > 0 ) {
-						indexi = index[i,.]
-						indexim = indexm[idim_pos,.]				
-					
-						/// get t indicator
-						ti = idt[|indexi[1,1],2 \ indexi[1,2],2|]
-						tim = idtmata[|indexim[1,1],2 \ indexim[1,2],2|]
-						t_unionm = xtdcce2_mm_which2f(tim,ti)
-						t_union = xtdcce2_mm_which2f(ti,tim)						
-						
-						if (cols(t_unionm) > 0 & cols( t_union) > 0 & rows(t_unionm) > 0 & rows(t_union)>0) {							
-							if (anyof(t_unionm,0)) t_unionm = select(t_unionm,t_unionm:!=0)
-							if (anyof(t_union,0)) t_union = select(t_union,t_union:!=0)			
-							
-							varsi[t_union,.] = varsim[t_unionm,.]
-						}
-					
-					}
+				
+					indexi = index[i,.]
+					indexim = indexm[idim_pos,.]				
+				
+					/// get t indicator
+					ti = idt[|indexi[1,1],2 \ indexi[1,2],2|]
+					tim = idtmata[|indexim[1,1],2 \ indexim[1,2],2|]
+					t_unionm = xtdcce2_mm_which2f(tim,ti)
+					t_unionm = t_unionm[xtdcce_selectindex(t_unionm)]
+					t_union = xtdcce2_mm_which2f(ti,tim)
+					varsi[t_union,.] = varsim[t_unionm,.]
 				}
 			
 			}
@@ -1196,10 +1168,10 @@ end
 /// EM program from xtnumfac
 capture mata mata drop xtdcce2_EM()
 mata:
-	function xtdcce2_EM(real matrix X0,real scalar N,real scalar T, real scalar kmax0,|string scalar msg_text, maxiter)
+	function xtdcce2_EM(real matrix X0,real scalar N,real scalar T, real scalar kmax0,|string scalar msg_text)
 	{
 		if (args()==5) stata(sprintf(`"noi disp as smcl in gr " Missing values imputed for %s." "',msg_text))
-		if (args() < 6) maxiter = 10000
+
 		missind = X0 :== .
 		obsind  = J(T,N,1) - missind
 		
@@ -1209,8 +1181,7 @@ mata:
 		conv_crit = (X0 - X0mean):^2
 		conv_crit = mean(mean(conv_crit)')
 		upd       = conv_crit
-		cnt = 0
-		while (upd > 0.001*conv_crit & cnt < maxiter) {
+		while (upd > 0.001*conv_crit) {
 			X0_old = X0
 			if (T > N) {
 				xx         = cross(X0,X0)
@@ -1226,7 +1197,6 @@ mata:
 			}
 			X0  = X0_old:*obsind + (uu_k*vee_k'):*missind:*sqrt(N*T)
 			upd = mean(mean(abs(X0-X0_old))')
-			cnt++
 		}
 		return(X0)
 	}	
@@ -1234,7 +1204,7 @@ end
 
 cap program drop xtdcce2_absorb_prog
 program define xtdcce2_absorb_prog, rclass
-	syntax anything(name=absorb) , [ TRACEhdfeopt partialonly] touse(string) vars(string) [donotoverwrite] [keepsingeltons]
+	syntax anything(name=absorb) , [ TRACEhdfeopt partialonly] touse(string) vars(string) [donotoverwrite]
 
 	local singeltons = 0
 	if "`keepsingeltons'" == "" local singeltons = 1
@@ -1298,138 +1268,106 @@ end
 
 /// RC test
 mata:
-	function xtdcce2_rctest(string scalar yxn, string scalar csain, string scalar csan,  string scalar tousen, string scalar idtn, real scalar criterion ,  real scalar boot, real scalar stand, real scalar trace,real scalar dimredu, string scalar resultsn )
+	function xtdcce2_rctest(string scalar yxvarsn, string scalar csan, string scalar Wn, string scalar tousen, string scalar idtn, real scalar criterion , real scalar boot, real scalar stand, real scalar trace, string scalar resultsn )
 	{
 		"Rank Test Program"
-		real matrix results, idt, idx,  YX, Zi, Z, Zbar, YXD, Zii, YXi,Psi, Psii, sigma, tmp, tmp2, tmp3, A1, A2, V,D,B, C, V1, D1, V2, D2, V3, D3, xx1, pval, ix, Ti, YXL
+		real matrix results, idt, idx,  YX, Z, Zbar, YXD, W, Zi, YXi,Wi, sigma, tmp, tmp2, tmp3, A1, A2, V,D,B, C, V1, D1, V2, D2, V3, D3, xx1, pval, ix, Ti, YXL
 		real scalar N,T, T_min,T_max, i, K, n0, reject, cnt
 		/// output
 		real scalar m, p, rc
 		timer_on(20)
-
-		if (yxn == "") yxn = csain
-
 		st_view(idt,.,idtn,tousen)
-		st_view(Zi,.,csain,tousen)
 		st_view(Z,.,csan,tousen)
-		st_view(YX,.,yxn,tousen)
+		st_view(YX,.,yxvarsn,tousen)
+		st_view(W,.,Wn,tousen)
 
-		if (mm_isconstant(YX[.,cols(YX)])==1) {
-			"constant removed"
-			st_view(YX,.,yxn[1..(cols(yxn)-1)],tousen)
-		}
-		YX
+		if (cols(W)==1) W = J(1,cols(Z),W)
+
 		idx = panelsetup(idt[.,1],1)
 		N = panelstats(idx)[1]
 		T = panelstats(idx)[4]
 		T_min = panelstats(idx)[3]
 		T_max = panelstats(idx)[4]
-		
 		K = cols(Z)
-		"N,T,T_min,T_max,K"
-		N,T,T_min,T_max,K
-		if (T_max < max(idx[.,2])) T_max = max(idt[.,2])
+
 		
 		timer_on(21)
 		if (trace==1) sprintf("Dimensions T = %s, N= %s, K=%s",strofreal(T_max),strofreal(N),strofreal(K))
 
-		if (dimredu:==0) sigma = J(T_max*K,T_max*K,0)
-		else sigma = J(K^2,K^2,0)
-		"Dim Redu"
-		dimredu
+		sigma = J(T_max*K,T_max*K,0)
 		Zbar = J(T_max,K,0)
-		if (dimredu:==0) Psi = I(T_max)
-		else if (dimredu:==1) Psi = rnormal(K,T_max,0,1)/sqrt(T_max)
-		else {
-			"Standard Shrink"
-			Psi = J(1,ceil(T_max/K),1)#I(K)
-			Psi = Psi[.,1..T_max]
-			div = rowsum(Psi)
-			_editvalue(div,0,1)
-			Psi = Psi :/ div
-		}
+
 		if (T_max:==T_min) {
-			
 			"balanced"
-			Zbar =  panelsubmatrix(Z,1,idx)
-			Zbar = Psi * Zbar
+			Zbar = panelsubmatrix(Z,1,idx)
 			
 			for (i=1;i<=N;i++) {
-				panelsubview(Zii,Zi,i,idx)
-				tmp = vec(Psi *Zii :-  Zbar)'
+				panelsubview(Wi,W,i,idx)
+				panelsubview(YXi,YX,i,idx)
+				///vec(Wi:*YXi :- Wi :* Zbar)
+				tmp = vec(Wi:*YXi :- Wi :* Zbar)'
+				
+				///quadcross(tmp,tmp)
 				sigma = sigma + quadcross(tmp,tmp) 
 			}
 			sigma= sigma/N
 			YXL = YX
 			
 			YXL = colshape(YXL',T_max)'
-			"done"
 		}
-		else {
-			"unbalanced"
+		else {			
 			YXL = J(T_max,K*N,.)
 			cnt = 1
 			Zbar = J(T_max,K,0)
-			
+			min_val_ti = min(idt[.,2])
 			for (i=1;i<=N;i++) {
 				i,T_max,T_min,K,cnt,N
 
 				panelsubview(Ti,idt[.,2],i,idx)					
-				panelsubview(Zj,Z,i,idx)
-				panelsubview(Zii,Zi,i,idx)
+				panelsubview(Zi,Z,i,idx)
+				panelsubview(Wi,W,i,idx)
 				panelsubview(YXi, YX,i,idx)
-				
-				/// ensure Ti always starts with 1
 
-				min_val_ti = min(Ti)
-				
+				/// ensure Ti always starts with 1
 				if (min_val_ti>1) Ti = Ti :- min_val_ti:+1				
-				
+
 				YXL[Ti,cnt..cnt-1+cols(YXi)] = YXi
-			
-				cnt = cnt + cols(Zii)
-				cnt
-				if (dimredu:==0) {
-					tmp = vec(Zii :-  Zj)'
-					Tii = J(K,1,1)#Ti :+ (((1..K)':-1)*T_max)#J(rows(Ti),1,1)
-					sigma[Tii,Tii] = sigma[Tii,Tii] :+ quadcross(tmp,tmp) :/ rows(Ti)
-				}
-				else {
-					Psii = Psi[.,Ti]
-					tmp = vec(Psii*Zii :-  Psii*Zj)'
-					sigma = sigma:+ quadcross(tmp,tmp) :/ rows(Ti)
-				}
+				
+				cnt = cnt + cols(YXi)
+				tmp = vec(Wi:*YXi :- Wi :* Zi)'
+
+				Tii = J(K,1,1)#Ti :+ (((1..K)':-1)*T_max)#J(rows(Ti),1,1)
+				sigma[Tii,Tii] = sigma[Tii,Tii] :+ quadcross(tmp,tmp) :/ rows(Ti)
+
 				/// buid CSA
-				tmp3 = selectindex((rowmissing(Zj):==0))				
+				tmp3 = selectindex((rowmissing(Zi):==0))
+				
 				tmp2 = Ti[tmp3]
 
-				Zbar[tmp2,.] = Zj[tmp3,.]
+				Zbar[tmp2,.] = Zi[tmp3,.]
 
+
+				///Wi = Wi[Ti,.]
+				//YXi = YXi[Ti,.]
+				//Zi = Zi[Ti,.]
+				///sigma[Ti,Ti] = sigma[Ti,Ti] + (quadcross(Wi,YXi) * quadcross(Wi,Zi)' ) / N
+
+
+				///if (hasmissing(Zbar)==0) i = N+1
 			}
-			Zbar = Psi * Zbar
 			"done"
 		}
 		timer_off(21)
 		/// Number of common factors
 		timer_on(22)
-		"get m"
+		
 		m  = bestnum_ic_int(numfac_int(YXL,7,stand))[criterion]
-		"m is"
-		m
+		
 		    
 		if (trace==1) sprintf("Estimated number of common factors %f",m)
 		timer_off(22)
 		timer_on(23)
 		/// Estimation of p
-		"start est p"
-
-		/// dimension reduction
-		K
-		T
-		rows(Zbar),cols(Zbar)
-
-		
-		
 		A1 = Zbar*Zbar'
 		A2 = quadcross(Zbar,Zbar)
 		
@@ -1438,9 +1376,7 @@ mata:
 		reject = 1
 		timer_off(23)
 		timer_on(24)
-
 		while (n0 < K & reject == 1) {
-			"start loop"
 			xtdcce2_eigenshuffle(&A1,D1=.,V1=.)	
 			"D1"
 			rows(D1),cols(D1)
@@ -1455,13 +1391,10 @@ mata:
 			timer_on(26)
 			/// Bootstrap Distribution
 			xtdcce2_eigenshuffle(&A2,D2=.,V2=.)
-			D = V2[.,n0+1..cols(V2)]
-			cols(sigma),rows(sigma)	
+			D = V2[.,n0+1..cols(V2)]			
 			B = (D'#C')*sigma*(D#C)
-			"as"
 			timer_on(28)
 			xtdcce2_eigenshuffle(&B,D3=.,V3=.)
-			"hjer"
 			timer_off(28)
 			timer_on(29)	
 			xx1 = colsum((D3[.,1] * J(1,boot,1) :* rchi2(rows(D3),boot,1) ))'
@@ -1469,15 +1402,18 @@ mata:
 			timer_on(27)
 			results[n0+1,2] = mm_quantile(Re(xx1),1,0.95)
 			timer_off(27)
-			tmp = Re(xx1)\results[n0+1,1]			
-			tmp = tmp,(1::(boot+1))			
+			tmp = Re(xx1)\results[n0+1,1]
+			
+			tmp = tmp,(1::(boot+1))
+			
 			tmp = sort(tmp,-1)
+			
+			tmp[.,2]:==(boot+1)
 			ix = selectindex(tmp[.,2]:==(boot+1))
 			
 			pval = 1 - ix/(boot+1)
 			results[n0+1,3] = pval
 			timer_off(26)
-			
 			/// Decision
 			if (results[n0+1,1] > results[n0+1,2] ) {
 				results[n0+1,4] = 1
@@ -1492,8 +1428,7 @@ mata:
 		timer_on(25)
 		
 		p = sum(results[.,4])
-		"p is"
-		p
+
 		st_matrix(resultsn,(1-(p<m),p,m))
 		names = J(3,1,""),("RC"\"p"\"m")
 		st_matrixcolstripe(resultsn,names)
@@ -1505,8 +1440,6 @@ mata:
 		st_matrixrowstripe(resultsn+"_det",rnames)
 		timer_off(25)
 		timer_off(20)
-		"RC Test done"
-
 		 
 	}
 	void xtdcce2_eigenshuffle(transmorphic mat, real matrix Eval, real matrix Evec) {
@@ -1518,143 +1451,6 @@ mata:
 			idx = order(Eval',-1)
 			Eval = Eval[idx]'
 			Evec = -Evec[idx,.]
-
-	}
-end
-
-
-program define fvexpand2 , rclass
-	syntax [anything] , [VARLISTOmitted]
-	
-
-
-	foreach var in `anything' {
-		cap fvrevar `var', list
-		if _rc == 0 local VarExist `VarExist' `var'
-		else  local VarNotExist `VarNotExist' `var'
-	}
-
-
-	fvexpand `VarExist'
-	
-	if "`varlistomitted'" == "" {
-		if "`r(varlist)'" != "" return local varlisto "`r(varlist)' `VarNotExist'"
-		local tmp = subinstr("`r(varlist)'","0b.","0.",.)
-		if "`tmp'" != "" return local varlist "`tmp' `VarNotExist'"
-	}
-	else {
-		if "`r(varlist)'" != "" return local varlist "`r(varlist)' `VarNotExist'"
-	}
-	if "`r(fvops)'" != "" return local fvops "`r(fvops)'"
-	if "`r(tsops)'" != "" return local tsops "`r(tsops)'"
-
-
-	
-end
-
-
-capture mata mata drop xtdcce2_ic()
-mata:
-	function xtdcce2_ic( ///
-		transmorphic matrix e_outputN, ///
-		transmorphic matrix CSAN,	  ///
-		transmorphic matrix idtN,	  ///
-		string scalar touse,	  ///
-		real matrix SigmaMFbar,			///
-		real matrix SigmaMF,			///
-		real scalar initMbar)
-	{
-		
-		"start IC program"
-
-		if (eltype(e_outputN)=="string") {
-			e_output = st_data(.,e_outputN,touse)
-		}
-		else {
-			e_output = e_outputN
-		}
-		"e loaded"
-		if (eltype(CSAN)=="string") {
-			CSA = st_data(.,CSAN,touse)
-		}
-		else {
-			CSA = CSAN
-		}
-		sel = J(1,cols(CSA),1)
-		
-		for (i=1;i<=cols(CSA);i++) {
-			sel[i] = (allof(CSA[.,i],1):==0)
-		}
-		
-		CSA = select(CSA,sel)
-		
-		/// check if constant part of CSA
-		if (eltype(idt)=="string") {
-			id = st_data(.,idtN,touse)
-		}
-		else {
-			id = idtN[.,1]
-		}
-
-		uniqueid = uniqrows(id[.,1])
-		
-		N = rows(uniqueid)
-		N
-		SSRi = 0
-		Ti = 0
-		balanced = 1
-		
-		
-		if (rows(e_output)/N != round(rows(e_output)/N)) balanced = 0
-
-		"panel is"
-		balanced
-
-		if (balanced==1) {
-			indic = (id :== uniqueid[1])
-			tmp_csa = select(CSA,indic)
-			M = I(rows(tmp_csa)) - tmp_csa * m_xtdcce_inverter(quadcross(tmp_csa,tmp_csa)) * tmp_csa'
-		}
-
-		i = 1
-		while (i <= rows(uniqueid)) {
-			indic = (id :== uniqueid[i])
-			tmp_e = select(e_output,indic)
-			Ti = Ti + rows(tmp_e)
-			if (balanced == 0) {
-				indic = (id :== uniqueid[i])
-				tmp_csa = select(CSA,indic)
-				M = I(rows(tmp_csa)) - tmp_csa * m_xtdcce_inverter(quadcross(tmp_csa,tmp_csa)) * tmp_csa'
-			}
-			tmp_e = (tmp_e'*M*tmp_e)
-			
-			SSRi = SSRi + tmp_e
-			
-			i++
-		}
-		Ti = Ti / N
-		SSRi = SSRi / (N*Ti)
-		SigmaMF = SSRi
-		/// Note: cannot compute IC2, PC2 because no max. of CSA available
-		N_csa = cols(CSA)
-		IC1 = ln(SSRi) + N_csa * (N+Ti) / (N*Ti) * ln((N*Ti)/(N+Ti))
-		IC2 = ln(SSRi) + N_csa * (N+Ti) / (N*Ti) * ln(min((N,Ti)))
-		
-		if (SigmaMFbar[1,1]!=.) {
-			"SigmaMFbar is"
-			SigmaMFbar, initMbar
-			if (initMbar == 1 ) SigmaMFbar = SigmaMF
-			"Now"
-			SigmaMFbar
-			PC1 = (SSRi) + N_csa * SigmaMFbar* (N+Ti) / (N*Ti) * ln((N*Ti)/(N+Ti))
-			PC2 = (SSRi) + N_csa * SigmaMFbar* (N+Ti) / (N*Ti) * ln(min((N,Ti)))
-
-		}
-		else {
-			PC1 = PC2 = .
-		}
-		return((IC1,IC2,PC1,PC2))
-
 
 	}
 end

@@ -25,7 +25,6 @@ Changelog:
 	23.09.2022 Improved calculation for unbalanced panels, fixed bug that CD test statistic becomes 1, added EM algorithm from xtnumfac for CDstar test
 	04.11.2022 Added seed() option to control seed for CDW test.
 	15.05.2023 Added trace option; bug fixed when using noadjust option
-	03.06.2024 Fixed bug in unblanced panel and EM
 	*/
 cap program drop xtcd2
 program define xtcd2, rclass
@@ -62,7 +61,6 @@ program define xtcd2_int, rclass
 			seed(string) ///
 			/// loop method for unbalanced panels and if noadjust option used
 			loop ///
-			maxiter(integer 1000) ///
 			/// force using unbalanced algorithm
 			FORCEUnbalanced ///
 			trace ]
@@ -200,7 +198,7 @@ program define xtcd2_int, rclass
 		
 		tempname CD CDp rhoMat
 		`trace' sum `varlist'
-		`trace' mata xtcd2_CD("`varlist'",`N',`T',`balanced',`noadjust',`pca',`maxiter',"`methods'",("`defactor'"!=""),`reps',"`CD'","`CDp'",("`rho'`heatplot'`heatplotmap'`kdensity'`contour'"!= ""),`rhoMat'=.,("`loop'"!=""))
+		`trace' mata xtcd2_CD("`varlist'",`N',`T',`balanced',`noadjust',`pca',"`methods'",("`defactor'"!=""),`reps',"`CD'","`CDp'",("`rho'`heatplot'`heatplotmap'`kdensity'`contour'"!= ""),`rhoMat'=.,("`loop'"!=""))
 
 
 
@@ -439,7 +437,6 @@ mata:
 							real scalar balanced,
 							real scalar stand,
 							real scalar numpca,
-							real scalar maxiter,
 							string scalar methods,
 							real scalar defac,
 							real scalar reps,
@@ -489,8 +486,7 @@ mata:
 			rseed(rng)
 			data_start = colshape(data[.,i],T)'
 			for (r=1;r<=reps;r++) {
-				i,K,r,reps
-
+				
 				/// standard CD stat
 				if (r == 1) {
 					rho_i = xtcd2_rho(data_start,N,T,stand,balanced,loop)
@@ -505,7 +501,7 @@ mata:
 				}
 
 				if ((cdstar==1 & r==1) | defac == 1) {
-					xtcd2_cdstar(data_start,N,T,numpca,loop,defac,maxiter,stand,i,r,rho_i=rho_i,CD=CD,CD_w=CD_w,CD_star=CD_star)
+					xtcd2_cdstar(data_start,N,T,numpca,loop,defac,stand,i,r,rho_i=rho_i,CD=CD,CD_w=CD_w,CD_star=CD_star)
 				}				
 				
 				if (pea == 1) {
@@ -550,7 +546,7 @@ end
 capture mata mata drop xtcd2_cdstar()
 mata:
 	function xtcd2_cdstar( ///
-				real matrix data_start,real scalar N, real scalar T,real scalar numpca,real scalar loop, real scalar defac,real scalar maxiter, real scalar stand,real scalar i, real scalar r, ///
+				real matrix data_start,real scalar N, real scalar T,real scalar numpca,real scalar loop, real scalar defac, real scalar stand,real scalar i, real scalar r, ///
 				real matrix rho_i, real matrix CD, real matrix CD_w, real matrix CD_star)
 		{
 			meanM = mean(data_start)
@@ -563,7 +559,7 @@ mata:
 			
 			data_ii = (data_start:-meanM):/sqrtM
 
-			if (hasmissing(data_ii)==1) data_ii = xtdcce2_EM(data_ii,N,T,numpca,"CD*",maxiter)
+			if (hasmissing(data_ii)==1) data_ii = xtdcce2_EM(data_ii,N,T,numpca,"CD*")
 			data_i2 = data_ii * data_ii'			
 			eigensystem(data_i2,evec=.,eval=.)
 			

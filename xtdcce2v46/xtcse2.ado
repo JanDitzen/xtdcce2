@@ -1,4 +1,4 @@
-*! xtcse2, version 1.05, May 2024
+*! xtcse2, version 1.04, May 2023
 *! author Jan Ditzen
 *! www.jan.ditzen.net - jan.ditzen@unibz.it
 /*
@@ -15,8 +15,6 @@ Changelog
 - removed option samesample. xtcd2 and xtcse2 impute panel independently.
 **********1.04*****************************
 - option nocenter affects xtcd2 as well
-**********1.04*****************************
-- bug when unbalanced panels fixed
 */
 program define xtcse2, rclass
 	syntax [varlist(default=none ts)] [if], [pca(integer 4) STANDardize nocd inprog size(real 0.1) tuning(real 0.5) Reps(integer 0) RESidual lags(integer 0) NOCENTER  ]
@@ -76,9 +74,6 @@ program define xtcse2, rclass
 			xtset2 if `touse' , checkvars(`res')
 
 			if "`r(balanced)'" != "strongly balanced" {
-
-				tempvar origi
-				gen `origi' = 1
 				/*
 				cap which xtbalance2
 				/// HERE TSFILL, FULL
@@ -130,7 +125,6 @@ program define xtcse2, rclass
 				local T = `r(max)'
 
 				mata `xx' = st_data(.,"`res'","`touse'")
-			
 				mata `xx' = colshape(`xx',`T')'
 				mata st_local("Nt",strofreal(cols(`xx'))) 
 
@@ -217,11 +211,6 @@ program define xtcse2, rclass
 			
 			local run = `run' + 1
 			drop `touse' `tmpid' `tmpt'
-
-			if "`isbalanced'" != "" {
-				cap drop if `origi' != 1
-				drop `origi' 
-			}
 		}
 	}
 	restore

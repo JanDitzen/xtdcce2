@@ -1,12 +1,11 @@
 /*
 estat for xtdcce2
-Requires xtdcce2 version 2.7
+Requires xtdcce2 version 1.2
 Changelog
 20.02.2023 - added option dropzero
 12.01.2017 - fixed bug if ts vars used
 16.10.2017 - fixed bug in box
 24.07.2020 - added options ebi and ebistructure
-10.05.2024 - added ICs 
 */
 
 *capture program drop xtdcce2_estat
@@ -126,9 +125,8 @@ program define xtdcce2_estat , rclass
 						local cols_start = word("`tbl_interval'",`ii')
 						local cols_end = word("`tbl_interval'",`=`ii'+1')
 						
-						cap scalar val = `eebb'[1,"`var'_`s'"]
-						if _rc != 0 scalar val = .
-
+						scalar val = `eebb'[1,"`var'_`s'"]
+						
 						local vali "1"
 						if val == 0 {
 							local vali  "0"
@@ -189,144 +187,6 @@ program define xtdcce2_estat , rclass
 	}
 	else if "`anything'" == "bootstrap" {
 		bootstrap_xtdcce2 , `options'
-	}
-	else if "`anything'" == "ic" {
-
-		local 0 , `options'
-		syntax [anything], [model(string) single SEQuential NOPROGress ]
-		
-		if "`model'`single'`sequential'" == "" {
-			matrix ICs = e(IC1),e(IC2),.,.
-			local model1 "`e(csa)'"
-			local Min_IC1 = 1
-			local Min_IC2 = 1
-			local Min_PC1 = 0
-			local Min_PC2 = 0
-		}
-		else {
-			
-			
-			if regexm("`model'","\(") {
-				
-				gettoken one two : model , bind
-				local model1 = subinstr(subinstr("`one'",")","",.),"(","",.)
-				local i = 1
-				while "`two'" != "" {
-					gettoken one two : two , bind
-					local i = `i'+1
-					local model`i' = subinstr(subinstr("`one'",")","",.),"(","",.)
-					
-				}
-				local NModel = `i'
-				local MainModel = 1
-			}
-			else {
-				if "`single'" != "" {
-					local model1 "`model'"
-					local NModel = 1
-				}
-				else {
-					if "`model'" == "" local model "`e(csa)'"
-					tuples `model'
-					local NModel = `ntuples'
-					forvalues i=1(1)`ntuples' {
-						local j = `ntuples'-`i'+1
-						local model`j' `tuple`j''
-					}
-					local MainModel = `ntuples'
-				}
-			}
-
-			/// Running Block
-			if "`noprogress'" == "" noi disp "Running `NModel' combinations of cross-section averages:"
-				
-			local cmd_Main "`e(cmdline)'"
-
-			tempname eps smpl ici res SigmaMF ResultsO
-			est sto `ResultsO'
-			_xt
-			local ivar r(ivar)
-
-			local SigmaMFbar = 0
-
-			matrix  ICs = J(`NModel',4,.)
-
-			forvalues i = 1(1)`NModel' {
-				*local j = `NModel'-`i'+1
-				local j = `i'
-				local 0 `cmd_Main'
-				syntax [anything] [if], CRosssectional(string) * [icopt(string)]
-				local options_cmd `options'
-				
-				local 0 `crosssectional'
-				syntax anything(name=cr_vars) , *
-				local options_cr `options'
-				if "`noprogress'" == "" noi disp "." , _c
-				local icinit `SigmaMFbar' `=`i'==1'
-				
-				qui `anything' `if' , `options_cmd' cr(`model`j'' ,`options_cr') icopt(`icinit')
-				
-				local SigmaMFbar = e(SigmaMF)
-
-				matrix ICs[`i',1] = e(IC1)
-				matrix ICs[`i',2] = e(IC2)
-				matrix ICs[`i',3] = e(PC1)
-				matrix ICs[`i',4] = e(PC1)
-
-				local model_cmd`i' = subinstr("`e(cmdline)'","icopt(`icinit')","",.)
-				
-			}
-
-			qui est restore `ResultsO'
-			mata `res' = st_matrix("ICs")
-			mata `res' = colmin(`res'):==`res'
-			mata st_local("Min_IC1",strofreal(selectindex(`res'[.,1])))
-			mata st_local("Min_IC2",strofreal(selectindex(`res'[.,2])))
-			mata st_local("Min_PC1",strofreal(selectindex(`res'[.,3])))
-			mata st_local("Min_PC2",strofreal(selectindex(`res'[.,4])))
-			
-		}
-		di as text ""
-		disp as text "IC from Margaritella & Westerlund (2023)"
-		di as text "{hline 10}{c TT}{hline 70}"
-		di as text "  Model  " _col(11) "{c |}" _col(16) "IC1" _col(32) "IC2" _col(46) "PC1" _col(61) "PC2"
-		di as text "{hline 10}{c +}{hline 70}"
-
-		local Nrows : rowsof ICs
-
-		forvalues i = 1(1)`Nrows' {
-			local star1
-			local star2
-			local star3
-			local star4
-
-			local j = `Nrows'-`i'+1
-			local j = `i'
-			if `j' == `Min_IC1' local star1 "*"
-			if `j' == `Min_IC2' local star2 "*"
-			if `j' == `Min_PC1' local star3 "*"
-			if `j' == `Min_PC2' local star4 "*"
-
-			
-			di as text _col(4) `i' _col(11) "{c |}" _col(12) %9.3g ICs[`j',1] "`star1'" _col(27) %9.3g ICs[`j',2] "`star2'" _col(42) %9.3g ICs[`j',3] "`star3'" _col(55) %9.3g ICs[`j',4] "`star4'"
-		}
-		di as text "{hline 10}{c BT}{hline 70}"
-		
-		if `Nrows' > 1 {
-			di as text " * indicates minimum."
-			di as text ""
-			di as text " Cross Section Averages:"
-			forvalues i = 1(1)`Nrows' {
-				local j = `Nrows'-`i'+1
-				local j = `i'
-				local textadd
-				if `i' == `MainModel' local textadd "(Main Model)"
-				dis as smcl "{stata `model_cmd`j'':  Model `i'}: `model`j'' `textadd'" 
-			}
-			di as text " Click on Model to run in xtdcce2."
-		}
-		return matrix ICs = ICs 
-	
 	}
 	else {
 		

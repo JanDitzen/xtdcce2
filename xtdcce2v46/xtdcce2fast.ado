@@ -23,7 +23,7 @@ program define xtdcce2fast, eclass sortpreserve
 	}	
 	else {
 	
-		syntax varlist(min=1 ts fv) [if/] , [cr_lags(numlist) CRosssectional(string) GLOBALCRosssectional(string) CLUSTERCRosssectional(string) NOCONStant lr(string) fullsample NOTable lr_options(string) NOCROSSsectional NOCD trace postframe NOPOST POOLEDindex Pooled(string) pooledvce(string) POOLEDConstant MGMISsing ] 
+		syntax varlist(min=1 ts) [if/] , [cr_lags(numlist) CRosssectional(string) GLOBALCRosssectional(string) CLUSTERCRosssectional(string) NOCONStant lr(string) fullsample NOTable lr_options(string) NOCROSSsectional NOCD trace postframe NOPOST POOLEDindex Pooled(string) pooledvce(string) POOLEDConstant MGMISsing ] 
 		qui{
 			version 15
 						
@@ -126,7 +126,7 @@ program define xtdcce2fast, eclass sortpreserve
 			if "`crosssectional'" != "" {
 			    if "`cr_lags'" == "" {
 					local 0 `crosssectional'
-					syntax varlist(ts fv) , [cr_lags(numlist) RCCEindex rcce(string) RCTest RCTestoptions(string)]
+					syntax varlist(ts) , [cr_lags(numlist) RCCEindex rcce(string)]
 					local crosssectional `varlist'
 					local checkscsa "`varlist'"
 					local cropt `options'
@@ -144,16 +144,13 @@ program define xtdcce2fast, eclass sortpreserve
 				else {
 				    local scr_lags `cr_lags'					
 				}
-
-				if "`rctest'" == "" & "`rctestoptions'" != "" local rctest rctest 
-				if "`rctestoptions'" != "" local rcopt rctestopt(`rctestoptions') 
 				
 			}
 			
 			*** Global Crosssectional averages
 			if "`globalcrosssectional'" != "" {
 				local 0 `globalcrosssectional'
-				syntax varlist(ts fv) , [cr_lags(numlist)]
+				syntax varlist(ts) , [cr_lags(numlist)]
 				local globalcrosssectional `varlist'
 				local checkgcsa "`varlist'"				
 				local checkcsa: list checkgcsa & checkscsa
@@ -173,7 +170,7 @@ program define xtdcce2fast, eclass sortpreserve
 			*** Clustered Crosssectional averages
 			if "`clustercrosssectional'" != "" {
 				local 0 `clustercrosssectional'
-				syntax varlist(ts fv) , [cr_lags(numlist) CLuster(varlist) ]
+				syntax varlist(ts) , [cr_lags(numlist) CLuster(varlist) ]
 				local clustercrosssectional `varlist'
 				local csa_cluster "`cluster'"
 				
@@ -252,11 +249,9 @@ program define xtdcce2fast, eclass sortpreserve
 			`trace' disp "vars `CleanLR'"
 			** parse varlist and create tempvars
 			*sort `idvar' `tvar'
-			*tsrevar `lhsrhs' `lr'
-			fvrevar `lhsrhs' `lr'
+			tsrevar `lhsrhs' `lr'
 			local varlistnew "`r(varlist)'"
-			*tsunab varlistnames: `lhsrhs' `CleanLR'
-			fvunab varlistnames: `lhsrhs' `CleanLR'
+			tsunab varlistnames: `lhsrhs' `CleanLR'
 
 			** add constant
 			if "`constant'" == "" {
@@ -285,31 +280,12 @@ program define xtdcce2fast, eclass sortpreserve
 			if "`crosssectional'" != "" {
 				if "`rcce'" != "" local rcceOpt rcce(`rcce')	
 				tempname scsa
-
-
-				*** Check if rctest can be used
-				local csaL0 = 0
-				foreach tmp in `scr_lags' {
-					if `tmp' > 0 & `tmp' != . local csaL0 = 1			
-				}
-			
-				if "`rctest'`rcopt'" != "" & `csaL0' {
-					noi disp "Rank Condition Test not possible for dynamic models."
-					local rctest ""
-					local rcopt ""
-				}
-
-				xtdcce2_csa `crosssectional' , idvar(`idvar') tvar(`tvar') cr_lags(`scr_lags') touse(`tousecr') csa(`scsa') tousets(`touse') `rcceOpt' `rcceindex'  `rctest' `rcopt'
+				xtdcce2_csa `crosssectional' , idvar(`idvar') tvar(`tvar') cr_lags(`scr_lags') touse(`tousecr') csa(`scsa') tousets(`touse') `rcceOpt' `rcceindex'
 				local scsa `r(varlist)'
 				local scross_structure `r(cross_structure)'	
 				if "`rcce'`rcceindex'`rcceOpt'" != "" {
 						local rcce_Type `r(Type)'
 						local rcce_NumPC `r(NumPc)'
-				}
-				if "`rctest'" != "" {
-					tempname rc_results rc_results_detail
-					matrix `rc_results' = r(rctest)
-					matrix `rc_results_detail' = r(rctest_det)
 				}
 			}
 			
@@ -392,12 +368,6 @@ program define xtdcce2fast, eclass sortpreserve
 			local rhs `*' `varlr'
 			local rhsi `*'
 			
-			fvexpand2 `rhs'
-			local rhs "`r(varlist)'"
-
-			fvexpand2 `rhsi'
-			local rhsi "`r(varlist)'"
-
 			matrix colnames `b_output' = `rhs'
 			matrix colnames `V_output' = `rhs'
 			matrix rownames `V_output' = `rhs'
@@ -447,16 +417,6 @@ program define xtdcce2fast, eclass sortpreserve
 		if "`rcce'`rcceindex'" != "" {
 			ereturn local hidden rcce_options "`rcceOpt' `rcceindex'"
 		}
-		if "`rctest'" !="" {
-			ereturn scalar rct = `rc_results'[1,1]
-			ereturn scalar rct_p = `rc_results'[1,2]
-			ereturn scalar rct_m = `rc_results'[1,3]
-			ereturn hidden matrix rctest = `rc_results'
-
-		}
-		if "`rctest'" != "" ereturn hidden matrix rctest_details = `rc_results_detail'
-
-
 		ereturn hidden local p_mg_vars "`rhsi'"
 		
 		ereturn local predict "xtdcce2_p"
@@ -746,25 +706,6 @@ program define xtdcce2fast, eclass sortpreserve
 				local lr_1 = word("`BaseListe'",1)
 				display  as text "Cointegration variable(s): lr_`lr_1'"
 			}
-
-			if "`rctest'" != "" {
-				tempname rc_testr rc_p rc_m rc_all
-				matrix `rc_all' = e(rctest)
-				scalar `rc_testr' = `rc_all'[1,1]
-				scalar `rc_p' = `rc_all'[1,2]
-				scalar `rc_m' = `rc_all'[1,3]
-				di as text "{hline `=`maxline'-`col_i'-2'}"
-				di as text "Test for Rank Condition (De Vos, Everaert and Sarafidis, 2024)"
-				local maxline = `maxline' - 2
-				di as text "{hline 14}{c TT}{hline `=`maxline'-`col_i'-15'}"
-				di as smcl _col(6) "RC" _col(15) "{c |}" _col(20) "Estimated"
-				di as text _col(2) "(1-I(p<m))*" _col(15) "{c |}" _col(18) "Rank" _col(25) "# Factors" 
-				di as text "{hline 14}{c +}{hline `=`maxline'-`col_i'-15'}"
-				di as result _col(6) `rc_testr' _col(15) "{c |}" _col(19) `rc_p' _col(27) `rc_m'
-				di as text "{hline 14}{c BT}{hline `=`maxline'-`col_i'-15'}"
-				dis as text "* RC=1 indicates rank condition holds."
-
-			}	
 		}
 		*cap drop `clistfull'
 	}
@@ -975,12 +916,9 @@ mata:
 		"r2 mg"
 		r2mg, upper, quadcolsum(lower_i)/(N_g * (T-1)) 
 		"r2"
-		s2_i
-		r2 = 1- quadcolsum(s2_i)/quadcolsum(lower_i)
-		r2
+		r2 = 1- s2_i/quadcolsum(lower_i)
 		r2_a = 1- (1-r2) * (N-1)/(N-Ktotal-1)
-		r2_a
-		///r2, r2_a, (N-1)/(N-Ktotal-1)
+		r2, r2_a, (N-1)/(N-Ktotal-1)
 		"b_i before lr calcualtions"
 		
 		/// Long Run Coefficients (only ECM/ARDL)

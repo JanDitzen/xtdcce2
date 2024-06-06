@@ -1,6 +1,6 @@
 {smcl}
 {hline}
-{hi:help xtdcce2}{right: v. 4.7 - 06. June 2024}
+{hi:help xtdcce2}{right: v. 4.6 - 09. January 2024}
 {right:SJ18-3: st0536}
 {right:SJ21-3: st0536_1}
 {hline}
@@ -56,8 +56,6 @@ with a large number of observations over groups and time periods.{p_end}
 {synopt:{cmdab:cl:ustercr(}{help varlist})}name of cluster variable(s), only for {cmd:clustercrosssectional}{p_end}
 {synopt:{cmd:rcce}}use regularized CCE, see Juodis (2022) with the ER criterion from Ahn and Horenstein (2013) to select the number of eigenvectors for static panels, see {help xtdcce2##rcce:details}.{p_end}
 {synopt:{cmd:rcce(options)}}as {cmd:rcce} but with further options options, see {help xtdcce2##options:Options}.{p_end}
-{synopt:{cmdab:rccl:assifier}}perform test for rank condition, see De Vos et al. (2024). RC = 1 implies rank condition holds.{p_end}
-{synopt:{cmdab:rccl:assifier(options)}}as {cmd:rctest} but with further options options, see {help xtdcce2##options:Options}.{p_end}
 {synoptline}
 {p2colreset}{...}
 
@@ -77,16 +75,13 @@ and note on {help xtdcce2##collinearity:collinearity issues}.{break}
 {p 8}{help xtdcce2##EconometricModel:Econometric Model}{p_end}
 {p 8}{help xtdcce2##EmpiricalModel:Empirical Model}{p_end}
 {p 8}{help xtdcce2##R2:Coefficient of Determination (R2)}{p_end}
-{p 8}{help xtdcce2##rcc:Rank Classifier}{p_end}
-{p 8}{help xtdcce2##ic:Information Criteria}{p_end}
 {p 8}{help xtdcce2##collinearity:Issues with Collinearity}{p_end}
 {p 4}{help xtdcce2##SpeedLargePanels:Large panels and speed}{p_end}
 {p 4}{help xtdcce2##saved_vales:Saved Values}{p_end}
 {p 4}{help xtdcce2##postestimation: Postestimation commands}{p_end}
 {p 8}{help xtdcce2##postestpredict: predict}{p_end}
 {p 8}{help xtdcce2##postestestat: estat}{p_end}
-{p 8}{help xtdcce2##postestboot: Bootstrap}{p_end}
-{p 8}{help xtdcce2##postestic: Information Criteria}{p_end}
+{p 8}{help xtdcce2##postestboot: bootstrap}{p_end}
 {p 4}{help xtdcce2##examples:Examples}{p_end}
 {p 4}{help xtdcce2##references:References}{p_end}
 {p 4}{help xtdcce2##about:About}{p_end}
@@ -110,8 +105,6 @@ c) The Cross-Sectional ARDL (CS-ARDL, Chudik et. al 2016) estimator using an ARD
 Additionally {cmd:xtdcce2} tests for cross sectional dependence (see {help xtcd2}) and 
 estimates the exponent of the cross sectional dependence alpha (see {help xtcse2}).
 {cmd:xtdcce2} also implements the regularized CCE estimator from Juodis (2022) for static panels. 
-The rank condition can be checked in static panels using the classifier from De Vos et al. (2024).
-Information criteria to select the optimal number of cross-section averages in static panels can be calculated using {cmd:estat}.
 It also supports instrumental variable estimations (see {help ivreg2}).{p_end}
 
 
@@ -123,32 +116,21 @@ Variables in {cmd: crosssectional()} are partialled out, the coefficients not es
 {p 8 8}{cmd:crosssectional}(_all) adds all variables as cross sectional averages. 
 No cross sectional averages are added if {cmd:crosssectional}(_none) is used, which is equivalent to {cmd:nocrosssectional}.
 {cmd:crosssectional}() is a required option but can be substituted by {cmd:nocrosssectional}.{break}
-If {cmd:cr(..., cr_lags())} is used, then the global option {cmd:cr_lags()} (see below) is ignored.{p_end}
-{p 8 10}{cmd:rcce[}{cmdab:c:riterion(string)} {cmdab:sc:ale}{cmd: npc(real)]} invokes regularized cross-section averages from Juodis (2022) for {bf:static panels}. 
+If {cmd:cr(..., cr_lags())} is used, then the global option {cmd:cr_lags()} (see below) is ignored.{break}
+{cmd:rcce[}{cmdab:c:riterion(string)} {cmdab:sc:ale}{cmd: nps(real)]} invokes regularized cross-section averages from Juodis (2022) for {bf:static panels}. 
 The number of common factors in the cross-section averages is estimated and 
 then the respective number of eigenvectors from the cross-section averages is used. For more details see {help xtdcce2##rcce:details}.{break}
 Detailed Options are:{p_end}
-{col 14}{cmd:criterion(er|gr)} specifies criterion to identify number of common factors using the ER or GR criterion from Ahn and Horenstein (2013), see {help xtnumfac}.
-{col 14}{cmd:scale} scales cross-section averages, see Juodis (2022).
-{col 14}{cmd:npc(real)} specifies number of eigenvectors without estimating it. Cannot be combined with {cmd:criterion}.
-{p 8 10}{cmdab:rccl:assifier[er gr }{cmdab:rep:lications(integer) }{cmdab:stand:ardize(integer) }{cmdab:random:shrinkage} {cmdab:noshrink:age]} performs the test of the rank condition, see De Vos et al. (2024).
-RC = 1 implies the rank condition holds. CCE is inconsistent if the rank condition does not hold.
-The classifier compares the rank of the matrix of cross-sectional averages of the data with the number of factors estimated from the data.  
-For the rank condition to hold, the number of factors has to be smaller than or equal to the rank of the matrix of cross-sectional averages.  
-The test can be applied for static panels only.{break}
-Detailed Options are:{p_end}
-{col 14}{cmd:er|gr} specifies criterion to identify number of common factors using the ER or GR criterion from Ahn and Horenstein (2013), see {help xtnumfac}. Default is {cmd:gr}.
-{col 14}{cmdab:stand:ardize(integer)} standardize data prior to estimation of number of common factors, see see {help xtnumfac}. Default is {cmd:5}.
-{col 14}{cmdab:rep:lications(integer)} sets number of replication for bootstrapping variance of the rank estimator of the unobserved matrix of average factor loadings. 
-{col 14}{cmdab:random:shrinkage} Instead of fold-over matrix, use matrix with entries drawn from random normal distribution. 
-{col 14}{cmdab:noshrink:age]} No shrinkage.
+{col 12}{cmd:criterion(er|gr)} specifies criterion to identify number of common factors using the ER or GR criterion from Ahn and Horenstein (2013), see {help xtnumfac}.
+{col 12}{cmd:scale} scales cross-section averages, see Juodis (2022).
+{col 12}{cmd:npc(real)} specifies number of eigenvectors without estimating it. Cannot be combined with {cmd:criterion}.
 
 {p 4 8}{cmdab:globalcr:osssectional(}{help varlist}{cmd:cr1 [,cr_lags(#)])} define global cross-section averages.
 {cmd:global} cross-section averages are cross-section averages based on observations which are excluded using {help if} statements.
 If {cmd:cr(..., cr_lags())} is used, then the global option {cmd:cr_lags()} (see below) is ignored.{p_end}
 
 {p 4 8}{cmdab:cluster:osssectional(}{help varlist}{cmd:cr1 [,cr_lags(#)] clustercr(varlist))} are clustered or local cross-section averages. 
-That is, the cross-section averages are the same for each realization of the variables defined in {cmd:clustercr()}.
+That is, the cross-section averages are the same for each realisation of the variables defined in {cmd:clustercr()}.
 For example, we have data observations regions of multiple countries, defined by variable {it:country}
 Now we want to add cross-section averages for each country. 
 We can define those by using the option {cmd:clustercr(varlist , clustercr(country))}.{break}
@@ -181,8 +163,7 @@ Coefficient will still be displayed as zero in e(bi). {p_end}
 {p 4 8 12}{cmd:pooledvce(}{it:type}{cmd:)} specifies the variance estimator for pooled regression.
 The default is the non-parametric variance estimator from Pesaran (2006). 
 {it:type} can be {cmd:nw} for Newey West heteroscedasticity autocorrelation robust standard errors (Pesaran 2006) or
-{cmd:wpn} for fixed T adjusted standard errors from Westerlund et. al (2019).
-{cmd:ols} for standard OLS standard errors.{p_end}
+{cmd:wpn} for fixed T adjusted standard errors from Westerlund et. al (2019).{p_end}
 
 {p 4 8}{cmd:xtdcce2} supports IV regressions using {help ivreg2}. 
 The IV specific options are:{break}
@@ -491,7 +472,7 @@ R2 is calculated.
 However the pooled or mean group adjusted R2 is displayed instead of the adjusted R2
 if calculated.{p_end}
 
-{p 4 4}In the case of a pure homogeneous model, the adjusted R2 is calculated as:{p_end}
+{p 4 4}In the case of a pure homogenous model, the adjusted R2 is calculated as:{p_end}
 
 {col 10}R2(CCEP) = 1 - s(p)^2 / s^2
 
@@ -511,81 +492,6 @@ individual R2 weighted by the overall error variance:{p_end}
 {col 10}R2(CCEMG) = 1 - s(mg)^2 / s^2
 
 {col 10}s(mg)^2 = 1/N sum(i=1,N) e(i)'e(i) / [T - 2k - 2].
-
-{p 2}{ul: Rank Classifier}{marker rcc}
-
-{p 4 4}A key condition for a consistent estimation in the presence of common factors
-and strong cross-sectional dependence is the so called Rank Condition in Pesaran (2016) and
-Chudik and Pesaran (2015).
-The rank condition implies that the rank of the average factor loadings is is smaller than the number of common factors. 
-Karabiyik et al. (2017) show that if rank condition fails, the CCE estimator is inconsistent. 
-In a empirical setting this implies that 1) the unknown number of unobserved common factors has to be equal or larger
-than the rank of the unobserved average factor loadings; 
-2) cross-section averages with a zero loading can pose a problem if the number of cross-section averages is small.
-{p_end}
-
-{p 4 4}DeVos et al. (2024) propose an classifier which indicates if the rank conditions holds:{p_end}
-
-{col 10}RC = 1 − I (g <m) 
-
-{p 4 4}where m is number of factors in the data and g is the rank of the matrix of cross-sectional averages of the data.
-m is estimated using the ER or GR criterion on the cross/product of the observed data.
-g is the rank of the average factor loadings and estimated from the cross-section averages.{break}
-If RC = 1, then the rank condition holds.{p_end}
-
-{p 4 4}A shrinkage of the time dimension of the unobserved matrix of average factor loadings is required for consistent estimation. 
-Default is a fold over matrix calculating the mean of every k-th row, see Section 3.1 in De Vos et al. (2024).
-Alternatives are random shrinkage and no shrinkage, see {help xtdcce2##options:Options}. 
-{p_end}
-
-{p 4 4}The Rank Condition Classifier is calculated on request using the option {cmd:cr(}{it:varlist}{cmd:,rccl)}, see {help xtdcce2##options:Options}.
-{p_end}
-
-
-{p 4 4}{ul:Notes:}
-The estimation of the rank of the factor loadings requires a bootstrap. 
-Consistency depends on fixed T, however CCE requires large T. 
-The solution is to bound the dimension of the loadings with shrinkage, see {help xtdcce2##options:Options}.
-Most importantly for the practitioner, the classifier is only valid for {ul:static panels!}{p_end}
-
-{p 4}{help xtdcce2##example_rcc:See example}{p_end}
-
-
-{p 2}{ul: Information Criteria}{marker ic}
-
-{p 4 4}The selection of the optimal set of cross-section averages is non-trivial
-and difficult to establish ex-anti. The inclusion of too many cross-section averages can 
-cause inefficiency. 
-To guide the selection of the optimal set of cross-section averages, 
-Margaritella and Westerlund (2023) propose 4 information criteria:{p_end}
-
-{col 10}IC1 = ln(S(FM)^2) + m (N+T)/(NT) ln(NT/(N+T))
-{col 10}IC2 = ln(S(FM)^2) + m (N+T)/(NT) ln(c(NT))
-{col 10}PC1 = S(FM)^2 + m S(FMb)^2 (N+T)/(NT) ln(NT/(N+T))
-{col 10}PC2 = S(FM)^2 + m S(FMb)^2 (N+T)/(NT) ln(c(NT))
-
-{p 4 4}where m is the number of cross-section averages of set M and 
-Mb denotes the set of cross-section averages with the largest number of cross-section averages. 
-S(FM) is the standard error of regression with the set of cross-section averages corresponding to set m,
-S(FMb) is the standard error of regression with the largest set of cross-section averages.
-c(NT) is an additional penalty term.{p_end}
-
-{p 4 4}IC1 and IC2 are calculated based only on the current (m-set) of cross-section averages,
-while PC1 and PC2 are in relation to the largest possible set of cross-section averages (Mb-set).
-Example: 3 possible cross-section averages, y, x1 and x2. Then the Mb-set would be y, x1 and x2.
-The m-sets can be 1) y, 2) x1, 3) x3, 4) y+x1, 5) y+x2, 6) x1+x2 and 7) y1+x1+x2. 
-Hence a total of 7 different combinations of CSA and ICs can be calculated.{p_end}
-
-
-{p 4 4}IC1 and IC2 are automatically calculated when running {cmd:xtdcce2}.
-PC1 and PC2 can be calculated using {cmd: estat ic}, see {help xtdcce2##postestic:estat ic}.
-{p_end}
-
-{p 4 4}{ul:Notes:} The IC and PC are only valid for {ul:static} panel models. 
-The IC and PC are intended to identify the optimal set of cross-section averages.
-{ul:DO NOT} use the criteria to select the number of lags in a dynamic model.{p_end}
-
-{p 4}{help xtdcce2##example_ic:See example}{p_end}
 
 {p 2}{ul: Collinearity Issues}{marker collinearity}
 
@@ -621,7 +527,10 @@ with the option {cmd:useqr}.{p_end}
 {p 4 4}{cmd:xtdcce2} takes the following steps if:{p_end}
 {p 6}{cmd:1. Z'Z is not of full rank}{p_end}
 {p 6 6}Before partialling out {cmd:xtdcce2} checks of Z'Z is of full rank. 
-In case Z'Z is rank deficient, then {cmd:xtdcce2} will return a warning. {p_end}
+In case Z'Z is rank deficient, then {cmd:xtdcce2} will return a warning. 
+Cross-section unit specific estimates are not consistent, however the mean group
+estimates are. 
+See  Chudik, Pesaran (2015, Journal of Econometrics), Assumption 6 and page 398.{p_end}
 
 {p 6}{cmd:2. The cross-sectional averages and the explanatory variables are collinear.}{p_end}
 {p 6 6}In this case regressors from the right are dropped, 
@@ -652,7 +561,7 @@ not done in {cmd:xtmg}.
 In addition it use as a default a different algorithm to invert matrices.{p_end}
 
 {p 4 4}The use of factor variables together with cross-sectional averages 
-can lead to collinearity issues. For example in a dataset with the time identifier 
+can lead to collineaity issues. For example in a dataset with the time identifier 
 {cmd:year} adding a time dummy using {cmd:i.year} implicitly creates a dummy for
 each year. These variables will be collinear with the cross-sectional averages.
 {cmd:xtdcce2} tries to control for collinearity but might fail when using factor 
@@ -720,8 +629,6 @@ are saved in a {cmd:mata} matrix.{p_end}
 {col 8}{cmd: e(Tmin)}{col 27} minimum time (only unbalanced panels)
 {col 8}{cmd: e(Tbar)}{col 27} average time (only unbalanced panels)
 {col 8}{cmd: e(Tmax)}{col 27} maximum time (only unbalanced panels)
-{col 8}{cmd: e(IC1)}{col 27} Information Criteria 1 to select CSA from Margaritella and Westerlund (2023).
-{col 8}{cmd: e(IC2)}{col 27} Information Criteria 2 to select CSA from Margaritella and Westerlund (2023).
 
 {col 4} Macros
 {col 8}{cmd: e(tvar)}{col 27} name of time variable
@@ -816,8 +723,7 @@ and ytilde and xtilde are y and x with the common factors partialled out:{p_end}
 {p 2}{ul: estat}{p_end}
 {marker postestestat}
 {p 4 4}{cmd: estat} can be used display the structure or values of individual coefficients and
-to create a box, bar or range plot.
-It can also calculate the information criteria from Margaritella and Westerlund (2023). {p_end}
+to create a box, bar or range plot. {p_end}
 
 {p 4 4}To display the individual coefficients ordered by the cross-sectional units:{p_end}
 {p 6 13}{cmd: estat} {it:ebi}{p_end}
@@ -884,30 +790,6 @@ runs {cmd:xtdcce2}.{p_end}
 
 {p 4 4}The default is to bootstrap standard errors and then use the bootstrapped standard errors to calculate the confidence intervals.
 Option {cmd:percentile} directly bootstraps confidence intervals.{p_end}
-
-
-{p 2}{ul: Information Criteria}{p_end}
-{marker postestic}
-{p 4 4}{cmd:estat ic} calculates the information criteria (IC) to select the optimal number of cross-section averages from Margaritella and Westerlund (2023).
-A total of 4 IC are implemented. IC1 and IC2 are information criteria on the current set of cross-section averages as set by the option {cmd:crosssectional()}
-of the {cmd:xtdcce2}. 
-PC1 and PC2 are the panel criteria and compare a set of cross-section averages to the largest possible set. 
-The largest possible set is either defined by all variables in {cmd:crosssectional()} or by {it:(model1)} when using the {cmd:model()} option
-of {cmd:estat ic}. 
-See {help xtdcce2##example_ic:Examples} for details on syntax.{p_end}
-
-{p 6 13}{cmd: estat ic , [options]}{p_end}
-
-{col 6}Options{col 25} Description
-{hline}
-{col 8}{cmdab:seq:uential}{col 27}Calculate IC for all combinations of cross-section averages defined in {cmd:cr()}. 
-{col 8}{cmd:model(}{it:models}{cmd:)}{col 27}Compare different models, where models are defined as {cmd:model(}{it:(model1) (model2) ... (modelK)}{cmd:)}.
-{col 8}{cmd:single}{col 27}Calculate IC for only 1st model.
-{col 8}{cmdab:noprog:ress}{col 27}Omit Progress bar.
-{hline}
-
-{p 4 4}The crtieria are only valud for static panels and to select the optimal set of cross-section averages. {cmd:DO NOT} use the information criteria in dynamic panels or to select the optimal number of lags of the dependent, independent variables or lags of cross-section averages.
-{p_end}
 
 
 {marker examples}{title:Examples}
@@ -1076,7 +958,7 @@ If the lag of {it:dp} is called {it:ldp}, then the variables need to be enclosed
 {marker example_rcce}{p 4}{ul: Regularized CCE and bootstrapping}{p_end}
 
 {p 4 4}The regularized CCE approach is only possible for static models.
-To estimate a static model of growth on human, physical capital and population growth, we can use:{p_end}
+To estimate a static model of growth on human, physical captial and population growth, we can use:{p_end}
 
 {p 8}{stata xtdcce2 log_rgdpo log_hc log_ck log_ngd , cr(log_rgdpo log_hc log_ck log_ngd, rcce)}{p_end}
 
@@ -1095,55 +977,9 @@ To ensure standard errors are correct, a bootstrap is run with a fixed seed:{p_e
 
 {p 8}{stata estat bootstrap, seed(123) wild percentile}{p_end}
 
-{p 4 4}Instead of specifying the criteria to estimate the number of eigenvectors of the rcce approach, we can hard set it using the option {cmd:npc()}:{p_end}
+{p 4 4}Instead of specifing the criteria to estimate the number of eigenvectors of the rcce approach, we can hard set it using the option {cmd:npc()}:{p_end}
 
 {p 8}{stata xtdcce2 log_rgdpo log_hc log_ck log_ngd , cr(log_rgdpo log_hc log_ck log_ngd, rcce(npc(3)))}{p_end}
-
-
-{marker example_rcc}{p 4}{ul: Rank Condition Classifier}{p_end}
-
-{p 4 4}The rank condition is key for a consistent estimation using the CCE estimator.
-Rank condition implies that - loosely speaking - the estimated rank of the matrix of cross-sectional averages of the data has to be larger or equal to the rank of the factors.
-To calculate the classifier from DeVos et al. (2024), option {cmd:rcclassifier} is added to the static model from the first
-Example:
-{p_end}
-
-{p 8}{stata xtdcce2 d.log_rgdpo log_hc log_ck log_ngd , cr(_all, rccl) reportc}{p_end}
-
-{p 4 4}The estimated rank of the matrix of cross-sectional averages of the data is 3 and the rank of the factors is 1, thus the rank condition holds.{break}
-Using the ER criterion to estimate the number of common factors in the cross-section averages and use fold-over matrix based on 
-random normal values to shrink dimension:{p_end}
-
-{p 8}{stata xtdcce2 d.log_rgdpo log_hc log_ck log_ngd , cr(_all, rccl(er random))}{p_end}
-
-{p 4 4}The estimated rank of the averages factor loadings reduces to 2, but is still arger than the number of factors. Rank condition holds.{p_end}
-
-{marker example_ic}{p 4}{ul: Information Criteria}{p_end}
-
-{p 4 4}The Information Criteria from Margaritella and Westerlund (2023) can be used to identify the optimal set of cross-section averages in static panels.
-We return to the model from the first Example:{p_end}
-
-{p 8}{stata xtdcce2 d.log_rgdpo log_hc log_ck log_ngd , cr(_all) reportc}{p_end}
-
-{p 4 4}Obtain IC1 and IC2 for the current set of cross-section averages defined in {cmd:cr(_all)}:{p_end}
-
-{p 8}{stata estat ic}{p_end}
-
-{p 4 4}Next, calculate IC for all possible combination of cross-section and indicate the lowest ones:{p_end}
-
-{p 8}{stata estat ic, sequential}{p_end}
-
-{p 4 4}IC for three different sets of cross-section averages indicated by {cmd:model(}{it:(model1) (model2) ... (modelK)}{cmd:)}, where
-{it:model1} is the reference model with the largest set of cross-section averages:{p_end}
-
-{p 8}{stata estat ic, model( (d.log_rgdpo log_hc log_ck log_ngd) (log_hc log_ck log_ngd) (log_hc log_ck ) )}{p_end}
-
-{p 4 4}Get IC for a single model of cross-section averages using option {cmd:single}. 
-Compare to output when option {cmd:single} not used, then all combinations are tried.{p_end}
-
-{p 8}{stata estat ic, model(log_hc log_ck ) single}{p_end}
-
-{p 8}{stata estat ic, model(log_hc log_ck log_ngd)}{p_end}
 
 {marker references}{title:References}
 
@@ -1169,10 +1005,6 @@ Journal of Econometrics 188(2): 393-420.{p_end}
 {p 4 8}Chudik, A., K. Mohaddes, M. H. Pesaran, and M. Raissi. 2016.
 Long-Run Effects in Large Heterogeneous Panel Data Models with Cross-Sectionally Correlated Errors
 Essays in Honor of Aman Ullah. 85-135.{p_end}
-
-{p 4 8}De Vos, I., G. Everaert and V. Sarafidis. 2024.
-A method to evaluate the rank condition for CCE estimators.
-Econometric Reviews 43(2-4).{p_end}
 
 {p 4 8}Ditzen, J. 2018. 
 Estimating Dynamic Common Correlated Effcts in Stata. 
@@ -1209,9 +1041,6 @@ Journal of Applied Econometrics, 37(4), 788– 810.{p_end}
 On the role of the rank condition in cce estimation of factor-augmented panel regressions.
 Journal of Econometrics, 197(1), 60–64.{p_end}
 
-{p 4 8}Margaritella, L., and J. Westerlund. 2023. Using Information Criteria to
-Select Averages in CCE. The Econometrics Journal. 26(3): 405-421.{p_end}
-
 {p 4 8}Pesaran, M. H. 2006.
 Estimation and inference in large heterogeneous panels with a multifactor error structure.
 Econometrica 74(4): 967-1012.{p_end}
@@ -1228,7 +1057,7 @@ The Stata Journal, 19(1), 4–60.{p_end}
 Pooled Mean Group Estimation of Dynamic Heterogeneous Panels.
 Journal of the American Statistical Association 94(446): 621-634.{p_end}
 
-{p 4 8}Westerlund, J., Petrova, Y., Norkute, M. 2019. CCE in fixed-T panels. 
+{p 4 8}Westerlund, J., Perova, Y., Norkute, M. 2019. CCE in fixed-T panels. 
 Journal of Applied Econometrics: 1-6.{p_end}
 
 
@@ -1243,7 +1072,6 @@ Sebastian Kripfganz,
 Erich Gundlach, 
 Achim Ahrens,
 Kyle McNabb,
-Vasilis Sarafidis,
 Sean Holly and Mark Schaffer, to the participants of the
 2016 Stata Users Group meeting in London, 2018 Stata User Group meeting in Zuerich,
  and two anonymous referees of The Stata Journal for many valuable comments and suggestions.
@@ -1260,10 +1088,6 @@ Ditzen, J. 2018. xtdcce2: Estimating dynamic common correlated effects in Stata.
 {p 4 8}The latest versions can be obtained via {stata "net from https://github.com/JanDitzen/xtdcce2"}.{p_end}
 
 {marker ChangLog}{title:Version History}
-{p 4 8}Version 4.6 to 4.7 - June 2024{p_end}
-{p 8 10} - bug fixes when using predict with xtdcce2fast.{p_end}
-{p 8 10} - factor variables for option cr().{p_end}
-{p 8 10} - added rank classifier and information criteria to select CSA.{p_end}
 {p 4 8}Version 4.5 to 4.6 - January 2024{p_end}
 {p 8 10} - bug fix in rcce option when using unbalanced panels{p_end}
 {p 8 10} - bug fix when combining absorb() with csa (thanks to Vasilis Sarafidis for pointing it out){p_end}

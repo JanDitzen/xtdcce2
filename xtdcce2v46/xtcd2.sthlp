@@ -1,6 +1,6 @@
 {smcl}
 {hline}
-{hi:help xtcd2}{right: v. 4.3 - June 2024}
+{hi:help xtcd2}{right: v. 4.2 - May 2023}
 {right:SJ18-3: st0536}
 {hline}
 {title:Title}
@@ -16,7 +16,6 @@
 {cmdab:kden:sity} {cmd:name({it:string})} 
 {cmd:heatplot[(}{cmdab:abs:olute} {it:options_heatplot}{cmd:)] contour[(}{cmdab:abs:olute} {it:options_contour}{cmd:) {cmdab:noadju:st}]}
 {cmd:seed(integer)}
-{cmd:maxiter(integer)}
 ]{p_end}
 
 {p 4 4}{varlist} is the name of residuals or variables to be tested for weak cross sectional dependence. 
@@ -170,9 +169,6 @@ If {cmd:name({it:string})} is set, then the histogram is saved and not drawn.{p_
 This was the default in versions prior 2.3.{p_end}
 
 {p 4 4}{cmd:seed(integer)} sets the {help set seed:seed} for the weighted CD test.{p_end}
-
-{p 4 4}{cmd:maxiter(integer)} maximum number of iterations for EM algorithm when using unbalanced panels and CD*.{p_end}
-
 
 {marker saved_vales}{title:Saved Values}
 

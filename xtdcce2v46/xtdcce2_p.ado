@@ -1,6 +1,6 @@
 /*
 predict for xtdcce2
-Requires xtdcce2 version 1.3
+Requires xtdcce2 version 1.2
 Changelog
 16.10.2017 - fixed bug in stdp
 08.11.2017 - added replace (option for Achim Ahrens)
@@ -18,7 +18,6 @@ Oct   2018 - changed xtdcce2133 to xtdcce2 in line 37
 04.03.2020 - fixed error when rec used.  Thanks to Gergio Tullio for the pointer.
 22.01.2021 - fixed error when fullsample and if used; Thanks to Gergio Tullio for the pointer.
 26.05.2022 - added option cov, only for xtdcce2fast
-26.01.2024 - support for absorb()
 */
 *capture program drop xtdcce2_p
 program define xtdcce2_p
@@ -103,12 +102,12 @@ program define xtdcce2_p_int
 				else if "`e(postresults)'" == "mata" {
 					if `type' == 0 {
 						putmata xtdcce2fast_pn = (`idvar' `tvar' `tousecr' `touse'), replace
-						noi mata xtdcce2_mata2stata("`newvar'",xtdcce2fast_p[.,(5)],"`idvar' `tvar'",xtdcce2fast_pn[.,(1,2)],"`touse'",`type')		
+						mata xtdcce2_mata2stata("`newvar'",xtdcce2fast_p[.,(5)],"`idvar' `tvar'",xtdcce2fast_pn[.,(1,2)],"`touse'",`type')		
 					}
 					else if `type' == 2 {
 						
 						
-						noi mata xtdcce2_mata2stata("`newvar'",xtdcce2fast_Vi[.,2..cols(xtdcce2fast_Vi)],"`idvar' `tvar'",xtdcce2fast_Vi[.,1],"`touse'",2) 
+						mata xtdcce2_mata2stata("`newvar'",xtdcce2fast_Vi[.,2..cols(xtdcce2fast_Vi)],"`idvar' `tvar'",xtdcce2fast_Vi[.,1],"`touse'",2) 
 						
 					}
 					else if `type' == -2 {
@@ -119,18 +118,18 @@ program define xtdcce2_p_int
 						local v1: list posof "`v1'" in tmp
 						local v2: list posof "`v2'" in tmp
 						
-						noi mata xtdcce2_mata2stata("`newvar'",xtdcce2fast_Vi[.,2..cols(xtdcce2fast_Vi)],"`idvar' `tvar'",xtdcce2fast_Vi[.,1],"`touse'",3,(`v1',`v2')) 
+						mata xtdcce2_mata2stata("`newvar'",xtdcce2fast_Vi[.,2..cols(xtdcce2fast_Vi)],"`idvar' `tvar'",xtdcce2fast_Vi[.,1],"`touse'",3,(`v1',`v2')) 
 
 					}
 					else {
-						noi mata xtdcce2_mata2stata("`newvar'",xtdcce2fast_bi,"`idvar' `tvar'",xtdcce2fast_order,"`touse'",`type')	
+						mata xtdcce2_mata2stata("`newvar'",xtdcce2fast_bi,"`idvar' `tvar'",xtdcce2fast_order,"`touse'",`type')	
 					}
 					
 				}
 				
 			}
 			else {
-				
+
 				if "`coeff'" != "" {
 					noi disp "Option coeff requires results stored in mata."
 					exit 199
@@ -570,27 +569,6 @@ program define xtdcce2_p_int
 				
 				markout `smpl' `lhs' `pooled_vars' `mg_vars' `clist1'
 				tempname mrk
-				
-				if "`e(absorb)'" != "" {
-					local absorb "`e(absorb)'"
-					local indepdepvars `lhs' `mg_vars'  `pooled_vars' /*`crosssectional'*/ `clist1' 
-					local indepdepvars : list uniq indepdepvars
-					///local noconstant noconstant]
-					gettoken 1 2: absorb, parse(",")
-					gettoken 3 4: 2					
-					`tracenoi' xtdcce2_absorb_prog `1' , `4' touse(`smpl') vars(`indepdepvars') 
-					
-					drop `r(absorb_vars)'
-					
-					///local indepdepvars `r(absorb_vars)'
-					///local spatial =word("`indepdepvars'",1)
-
-	            			*** adjust touse
-					*markout `lhs' `rhs' `pooled' `clist1' `endogenous_vars' `exogenous_vars' `endo_pooled' `exo_pooled'
-									
-				}
-				
-				
 				
 				issorted `idvar' `tvar'	
 				
