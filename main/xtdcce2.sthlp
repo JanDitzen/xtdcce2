@@ -1260,8 +1260,9 @@ Ditzen, J. 2018. xtdcce2: Estimating dynamic common correlated effects in Stata.
 {p 4 8}The latest versions can be obtained via {stata "net from https://github.com/JanDitzen/xtdcce2"}.{p_end}
 
 {marker ChangLog}{title:Version History}
-{p 4 8}Version 4.7 to 4.8 - June 2024{p_end}
+{p 4 8}Version 4.7 to 4.8 - January 2025{p_end}
 {p 8 10} - bug jackknife + IC fixed.{p_end}
+{p 8 10} - bug IV + IC fixed.{p_end}
 {p 4 8}Version 4.6 to 4.7 - June 2024{p_end}
 {p 8 10} - bug fixes when using predict with xtdcce2fast.{p_end}
 {p 8 10} - factor variables for option cr().{p_end}
