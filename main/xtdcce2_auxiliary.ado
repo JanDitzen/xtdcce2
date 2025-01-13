@@ -310,12 +310,12 @@ end
 
 **Wrapper for selectindex, checks if version is smaller than 13, then runs code, otherwise uses mata function
 
-	*if `c(version)' < 13 {
+	
 		capture mata mata drop xtdcce_selectindex()
 		mata: 
 			function xtdcce_selectindex(a)
 			{
-				
+				if (c("version") < 13) {
 					row = rows(a)
 					col = cols(a)
 					if (row==1) {
@@ -338,7 +338,10 @@ end
 							j++
 						}		
 					}
-
+				}
+				else {
+					output = selectindex(a)
+				}
 				return(output)
 			}
 		end
@@ -743,7 +746,7 @@ mata:
 				///ZZbar
 				if (hasmissing(Zbar)) {
 					"add miss"
-					tmp3 = selectindex(Zbari:!=.)
+					tmp3 = xtdcce_selectindex(Zbari:!=.)
 					tmp2 = Ti[tmp3]
 					
 					Zbar[tmp2,.] = Zbari[tmp3,.]
@@ -1100,10 +1103,10 @@ end
 capture mata mata drop xtdcce2_mata2stata()
 mata:
 	function xtdcce2_mata2stata (string scalar varnames, real matrix source, string scalar idtstata, real matrix idtmata, string scalar touse , real scalar type,|real matrix numb)
-		/// type: 0 residual, 1 coeff
+		/// type: 0 residual, 1 coeff, 2 se
 	{
 		/// check that varnames and source have same number of columns
-		varnames
+
 		if ((cols(tokens(varnames))!=cols(source)) * (type != 3)) {
 			varnames = varnames[1,1]:+(strofreal(1..cols(source)))	
 		}
@@ -1111,7 +1114,8 @@ mata:
 			varnames = tokens(varnames)
 		}
 
-		st_addvar("double", varnames)
+		real scalar idx
+		idx = st_addvar("double", varnames)
 		
 		real matrix vars
 		st_view(vars,.,varnames,touse)
@@ -1141,8 +1145,8 @@ mata:
 				/// ith element from Stata part, find in mata range
 				/// find element in mata list
 				/// select rows in mata list
-				firstindex = selectindex(idtmata[.,1]:==idt[index[i,1],1])[1,1]
-				indexmi = selectindex(indexm[.,1]:==firstindex)
+				firstindex = xtdcce_selectindex(idtmata[.,1]:==idt[index[i,1],1])[1,1]
+				indexmi = xtdcce_selectindex(indexm[.,1]:==firstindex)
 				panelsubview(varsi,vars,i,index)
 				varsim = panelsubmatrix(source,indexmi,indexm)
 				
@@ -1597,6 +1601,8 @@ mata:
 		}
 
 		uniqueid = uniqrows(id[.,1])
+
+		idti = panelsetup(id[.,1],1)
 		
 		N = rows(uniqueid)
 		N
@@ -1604,17 +1610,22 @@ mata:
 		Ti = 0
 		balanced = 1
 		
-		
-		if (rows(e_output)/N != round(rows(e_output)/N)) balanced = 0
+		panelstats(idti)
+		if (panelstats(idti)[3] != panelstats(idti)[4] ) balanced = 0
 
 		"panel is"
 		balanced
+		rows(e_output)/N
 
-		if (balanced==1) {
-			indic = (id :== uniqueid[1])
+		if (balanced==1 & cols(CSA) > 0) {
+			indic = (id :== uniqueid[1])			
 			tmp_csa = select(CSA,indic)
 			M = I(rows(tmp_csa)) - tmp_csa * m_xtdcce_inverter(quadcross(tmp_csa,tmp_csa)) * tmp_csa'
 		}
+		else if (balanced == 1) {
+			M = I( panelstats(idti)[4])
+		}
+		
 
 		i = 1
 		while (i <= rows(uniqueid)) {
@@ -1626,6 +1637,8 @@ mata:
 				tmp_csa = select(CSA,indic)
 				M = I(rows(tmp_csa)) - tmp_csa * m_xtdcce_inverter(quadcross(tmp_csa,tmp_csa)) * tmp_csa'
 			}
+			"here"
+			
 			tmp_e = (tmp_e'*M*tmp_e)
 			
 			SSRi = SSRi + tmp_e

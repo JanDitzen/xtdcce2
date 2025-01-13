@@ -11,7 +11,7 @@ Changelog
 
 *capture program drop xtdcce2_estat
 program define xtdcce2_estat , rclass
-	syntax anything [if] [in] , [Combine(string asis) Individual(string asis) nomg CLEARGraph fmt(string) dropzero * ]
+	syntax anything [if] [in] , [Combine(string asis) Individual(string asis) nomg CLEARGraph fmt(string) dropzero lags(string) NOGRAPH axis2(string) Horizontal Ivar(string) zero level(string) * ]
 	
 	marksample touse , nov
 
@@ -192,7 +192,7 @@ program define xtdcce2_estat , rclass
 	}
 	else if "`anything'" == "ic" {
 
-		local 0 , `options'
+		local 0 , `options' 
 		syntax [anything], [model(string) single SEQuential NOPROGress ]
 		
 		if "`model'`single'`sequential'" == "" {
@@ -328,6 +328,73 @@ program define xtdcce2_estat , rclass
 		return matrix ICs = ICs 
 	
 	}
+	else if "`anything'" == "crlags" {
+
+
+
+		local lags_loop `lags'
+
+		tempname ResultsO
+		est sto `ResultsO'
+
+
+		if "`lags_loop'" == "" local lags_loop = floor(`e(T)'^(1/3))
+		numlist "`lags_loop'"
+		local lags_loop "`r(numlist)'"
+		if wordcount("`lags_loop'") == 1 local lags_loop "-1/`lags_loop'"
+		numlist "`lags_loop'"
+		local lags_loop "`r(numlist)'"
+		local n_loop = wordcount("`lags_loop'")
+
+		local cmd_Main "`e(cmdline)'"
+		local 0 `cmd_Main'
+		syntax [anything] [if], [NOCROSSsectional CRosssectional(string)] * [cr_lags(string)]
+		local options_cmd `options'
+				
+		local 0 `crosssectional' 
+		syntax [anything(name=cr_vars)] , * [cr_lags(string)]
+		local cr_opt `options'
+		if "`cr_vars'" == "" local cr_vars "_all"
+		
+		/// saved values
+		tempname saved_values
+		mata `saved_values' = J(`n_loop',3,.)
+
+		
+		if "`noprogress'" == "" di as text "  Lags  " _col(10) "{c |}" _col(15) "CD" _col(25) "p-value" 
+		if "`noprogress'" == "" di as text "{hline 9}{c +}{hline 20}"
+		
+		forvalues i = 1(1)`n_loop' {
+			local lagi = word("`lags_loop'",`i')
+			if "`lagi'" == "-1" {
+				qui `anything' `if' , `options_cmd' nocross
+			}
+			else qui `anything' `if' , `options_cmd' cr(`cr_vars',`cr_opt' cr_lags(`lagi'))
+			mata `saved_values'[`i',.] = `lagi',`e(cd)',`e(cdp)'
+
+			if "`noprogress'" == "" di as text _col(3) "`lagi'" _col(10) "{c |}" _col(12) %8.3g `e(cd)'  _col(22) %5.3g `e(cdp)' 
+		}
+		
+
+		mata st_matrix("`saved_values'",`saved_values')
+		matrix colnames `saved_values' = Lags CD CDp
+		matrix rownames `saved_values' = `lags_loop'
+
+		return matrix cd_struct = `saved_values'
+
+		tempname CD CDp
+		mata `CD' = `saved_values'[.,(2,1)]
+		mata `CDp' = `saved_values'[.,(3,1)]
+
+		if "`nograph'" == "" {
+			twoway line matamatrix(`CD') , ytitle("CD", axis(1)) || line matamatrix(`CDp') , ytitle("p-value", axis(2)) yaxis(2) yline(1.96 -1.96 , axis(1) lp(dash)) , ///
+								legend(label(1 "CD") label(2 "CDp")  pos(6) rows(1)) note("Dashed line indicates 5% signifiance level. -1 stands for no cross-section averages.") xtitle("Lags")
+		}
+
+		mata mata drop `CD' `CDp' `saved_values'
+		qui est restore `ResultsO'
+
+	}
 	else {
 		
 		gettoken type vars : anything 
@@ -406,11 +473,29 @@ program define xtdcce2_estat , rclass
 			}
 			if "`type'" == "rcap" {
 				tempname se coeff
-				scalar cv = invnorm(1 - ((100-`c(level)')/100)/2)
+				if "`level'" == "" local level = `c(level)'
+				scalar cv = invnorm(1 - ((100-`level')/100)/2)
 				predict `se' if `touse'  , se
 				predict `coeff' if `touse' , coeff
 				*noi sum `coeff'* `se'*
 				*noi disp "vars: `graph_vars_mg' - `anything' - `mg'"
+
+				local tivar `idvar' 
+
+				if "`ivar'" != "" {
+						local 0 `ivar'
+						syntax varlist(min=1 max=1) , [SORTivar *]
+						local tmpi tmpl
+						encode `varlist', gen(`tmpi') label(tmpl)
+						local labelinfo 
+						qui sum `tmpi'
+						local NN = r(max)
+						if "`horizontal'" == "" local labelinfo xlabel(#`NN', valuelabel `options') 
+						else local labelinfo ylabel(#`NN', valuelabel `options' ) 
+						local tivar `tmpi'
+				}
+
+
 				foreach var in `graph_vars_mg' {
 					local s_var = subinstr("`var'",".","_",.)
 					qui gen `s_var'_up = `coeff'_`s_var' + cv * `se'_`s_var' if `touse'
@@ -420,26 +505,46 @@ program define xtdcce2_estat , rclass
 						local mg_mean = _b[`var']
 						local mg_up = `mg_mean' + cv * _se[`var']
 						local mg_lo = `mg_mean' - cv * _se[`var']
-						local ylines "yline(`mg_mean') yline(`mg_up', lp(dash)) yline(`mg_lo' , lp(dash)) "
+
+						if "`horizontal'" == "" {							
+							if "`zero'" != "" local ylines "yline(`mg_mean') yline(`mg_up', lp(dash)) yline(`mg_lo' , lp(dash)) yline(0, lp(solid) lw(thick) lc(black))"
+							else local ylines "yline(`mg_mean') yline(`mg_up', lp(dash)) yline(`mg_lo' , lp(dash)) " 
+						}
+						else {
+							
+							if "`zero'" != "" local xlines "xline(`mg_mean') xline(`mg_up', lp(dash)) xline(`mg_lo' , lp(dash))  xline(0, lp(solid) lw(thin) lc(black))"
+							else local xlines "xline(`mg_mean') xline(`mg_up', lp(dash)) xline(`mg_lo' , lp(dash)) "
+						}
 					}
 					if "`cleargraph'" == "" {
-						local grcap `"legend(off) `ylines' nodraw  ytitle("") title("`var'") note("Mean: `=string(_b[`var'])'" "SE: `=string(_se[`var'])'")"'
+						local grcap `"legend(off) `ylines' `xlines' nodraw  ytitle("") title("`var'") note("Mean: `=string(_b[`var'])'" "SE: `=string(_se[`var'])'")"'
 					}				
 					if "`dropzero'" != "" local dropzeroc & `coeff'_`s_var' != 0
+					
 					local varname = strtoname("`var'")
 					
-					twoway	(scatter `coeff'_`s_var' `idvar' , m(X)  ) /*
-							 */ (rcap `s_var'_up `s_var'_lo `idvar' , lp(dash) ) /*
-							*/ if `touse' `dropzeroc' , name(rc`varname', replace) `grcap' `individual'
+					if "`sortivar'" != "" sort `coeff'_`s_var' `idvar' `tvar'
+					
+					if "`horizontal'" == "" {
+						twoway	(scatter `coeff'_`s_var' `tivar' , m(X)  ) /*
+								 */ (rcap `s_var'_up `s_var'_lo `tivar' , lp(dash) ) /*
+								*/ if `touse' `dropzeroc' , name(rc`varname', replace) `grcap' `individual' `labelinfo'
+					}
+					else {
+						twoway	(scatter `tivar' `coeff'_`s_var'  , m(X)  ) /*
+								 */ (rcap  `s_var'_up `s_var'_lo `tivar' , lp(dash) horizontal ) /*
+								*/ if `touse' `dropzeroc' , name(rc`varname', replace) `grcap' `individual' `labelinfo'
+					}
 					local graph_list `graph_list' rc`varname' 
 
 				}
 				if "`cleargraph'" == "" {
-					local cgrcap `"title("Mean Group Variables") note("Point estimates are indicated by a cross, mean group estimates by the red line and " "the `c(level)'% confidence interval by the upper and lower range and dashed red line.", size(tiny )) name(xtdcce2_combine, replace)"'
+					local cgrcap `"title("Mean Group Variables") note("Point estimates are indicated by a cross, mean group estimates by the red line and " "the `level'% confidence interval by the upper and lower range and dashed red line.", size(tiny )) name(xtdcce2_combine, replace)"'
 				}
 				graph combine `graph_list' , `combine' `cgrcap'
 
 			}
+
 			
 			if "`cleargraph'" == "" {
 				display as text "Combined graph saved as " as error "xtdcce2_combine" as text "."

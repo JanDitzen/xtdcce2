@@ -63,11 +63,13 @@ program define xtdcce2_p_int
 
 
 		if wordcount("`stdp'  `partial'")> 0 {
-			display "Option `stdp'`se'`partial' not supported."
+			display "Option `stdp'`partial' not supported."
 			exit 498
 
 		}
-
+		if "`se'" != "" {
+			noi disp "Standard Errors only available for short run coefficients."
+		}
 		if "`residuals'" != ""  local type = 0
 		if "`cfresiduals'" != ""  local type = -1
 		if "`xb'" != "" local type = -1
@@ -82,11 +84,19 @@ program define xtdcce2_p_int
 				if (`type' >0) {
 					
 					local vars = subinstr("`e(p_mg_vars)'","_cons","",.)
+					
 					local hasc = 0
+
 					if regexm("`e(p_mg_vars)'","_cons") == 1 local hasc = 1
 
 					tsunab vars: `vars'
-					if `hasc' == 1 local vars `vars' _cons
+
+					if `type' == 2 & `hasc' == 1 local vars `vars' _cons
+					if `type' == 1 {
+						if `hasc' == 1 local vars `vars' _cons
+						local vars `vars' `e(p_lr_vars_mg)'
+
+					}
 					*** extend varlist to all variables
 					mata st_local("newvar",invtokens(strtoname("`newvar'_":+tokens("`vars'"))))
 				}
@@ -103,12 +113,12 @@ program define xtdcce2_p_int
 				else if "`e(postresults)'" == "mata" {
 					if `type' == 0 {
 						putmata xtdcce2fast_pn = (`idvar' `tvar' `tousecr' `touse'), replace
-						noi mata xtdcce2_mata2stata("`newvar'",xtdcce2fast_p[.,(5)],"`idvar' `tvar'",xtdcce2fast_pn[.,(1,2)],"`touse'",`type')		
+						mata xtdcce2_mata2stata("`newvar'",xtdcce2fast_p[.,(5)],"`idvar' `tvar'",xtdcce2fast_pn[.,(1,2)],"`touse'",`type')		
 					}
 					else if `type' == 2 {
 						
 						
-						noi mata xtdcce2_mata2stata("`newvar'",xtdcce2fast_Vi[.,2..cols(xtdcce2fast_Vi)],"`idvar' `tvar'",xtdcce2fast_Vi[.,1],"`touse'",2) 
+						mata xtdcce2_mata2stata("`newvar'",xtdcce2fast_Vi[.,2..cols(xtdcce2fast_Vi)],"`idvar' `tvar'",xtdcce2fast_Vi[.,1],"`touse'",2) 
 						
 					}
 					else if `type' == -2 {
@@ -119,11 +129,11 @@ program define xtdcce2_p_int
 						local v1: list posof "`v1'" in tmp
 						local v2: list posof "`v2'" in tmp
 						
-						noi mata xtdcce2_mata2stata("`newvar'",xtdcce2fast_Vi[.,2..cols(xtdcce2fast_Vi)],"`idvar' `tvar'",xtdcce2fast_Vi[.,1],"`touse'",3,(`v1',`v2')) 
+						mata xtdcce2_mata2stata("`newvar'",xtdcce2fast_Vi[.,2..cols(xtdcce2fast_Vi)],"`idvar' `tvar'",xtdcce2fast_Vi[.,1],"`touse'",3,(`v1',`v2')) 
 
 					}
 					else {
-						noi mata xtdcce2_mata2stata("`newvar'",xtdcce2fast_bi,"`idvar' `tvar'",xtdcce2fast_order,"`touse'",`type')	
+						mata xtdcce2_mata2stata("`newvar'",xtdcce2fast_bi,"`idvar' `tvar'",xtdcce2fast_order,"`touse'",`type')	
 					}
 					
 				}

@@ -26,6 +26,7 @@ Changelog:
 	04.11.2022 Added seed() option to control seed for CDW test.
 	15.05.2023 Added trace option; bug fixed when using noadjust option
 	03.06.2024 Fixed bug in unblanced panel and EM
+	09.09.2024 Changed H0 for CD star
 	*/
 cap program drop xtcd2
 program define xtcd2, rclass
@@ -367,16 +368,6 @@ include "`r(fn)'"
 /// output program
 cap program drop xtcd2_output
 program define xtcd2_output
-	disp ""
-	disp as text "Testing for weak cross-sectional dependence (CSD)"
-	disp as text "{col 4}H0: weak cross-section dependence"
-	disp as text "{col 4}H1: strong cross-section dependence"
-
-	local firstline "{col 16}{c |}"
-	local nums = 0
-	local coli_start = 15
-	local coli = `coli_start' + 5
-	local step = 14
 
 	tempname CD CDp
 	matrix `CD' = r(CD)
@@ -384,6 +375,37 @@ program define xtcd2_output
 	
 	local methods: colnames `CD'
 	local varlist: rownames `CD'
+
+	disp ""
+	if "`r(pesaran)'`r(cdw)'`r(pea)'" != "" & "`r(cdstar)'" != "" {
+		if "`r(pesaran)'" != "" local names "CD"
+		if "`r(cdw)'" != "" local names "`names' CDw" 
+		if "`r(pea)'" != "" local names "`names' CDw+"
+		disp as text "Testing for cross-sectional dependence (CSD)"
+		disp as text _col(6) "`names'" _col(40) "CD*"
+		disp as text "{col 2}H0:" _col(6) "weak cross-section dependence" 	_col(40) "independence in presence of factors"
+		disp as text "{col 2}H1:" _col(6) "strong cross-section dependence"	_col(40) "weak dependence in presence of factors"
+	}
+	if "`r(pesaran)'`r(cdw)'`r(pea)'" != "" & "`r(cdstar)'" == "" {
+		disp as text "Testing for weak cross-sectional dependence (CSD)"
+		disp as text "{col 4}H0: weak cross-section dependence" 	
+		disp as text "{col 4}H1: strong cross-section dependence"	
+	}
+	if "`r(pesaran)'`r(cdw)'`r(pea)'" == "" & "`r(cdstar)'" != "" {
+		disp as text "Testing for weak cross-sectional dependence (CSD) in presence of factors"
+		disp as text "{col 4}H0: independence in presence of factors"
+		disp as text "{col 4}H1: weak dependence in presence of factors"	
+	}
+
+	
+
+	local firstline "{col 16}{c |}"
+	local nums = 0
+	local coli_start = 15
+	local coli = `coli_start' + 5
+	local step = 14
+
+	
 
 	foreach type in `methods' {
 		

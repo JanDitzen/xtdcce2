@@ -1334,6 +1334,9 @@ ssc install xtdcce2
 
 # 13. Change log
 
+Version 4.8 - January 2025
+- bug jackknife + IC fixed
+
 Version 4.7 - June 2024
 - bug fixes when using predict with xtdcce2fast.
 - factor variables for option cr().

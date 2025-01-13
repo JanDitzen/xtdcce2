@@ -1,4 +1,4 @@
-*! xtdcce2 4.7 - 03.06.2024
+*! xtdcce2 4.8 - 07.01.2025
 *! author Jan Ditzen
 *! www.jan.ditzen.net - jan.ditzen@unibz.it
 *! see viewsource xtdcce2.ado for more info.
@@ -162,6 +162,10 @@ fixed. was before assuming same s2 for all csu
 14.05.2024 - bug fixes:
 			 -- in fvexpand2 fixed.
 			 -- xtdcce2_mata2stata returned error when samples different 				
+----------------------------------------xtdcce2 4.7
+10.06.2024 - bug in IC fixed
+----------------------------------------xtdcce2 4.8
+27.12.2024 - bug jackknife + IC fixed
 
 */
 
@@ -172,7 +176,7 @@ program define xtdcce2 , eclass sortpreserve
 		exit
 	}
 	version 11.1
-	local xtdcce2_version = 4.7
+	local xtdcce2_version = 4.8
 	if replay() {
 		syntax [, VERsion replay * ] 
 		if "`version'" != "" {
@@ -2753,12 +2757,20 @@ mata:
 		variablenames = variablenames[1]
 		"start m_reg"
 		(variablenames , ccep , lr_vars)
-
+		"jackknife names"
+		jackknife_names
+		"input partial"
+		input_no_partial
 		SigmaMFbar = input_no_partial[2]
-		IC_init= input_no_partial[3]
+		if (cols(IC_init) >= 3) {
+			IC_init= input_no_partial[3]
+		}
+		else {
+			IC_init = 0
+		}
 		input_no_partial = input_no_partial[1]
 
-		
+		"here"
 
 		lhs = tokens(variablenames)[1]
 		mg_d = 0
@@ -2766,6 +2778,7 @@ mata:
 		exo = 0
 		num_K = 0
 		num_Kp = 0
+		"process var lists"
 		num_Kmg = 0
 		if (cols(tokens(variablenames)) > 1) {
 			rhs = tokens(variablenames)[2..cols(tokens(variablenames))]
@@ -3062,9 +3075,9 @@ mata:
 			"start regs"
 			"vars for jack"
 			variabaljack
-			b_a = xtdcce_m_reg(variabaljack,jack_indic_a,id_var,ccep_jack,"","",(0,-1),"e","eb","cov","sd","t","st","jack1",mata_var_names,1,input_exo_j,blockdiaguse,useqr)
+			b_a = xtdcce_m_reg(variabaljack,jack_indic_a,id_var,ccep_jack,"","",(0,-1,-1),"e","eb","cov","sd","t","st","jack1",mata_var_names,1,input_exo_j,blockdiaguse,useqr)
 			"in jack"
-			b_b = xtdcce_m_reg(variabaljack,jack_indic_b,id_var,ccep_jack,"","",(0,-1),"e","eb","cov","sd","t","st","jack2",mata_var_names,1,input_exo_j,blockdiaguse,useqr)
+			b_b = xtdcce_m_reg(variabaljack,jack_indic_b,id_var,ccep_jack,"","",(0,-1,-1),"e","eb","cov","sd","t","st","jack2",mata_var_names,1,input_exo_j,blockdiaguse,useqr)
 			"outputs"
 			"first half"
 			b_a
@@ -3521,11 +3534,11 @@ mata:
 						i++
 				}				
 				S = S
-				sigma = sigma
+				sigma = sigma 
 				///sigma1 = pinv(sigma)
 				sigma1 = m_xtdcce_inverter(sigma,useqr)
 				///sigma = cholqrinv(sigma)
-				cov_p = (sigma1*S*sigma1)
+				cov_p = (sigma1*S*sigma1) 
 			}
 			if (FixedTVCE == 2) {
 				"NW estimator for pooled coefficients"
