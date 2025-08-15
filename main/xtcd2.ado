@@ -341,7 +341,8 @@ program define xtcd2_int, rclass
 						local graphname name(`name') 
 					}	
 					else  {
-						local graphname name(`var')
+						local graphname = strtoname("`var'")
+						local graphname name(`graphname')
 					}
 					
 					noi dis ""
@@ -352,7 +353,7 @@ program define xtcd2_int, rclass
 					}
 					else {
 
-						heatplot rho id1 id2 ,  `options' level(`levels') yscale(`yscale') `graphname'
+						heatplot rho id1 id2 ,  `options' bins(`N') yscale(`yscale') `graphname'
 					}
 				restore
 			}

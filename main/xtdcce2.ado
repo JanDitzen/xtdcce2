@@ -1,4 +1,4 @@
-*! xtdcce2 4.8 - 07.01.2025
+*! xtdcce2 4.9 - 15.08.2025
 *! author Jan Ditzen
 *! www.jan.ditzen.net - jan.ditzen@unibz.it
 *! see viewsource xtdcce2.ado for more info.
@@ -166,7 +166,8 @@ fixed. was before assuming same s2 for all csu
 10.06.2024 - bug in IC fixed
 ----------------------------------------xtdcce2 4.8
 27.12.2024 - bug jackknife + IC fixed
-
+----------------------------------------xtdcce2 4.9
+15.08.2025 - bug in IC fixed
 */
 
 program define xtdcce2 , eclass sortpreserve
@@ -176,7 +177,7 @@ program define xtdcce2 , eclass sortpreserve
 		exit
 	}
 	version 11.1
-	local xtdcce2_version = 4.8
+	local xtdcce2_version = 4.9
 	if replay() {
 		syntax [, VERsion replay * ] 
 		if "`version'" != "" {
@@ -2581,7 +2582,7 @@ program define xtdcce2int, eclass
 		mata: st_local("rk_indic",strofreal(all(`RankReg'[.,1]:==`RankReg'[.,2])))
 		if `rk_indic' != 1 {
 			display in red "Warning:" 
-			if "`mgmissing'" == "" display as text "Collinearities detected. One or more variables are dropped and set to zero."
+			if "`mgmissing'" == "" display as text "Collinearities detected. One or more variables are dropped and coefficients set to zero. MG estimates will be affected. Consider option mgmissing."
 			if "`mgmissing'" != "" display as text "Collinearities detected. One or more individual coefficients are excluded from MG regression."
 			display as text in smcl "Use {stata estat ebistructure} to display more details." 
 				
@@ -2762,7 +2763,7 @@ mata:
 		"input partial"
 		input_no_partial
 		SigmaMFbar = input_no_partial[2]
-		if (cols(IC_init) >= 3) {
+		if (cols(input_no_partial) >= 3) {
 			IC_init= input_no_partial[3]
 		}
 		else {

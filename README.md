@@ -1334,6 +1334,9 @@ ssc install xtdcce2
 
 # 13. Change log
 
+Version 4.9 - August 2025
+- bug in IC fixed
+
 Version 4.8 - January 2025
 - bug jackknife + IC fixed
 

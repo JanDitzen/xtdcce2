@@ -107,7 +107,7 @@ program define xtdcce2_p_int
 				
 				if "`e(postresults)'" == "frame" & `type' == 0 {
 					tempname frlink
-					frlink 1:1 `id' `tvar' , from(xtdcce2fast) gen(`frlink')
+					frlink 1:1 `idvar' `tvar' , frame(xtdcce2fast `idvar' `tvar') gen(`frlink' )
 					frget `newvar' = residuals , from(`frlink')
 				}
 				else if "`e(postresults)'" == "mata" {

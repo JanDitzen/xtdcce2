@@ -1590,6 +1590,7 @@ mata:
 			sel[i] = (allof(CSA[.,i],1):==0)
 		}
 		
+		//// remove any fixed effects in CSA
 		CSA = select(CSA,sel)
 		
 		/// check if constant part of CSA
